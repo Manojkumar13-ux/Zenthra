@@ -1,8 +1,10 @@
+// app/(main)/analytics/page.tsx
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import toast from "react-hot-toast"; // ✅ Added import
 import {
   AreaChart,
   Area,

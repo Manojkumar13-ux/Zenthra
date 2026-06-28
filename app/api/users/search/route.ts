@@ -1,53 +1,52 @@
+// app/api/users/search/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
-import mongoose from "mongoose";
 
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const q = searchParams.get("q") || "";
+    const limit = parseInt(searchParams.get("limit") || "10");
+
+    if (!q) {
+      return NextResponse.json({ users: [] });
     }
 
     await connectDB();
 
-    const { searchParams } = new URL(req.url);
-    const query = searchParams.get("q") || "";
-    const limit = parseInt(searchParams.get("limit") || "10");
-
-    if (!query) {
-      return NextResponse.json({ users: [] });
-    }
-
     const users = await User.find({
       $or: [
-        { name: { $regex: query, $options: "i" } },
-        { username: { $regex: query, $options: "i" } },
+        { name: { $regex: q, $options: "i" } },
+        { username: { $regex: q, $options: "i" } },
       ],
-      _id: { $ne: new mongoose.Types.ObjectId(session.user.id) },
+      _id: { $ne: session.user.id },
     })
-      .select("name username image bio followers following")
-      .limit(limit)
-      .lean();
+    .select("_id name username image bio")
+    .limit(limit)
+    .lean();
 
-    const currentUser = await User.findById(session.user.id).select("following");
-    const followingIds = currentUser?.following?.map((id: any) => id.toString()) || [];
-
-    const usersWithFollow = users.map((user) => ({
+    const formattedUsers = users.map((user: any) => ({
       ...user,
-      isFollowing: followingIds.includes(user._id.toString()),
-      followersCount: user.followers?.length || 0,
+      _id: user._id.toString(),
     }));
 
-    return NextResponse.json({ users: usersWithFollow });
+    return NextResponse.json({ users: formattedUsers });
   } catch (error) {
-    console.error("GET /api/users/search error:", error);
+    console.error("Error searching users:", error);
     return NextResponse.json(
-      { users: [], message: "Failed to search users" },
-      { status: 200 }
+      { error: "Failed to search users" },
+      { status: 500 }
     );
   }
 }

@@ -1,47 +1,72 @@
 // app/api/users/posts/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
-import { User } from "@/lib/db/models/User";
 
-// GET /api/users/posts - Get current user's posts
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = parseInt(searchParams.get("page") || "1");
+    const skip = (page - 1) * limit;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "UserId is required" },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
-    const posts = await Post.find({ author: session.user.id, isPublished: true })
+    const query: any = { author: userId };
+    
+    // Only show public posts or posts from followed users
+    // For simplicity, we'll show all posts for now
+
+    const posts = await Post.find(query)
       .sort({ createdAt: -1 })
-      .populate("author", "name username image verified")
+      .skip(skip)
+      .limit(limit)
+      .populate("author", "name username image")
       .lean();
 
-    // Add user interaction status
-    const postsWithData = posts.map((post: any) => {
-      const liked = post.likedBy?.some((id: any) => id.toString() === session.user.id) || false;
-      const bookmarked = post.bookmarkedBy?.some((id: any) => id.toString() === session.user.id) || false;
-      const reposted = post.repostedBy?.some((id: any) => id.toString() === session.user.id) || false;
-      
-      return { 
-        ...post, 
-        liked,
-        bookmarked,
-        reposted,
-        author: post.author || { name: "Unknown", username: "unknown" }
-      };
-    });
+    const total = await Post.countDocuments(query);
 
-    return NextResponse.json({ posts: postsWithData });
+    const formattedPosts = posts.map((post: any) => ({
+      ...post,
+      _id: post._id.toString(),
+      author: post.author ? {
+        ...post.author,
+        _id: post.author._id.toString(),
+      } : null,
+      createdAt: post.createdAt?.toISOString(),
+    }));
+
+    return NextResponse.json({
+      posts: formattedPosts,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    });
   } catch (error) {
-    console.error("User posts error:", error);
+    console.error("Error fetching user posts:", error);
     return NextResponse.json(
       { error: "Failed to fetch posts" },
       { status: 500 }

@@ -1,6 +1,7 @@
+// app/api/users/find/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
 
@@ -45,11 +46,9 @@ export async function GET(req: Request) {
     if (tab === "following") {
       query._id = { $in: currentUser?.following || [] };
     } else if (tab === "suggested") {
-      // Users not followed and not current user
       query._id = { 
         $nin: [...(currentUser?.following || []), session.user.id] 
       };
-      // Prioritize users with more followers
     }
 
     // Fetch users with pagination
