@@ -23,13 +23,26 @@ Avatar.displayName = AvatarPrimitive.Root.displayName;
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  // ✅ Use useMemo to prevent unnecessary re-renders
+  const imageRef = React.useRef<HTMLImageElement>(null);
+  
+  // ✅ No state updates that could cause loops
+  const handleError = React.useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    // Just prevent the error from propagating
+    e.preventDefault();
+    // You can add fallback logic here if needed
+  }, []);
+
+  return (
+    <AvatarPrimitive.Image
+      ref={ref}
+      className={cn("aspect-square h-full w-full object-cover", className)}
+      {...props}
+      onError={handleError}
+    />
+  );
+});
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
 const AvatarFallback = React.forwardRef<
@@ -39,7 +52,7 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800",
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
       className
     )}
     {...props}

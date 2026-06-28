@@ -1,137 +1,135 @@
 // app/api/feed/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
 import { User } from "@/lib/db/models/User";
 
-export async function GET(request: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    console.log("🔵 Feed API: Starting request");
     
-    if (!session?.user?.id) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      console.log("🔴 Feed API: Unauthorized");
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Unauthorized", posts: [] },
         { status: 401 }
       );
     }
 
+    console.log(`🟢 Feed API: User ${session.user.id} authenticated`);
+
     await connectDB();
+    console.log("✅ Feed API: Database connected");
 
-    const userId = session.user.id;
-    const { searchParams } = new URL(request.url);
-    const tab = searchParams.get("tab") || "for-you";
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "10", 10);
-
-    let postsQuery: any = { isDeleted: { $ne: true } };
-    let sortQuery: any = { createdAt: -1 };
-
-    // ============ FOR YOU TAB ============
-    if (tab === "for-you") {
-      // Show all non-deleted posts
-    }
-
-    // ============ FOLLOWING TAB ============
-    if (tab === "following") {
-      const user = await User.findById(userId).select("following");
-      const followingIds = user?.following?.map((id: any) => id.toString()) || [];
-      
-      if (followingIds.length === 0) {
-        return NextResponse.json({
-          posts: [],
-          pagination: {
-            total: 0,
-            page,
-            limit,
-            hasNext: false,
-          },
-        });
-      }
-      
-      postsQuery.author = { $in: followingIds };
-    }
-
-    // ============ TRENDING TAB ============
-    if (tab === "trending") {
-      postsQuery.$or = [
-        { hashtags: { $exists: true, $ne: [] } },
-        { likes: { $exists: true, $ne: [] } },
-        { comments: { $exists: true, $ne: [] } }
-      ];
-      sortQuery = { likesCount: -1, commentsCount: -1, createdAt: -1 };
-    }
-
-    // ============ COMMUNITIES TAB ============
-    if (tab === "communities") {
-      const user = await User.findById(userId).select("communities");
-      const communityIds = user?.communities || [];
-      
-      if (communityIds.length === 0) {
-        return NextResponse.json({
-          posts: [],
-          pagination: {
-            total: 0,
-            page,
-            limit,
-            hasNext: false,
-          },
-        });
-      }
-      
-      postsQuery.community = { $in: communityIds };
-    }
-
+    const url = new URL(req.url);
+    const tab = url.searchParams.get("tab") || "for-you";
+    const category = url.searchParams.get("category") || "all";
+    const page = Math.max(parseInt(url.searchParams.get("page") || "1"), 1);
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "10"), 50);
     const skip = (page - 1) * limit;
-    
-    const [posts, totalCount] = await Promise.all([
-      Post.find(postsQuery)
-        .sort(sortQuery)
-        .skip(skip)
-        .limit(limit)
-        .populate("author", "name username image verified")
-        .lean(),
-      Post.countDocuments(postsQuery),
-    ]);
 
-    const postsWithData = posts.map((post: any) => {
-      const liked = post.likes?.some((id: any) => id.toString() === userId) || false;
-      const bookmarked = post.bookmarks?.some((id: any) => id.toString() === userId) || false;
-      const reposted = post.reposts?.some((id: any) => id.toString() === userId) || false;
-      
-      return { 
-        ...post, 
-        liked,
-        bookmarked,
-        reposted,
-        likesCount: post.likes?.length || 0,
-        commentsCount: post.comments?.length || 0,
-        repostsCount: post.reposts?.length || 0,
-        author: post.author || { 
-          name: "Unknown", 
-          username: "unknown", 
-          _id: post.author || userId 
-        }
+    console.log(`📊 Feed API: tab=${tab}, category=${category}, page=${page}`);
+
+    // Build query
+    let query: any = {};
+    let sort: any = { createdAt: -1 };
+
+    switch (tab) {
+      case "following": {
+        const currentUser = await User.findById(session.user.id)
+          .select("following")
+          .lean();
+        
+        const followingIds = currentUser?.following?.map((id: any) => id.toString()) || [];
+        const userId = session.user.id;
+        query.author = { $in: [...followingIds, userId] };
+        console.log(`📊 Following: ${followingIds.length} users`);
+        break;
+      }
+      case "trending": {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        query.createdAt = { $gte: sevenDaysAgo };
+        sort = { likes: -1, comments: -1, createdAt: -1 };
+        console.log("📊 Trending: Last 7 days");
+        break;
+      }
+      case "communities": {
+        query.hashtags = { $in: ["community", "zenthra"] };
+        console.log("📊 Communities");
+        break;
+      }
+      case "for-you":
+      default: {
+        console.log("📊 For-You: All posts");
+        break;
+      }
+    }
+
+    // Apply category filter
+    if (category !== "all") {
+      const categoryLower = category.toLowerCase();
+      query.hashtags = { 
+        $in: [
+          categoryLower,
+          `#${categoryLower}`,
+        ] 
       };
-    });
+      console.log(`📊 Category filter: ${category}`);
+    }
 
-    const hasNext = skip + posts.length < totalCount;
+    console.log("🔍 Feed API: Query:", JSON.stringify(query));
+
+    // Get total count
+    const total = await Post.countDocuments(query);
+    console.log(`📊 Total posts: ${total}`);
+
+    // ✅ FIX: Remove comment population to avoid the error
+    const posts = await Post.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate("author", "name username image")
+      // .populate("comments") // ❌ Remove this - Comment model doesn't exist yet
+      .lean();
+
+    console.log(`✅ Found ${posts.length} posts`);
+
+    // Format posts
+    const formattedPosts = posts.map((post: any) => ({
+      ...post,
+      _id: post._id.toString(),
+      author: post.author ? {
+        ...post.author,
+        _id: post.author._id.toString(),
+      } : null,
+      likes: post.likes?.map((id: any) => id.toString()) || [],
+      comments: post.comments?.map((id: any) => id.toString()) || [],
+      reposts: post.reposts?.map((id: any) => id.toString()) || [],
+      createdAt: post.createdAt?.toISOString(),
+    }));
 
     return NextResponse.json({
-      posts: postsWithData,
+      posts: formattedPosts,
       pagination: {
-        total: totalCount,
         page,
         limit,
-        hasNext,
+        total,
+        hasNext: skip + posts.length < total,
+        hasPrev: page > 1,
       },
     });
-
   } catch (error) {
     console.error("❌ Feed API Error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch feed" },
+      { 
+        error: error instanceof Error ? error.message : "Failed to fetch feed",
+        posts: [],
+        pagination: { page: 1, limit: 10, total: 0, hasNext: false, hasPrev: false }
+      },
       { status: 500 }
     );
   }

@@ -1,3 +1,4 @@
+// middleware.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
@@ -6,43 +7,40 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Define public routes (accessible without authentication)
+    // Define public routes
     const publicRoutes = ["/login", "/register", "/forgot-password"];
-    
-    // Check if the current path is a public route
     const isPublicRoute = publicRoutes.includes(path);
-    
-    // Check if the current path is the root
     const isRoot = path === "/";
+    const isApiAuth = path.startsWith("/api/auth");
 
-    // If user is authenticated
-    if (token) {
-      // Redirect from public routes to feed
-      if (isPublicRoute) {
-        return NextResponse.redirect(new URL("/feed", req.url));
-      }
-      // Redirect from root to feed
-      if (isRoot) {
-        return NextResponse.redirect(new URL("/feed", req.url));
-      }
-      // Allow access to all other routes
+    // ✅ Allow API auth routes to pass through
+    if (isApiAuth) {
       return NextResponse.next();
     }
 
-    // If user is not authenticated
-    if (!token) {
-      // Redirect from root to login
-      if (isRoot) {
-        return NextResponse.redirect(new URL("/login", req.url));
-      }
-      // Redirect from protected routes to login
-      if (!isPublicRoute) {
-        const loginUrl = new URL("/login", req.url);
+    // If authenticated and on public route → redirect to feed
+    if (token && isPublicRoute) {
+      return NextResponse.redirect(new URL("/feed", req.url));
+    }
+
+    // If authenticated and on root → redirect to feed
+    if (token && isRoot) {
+      return NextResponse.redirect(new URL("/feed", req.url));
+    }
+
+    // If NOT authenticated and on root → redirect to login
+    if (!token && isRoot) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // If NOT authenticated and NOT on public route → redirect to login
+    if (!token && !isPublicRoute) {
+      const loginUrl = new URL("/login", req.url);
+      // ✅ Only add callbackUrl if it's the first redirect
+      if (!req.nextUrl.searchParams.has("callbackUrl")) {
         loginUrl.searchParams.set("callbackUrl", path);
-        return NextResponse.redirect(loginUrl);
       }
-      // Allow access to public routes (login, register, forgot-password)
-      return NextResponse.next();
+      return NextResponse.redirect(loginUrl);
     }
 
     return NextResponse.next();

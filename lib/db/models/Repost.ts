@@ -1,21 +1,19 @@
 // lib/db/models/Repost.ts
 import mongoose from "mongoose";
 
-export interface IRepost extends mongoose.Document {
-  post: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const RepostSchema = new mongoose.Schema<IRepost>(
+const RepostSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     post: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Post",
       required: true,
     },
-    user: {
+    originalAuthor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -26,11 +24,8 @@ const RepostSchema = new mongoose.Schema<IRepost>(
   }
 );
 
-// Ensure a user can only repost a post once
-RepostSchema.index({ post: 1, user: 1 }, { unique: true });
-
-// Index for faster queries
+RepostSchema.index({ user: 1, post: 1 }, { unique: true });
 RepostSchema.index({ post: 1 });
-RepostSchema.index({ user: 1 });
+RepostSchema.index({ originalAuthor: 1 });
 
-export const Repost = mongoose.models.Repost || mongoose.model<IRepost>("Repost", RepostSchema);
+export const Repost = mongoose.models.Repost || mongoose.model("Repost", RepostSchema);

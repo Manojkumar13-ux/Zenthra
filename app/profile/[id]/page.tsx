@@ -1,58 +1,56 @@
-// app/(main)/profile/page.tsx
+// app/profile/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, 
   Calendar, 
   MapPin, 
   Link as LinkIcon, 
+  UserPlus,
+  UserCheck,
   Settings,
+  Mail,
   MessageCircle,
   Heart,
   Repeat2,
   Bookmark,
-  Edit,
-  Camera,
-  Sparkles
+  Sparkles,
+  Edit
 } from "lucide-react";
+// ✅ Fix: Import social icons correctly
 import { FaTwitter, FaInstagram, FaYoutube, FaGithub } from "react-icons/fa";
 import { AvatarSimple } from "@/components/ui/avatar-simple";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// ✅ Fix: Import PostCard as default
 import PostCard from "@/components/posts/PostCard";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
 
-export default function OwnProfilePage() {
-  const { data: session, status } = useSession();
+export default function UserProfilePage() {
+  const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const [user, setUser] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    bio: "",
-    location: "",
-    website: "",
-  });
 
-  const userId = session?.user?.id;
+  const userId = params.id as string;
+  const isOwnProfile = session?.user?.id === userId;
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (userId) {
       fetchUserProfile();
       fetchUserPosts();
     }
-  }, [session]);
+  }, [userId]);
 
   const fetchUserProfile = async () => {
     try {
@@ -60,12 +58,10 @@ export default function OwnProfilePage() {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        setEditForm({
-          name: data.user.name || "",
-          bio: data.user.bio || "",
-          location: data.user.location || "",
-          website: data.user.website || "",
-        });
+        setIsFollowing(data.user.isFollowing || false);
+      } else {
+        toast.error("User not found");
+        router.push("/feed");
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -87,29 +83,33 @@ export default function OwnProfilePage() {
     }
   };
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFollow = async () => {
+    if (!session) {
+      toast.error("Please sign in to follow");
+      return;
+    }
+
     try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: "PUT",
+      const action = isFollowing ? 'unfollow' : 'follow';
+      const res = await fetch(`/api/users/${userId}/follow?action=${action}`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-        toast.success("Profile updated successfully!");
-        setIsEditing(false);
+        setIsFollowing(!isFollowing);
+        toast.success(isFollowing ? "Unfollowed" : "Followed");
+        fetchUserProfile();
       } else {
-        toast.error("Failed to update profile");
+        const data = await res.json();
+        toast.error(data.error || "Failed to update follow status");
       }
     } catch (error) {
-      toast.error("Failed to update profile");
+      toast.error("Failed to update follow status");
     }
   };
 
-  if (status === "loading" || loading) {
+  if (loading) {
     return (
       <div className="max-w-3xl mx-auto p-4">
         <div className="animate-pulse space-y-4">
@@ -120,103 +120,40 @@ export default function OwnProfilePage() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className="max-w-3xl mx-auto p-4 text-center">
-        <h2 className="text-2xl font-bold mb-2">Please Sign In</h2>
-        <p className="text-gray-500">You need to be signed in to view your profile.</p>
-        <Link href="/login" className="mt-4 inline-block bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
-          Sign In
-        </Link>
-      </div>
-    );
-  }
-
   if (!user) {
     return (
       <div className="max-w-3xl mx-auto p-4 text-center">
         <h2 className="text-2xl font-bold mb-2">User not found</h2>
-        <p className="text-gray-500">Unable to load your profile.</p>
-      </div>
-    );
-  }
-
-  if (isEditing) {
-    return (
-      <div className="max-w-3xl mx-auto p-4">
-        <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Edit Profile</h2>
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
-              <Input
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Bio</label>
-              <Textarea
-                value={editForm.bio}
-                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                rows={3}
-                maxLength={160}
-                placeholder="Tell us about yourself..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Location</label>
-              <Input
-                value={editForm.location}
-                onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                placeholder="Your location"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Website</label>
-              <Input
-                value={editForm.website}
-                onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
-                placeholder="https://yourwebsite.com"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit">Save Changes</Button>
-              <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Card>
+        <p className="text-gray-500">The user you're looking for doesn't exist.</p>
+        <Link href="/feed" className="mt-4 inline-block text-blue-500 hover:underline">
+          Back to Feed
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto p-4">
+      {/* Back Button */}
       <Link href="/feed" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4">
         <ArrowLeft className="h-4 w-4" />
         Back to Feed
       </Link>
 
+      {/* Profile Header */}
       <Card className="p-6">
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="flex-shrink-0 relative">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
             <AvatarSimple
               src={user.image}
               fallback={user.name}
               alt={user.name}
               size="xl"
             />
-            <button 
-              className="absolute bottom-0 right-0 p-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-              onClick={() => toast.info("Profile picture upload coming soon!")}
-            >
-              <Camera className="h-3 w-3" />
-            </button>
           </div>
 
+          {/* User Info */}
           <div className="flex-1">
             <div className="flex items-start justify-between flex-wrap gap-2">
               <div>
@@ -229,22 +166,48 @@ export default function OwnProfilePage() {
                 <p className="text-gray-500">@{user.username}</p>
               </div>
               
-              <Button
-                onClick={() => setIsEditing(true)}
-                variant="outline"
-                className="gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Edit Profile
-              </Button>
+              {/* Follow Button - Only show if not own profile */}
+              {!isOwnProfile && session && (
+                <Button
+                  onClick={handleFollow}
+                  variant={isFollowing ? "outline" : "default"}
+                  className="gap-2"
+                >
+                  {isFollowing ? (
+                    <>
+                      <UserCheck className="h-4 w-4" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4" />
+                      Follow
+                    </>
+                  )}
+                </Button>
+              )}
+              
+              {/* If own profile, show Edit button linking to own profile */}
+              {isOwnProfile && (
+                <Button
+                  onClick={() => router.push("/profile")}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Profile
+                </Button>
+              )}
             </div>
 
+            {/* Bio */}
             {user.bio && (
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 {user.bio}
               </p>
             )}
 
+            {/* Location & Website */}
             <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-500">
               {user.location && (
                 <span className="flex items-center gap-1">
@@ -269,6 +232,7 @@ export default function OwnProfilePage() {
               </span>
             </div>
 
+            {/* Stats */}
             <div className="flex gap-6 mt-4">
               <div>
                 <span className="font-bold">{user.followers?.length || 0}</span>
@@ -283,10 +247,37 @@ export default function OwnProfilePage() {
                 <span className="text-gray-500 text-sm ml-1">Posts</span>
               </div>
             </div>
+
+            {/* Social Links */}
+            {user.socialLinks && (
+              <div className="flex gap-2 mt-3">
+                {user.socialLinks.twitter && (
+                  <a href={user.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-400 transition-colors">
+                    <FaTwitter className="h-5 w-5" />
+                  </a>
+                )}
+                {user.socialLinks.instagram && (
+                  <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-pink-500 transition-colors">
+                    <FaInstagram className="h-5 w-5" />
+                  </a>
+                )}
+                {user.socialLinks.youtube && (
+                  <a href={user.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-red-500 transition-colors">
+                    <FaYoutube className="h-5 w-5" />
+                  </a>
+                )}
+                {user.socialLinks.github && (
+                  <a href={user.socialLinks.github} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-900 transition-colors">
+                    <FaGithub className="h-5 w-5" />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Card>
 
+      {/* Tabs */}
       <div className="mt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4 bg-muted/50">
@@ -313,9 +304,6 @@ export default function OwnProfilePage() {
               <Card className="p-8 text-center">
                 <Sparkles className="h-8 w-8 mx-auto text-gray-300 mb-2" />
                 <p className="text-gray-500">No posts yet</p>
-                <Link href="/create-post" className="mt-2 inline-block text-blue-500 hover:underline">
-                  Create your first post →
-                </Link>
               </Card>
             ) : (
               posts.map((post) => (

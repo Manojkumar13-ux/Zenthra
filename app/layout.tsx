@@ -2,14 +2,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { Toaster } from "react-hot-toast";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Zenthra",
-  description: "Your social media platform",
+  description: "Connect with friends, share your thoughts, and discover amazing content.",
 };
 
 export default function RootLayout({
@@ -19,21 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <ThemeProvider defaultTheme="light" storageKey="zenthra-theme">
+      <body className={inter.className}>
+        <Providers>
           {children}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: "hsl(var(--background))",
-                color: "hsl(var(--foreground))",
-                border: "1px solid hsl(var(--border))",
-              },
-            }}
-          />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

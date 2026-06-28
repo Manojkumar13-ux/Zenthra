@@ -30,15 +30,27 @@ export const authOptions: NextAuthOptions = {
             email: credentials.email.toLowerCase()
           });
 
-          if (!user) return null;
-          if (!user.password) return null;
+          if (!user) {
+            console.log("❌ User not found:", credentials.email);
+            return null;
+          }
+
+          if (!user.password) {
+            console.log("❌ User has no password set:", credentials.email);
+            return null;
+          }
 
           const passwordMatch = await bcrypt.compare(
             credentials.password,
             user.password
           );
 
-          if (!passwordMatch) return null;
+          if (!passwordMatch) {
+            console.log("❌ Password mismatch for:", credentials.email);
+            return null;
+          }
+
+          console.log("✅ User authenticated:", user.email);
 
           return {
             id: user._id.toString(),
@@ -49,7 +61,7 @@ export const authOptions: NextAuthOptions = {
             username: user.username || null,
           };
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error('❌ Auth error:', error);
           return null;
         }
       }
@@ -65,7 +77,9 @@ export const authOptions: NextAuthOptions = {
         try {
           await connectDB();
           
-          let existingUser = await User.findOne({ email: user.email });
+          let existingUser = await User.findOne({
+            email: user.email
+          });
 
           if (!existingUser) {
             const newUser = {
@@ -88,6 +102,7 @@ export const authOptions: NextAuthOptions = {
             
             const result = await User.create(newUser);
             user.id = result._id.toString();
+            console.log("✅ New Google user created:", user.email);
           } else {
             user.id = existingUser._id.toString();
             await User.findByIdAndUpdate(existingUser._id, {
@@ -98,9 +113,10 @@ export const authOptions: NextAuthOptions = {
                 updatedAt: new Date()
               }
             });
+            console.log("✅ Existing Google user updated:", user.email);
           }
         } catch (error) {
-          console.error("Google signIn error:", error);
+          console.error("❌ Google signIn error:", error);
           return false;
         }
       }

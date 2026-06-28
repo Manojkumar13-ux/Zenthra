@@ -1,43 +1,59 @@
 // lib/db/connect.ts
 import mongoose from "mongoose";
+import "./models"; // This imports all models
 
-const MONGODB_URI = process.env.MONGODB_URI || "";
+const MONGODB_URI = process.env.MONGODB_URI!;
 
 if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable");
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
-// Use a global variable to cache the connection
-let cached = (global as any).mongoose;
+interface GlobalMongoose {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
+declare global {
+  var mongoose: GlobalMongoose;
+}
+
+let cached = global.mongoose;
 
 if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
+  cached = global.mongoose = { conn: null, promise: null };
 }
 
 export async function connectDB() {
-  // If connection exists, return it immediately (no logs)
   if (cached.conn) {
     return cached.conn;
   }
 
-  // If no connection promise exists, create one
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,
+      bufferCommands: true,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     };
 
-    console.log("📚 Database: Connecting to MongoDB...");
-    cached.promise = mongoose.connect(MONGODB_URI, opts)
-      .then((mongoose) => {
-        console.log("✅ Database: Connected successfully");
+    cached.promise = mongoose
+      .connect(MONGODB_URI, opts)
+      .then(async (mongoose) => {
+        console.log("✅ MongoDB connected successfully");
+        
+        if (process.env.NODE_ENV === "development") {
+          try {
+            await mongoose.syncIndexes();
+            console.log("✅ Indexes synced");
+          } catch (error) {
+            console.warn("⚠️ Could not sync indexes:", error);
+          }
+        }
+        
         return mongoose;
       })
       .catch((error) => {
-        console.error("❌ Database: Connection failed", error);
-        cached.promise = null;
+        console.error("❌ MongoDB connection error:", error);
         throw error;
       });
   }
@@ -50,14 +66,4 @@ export async function connectDB() {
   }
 
   return cached.conn;
-}
-
-// Optional: Function to close connection (for testing)
-export async function closeDatabaseConnection() {
-  if (cached.conn) {
-    await cached.conn.disconnect();
-    cached.conn = null;
-    cached.promise = null;
-    console.log("📚 Database: Connection closed");
-  }
 }

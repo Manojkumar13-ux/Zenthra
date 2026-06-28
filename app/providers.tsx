@@ -1,8 +1,10 @@
+// app/providers.tsx
 "use client";
 
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "@/components/theme-provider";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -11,26 +13,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30 * 1000, // 30 seconds
-            gcTime: 5 * 60 * 1000, // 5 minutes
+            staleTime: 60 * 1000,
             refetchOnWindowFocus: false,
-            refetchOnMount: true,
-            retry: 1,
-            retryDelay: 1000,
-          },
-          mutations: {
-            retry: 1,
-            retryDelay: 1000,
           },
         },
       })
   );
 
   return (
-    <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
+    <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        {children}
-        <ReactQueryDevtools initialIsOpen={false} />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+          storageKey="zenthra-theme"
+        >
+          {children}
+          <Toaster position="bottom-right" />
+        </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>
   );

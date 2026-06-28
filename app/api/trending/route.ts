@@ -1,159 +1,163 @@
+// app/api/trending/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
-import mongoose from "mongoose";
 
 export async function GET(req: Request) {
   try {
+    console.log("🔵 Trending API: Starting request");
+    
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      console.log("🔴 Trending API: Unauthorized");
+      return NextResponse.json(
+        { error: "Unauthorized", trending: [] },
+        { status: 401 }
+      );
     }
 
     await connectDB();
+    console.log("✅ Trending API: Database connected");
 
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "10");
     const hashtag = searchParams.get("hashtag");
 
-    // If a specific hashtag is requested, get posts with that hashtag
+    // If a specific hashtag is requested
     if (hashtag) {
       const posts = await Post.find({
-        hashtags: hashtag,
-        isPublished: true,
+        hashtags: { $in: [hashtag, `#${hashtag}`] },
       })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .populate("author", "name username image verified")
+        .populate("author", "name username image")
         .lean();
+
+      const formattedPosts = posts.map((post: any) => ({
+        ...post,
+        _id: post._id.toString(),
+        author: post.author ? {
+          ...post.author,
+          _id: post.author._id.toString(),
+        } : null,
+        createdAt: post.createdAt?.toISOString(),
+      }));
 
       return NextResponse.json({
         hashtag,
-        posts,
-        count: posts.length,
+        posts: formattedPosts,
+        count: formattedPosts.length,
       });
     }
 
-    // Get all posts with hashtags
-    const allPostsWithHashtags = await Post.find({
+    // ✅ FIX: Get ALL posts with hashtags
+    const allPosts = await Post.find({
       hashtags: { $exists: true, $ne: [] },
-      isPublished: true,
     })
-      .select("hashtags likesCount commentsCount createdAt")
+      .select("hashtags")
       .lean();
 
-    // Count hashtag occurrences
-    const hashtagCountMap: Record<string, { count: number; posts: any[] }> = {};
+    console.log(`📊 Total posts with hashtags: ${allPosts.length}`);
 
-    allPostsWithHashtags.forEach((post) => {
+    // Count hashtag occurrences
+    const hashtagCountMap: Record<string, number> = {};
+
+    allPosts.forEach((post: any) => {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
-          if (!hashtagCountMap[tag]) {
-            hashtagCountMap[tag] = { count: 0, posts: [] };
+          const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
+          if (cleanTag && cleanTag.length > 0) {
+            hashtagCountMap[cleanTag] = (hashtagCountMap[cleanTag] || 0) + 1;
           }
-          hashtagCountMap[tag].count += 1;
-          hashtagCountMap[tag].posts.push(post._id);
         });
       }
     });
 
-    // Sort hashtags by count (descending)
+    console.log("📊 Hashtag counts:", hashtagCountMap);
+
+    // Sort by count (descending) and limit
     const sortedHashtags = Object.entries(hashtagCountMap)
-      .sort((a, b) => b[1].count - a[1].count)
+      .sort((a, b) => b[1] - a[1])
       .slice(0, limit);
 
-    // Get the most recent posts for each hashtag
-    const trendingData = await Promise.all(
-      sortedHashtags.map(async ([tag, data]) => {
-        const recentPosts = await Post.find({
-          hashtags: tag,
-          isPublished: true,
-        })
-          .sort({ createdAt: -1 })
-          .limit(3)
-          .populate("author", "name username image verified")
-          .lean();
-
-        return {
-          tag,
-          count: data.count,
-          posts: recentPosts,
-        };
-      })
-    );
-
-    // Get all trending posts (posts with hashtags sorted by engagement)
-    const trendingPosts = await Post.find({
-      hashtags: { $exists: true, $ne: [] },
-      isPublished: true,
-    })
-      .sort({ likesCount: -1, commentsCount: -1, createdAt: -1 })
-      .limit(20)
-      .populate("author", "name username image verified")
-      .lean();
-
-    // Add like/bookmark/repost status for current user
-    const userId = session.user.id;
-    const trendingPostsWithStatus = trendingPosts.map((post) => ({
-      ...post,
-      liked: post.likedBy?.some((id: any) => id.toString() === userId) || false,
-      bookmarked: post.bookmarkedBy?.some((id: any) => id.toString() === userId) || false,
-      reposted: post.repostedBy?.some((id: any) => id.toString() === userId) || false,
+    // Format trending data
+    const trending = sortedHashtags.map(([tag, count]) => ({
+      tag,
+      count,
     }));
 
+    // ✅ FIX: Get trending posts - ONLY sort by createdAt
+    const trendingPosts = await Post.find({
+      hashtags: { $exists: true, $ne: [] },
+    })
+      .sort({ createdAt: -1 })  // ✅ Only sort by createdAt
+      .limit(20)
+      .populate("author", "name username image")
+      .lean();
+
+    const formattedTrendingPosts = trendingPosts.map((post: any) => {
+      // Calculate counts safely
+      const likeCount = Array.isArray(post.likes) ? post.likes.length : 0;
+      const commentCount = Array.isArray(post.comments) ? post.comments.length : 0;
+      
+      return {
+        ...post,
+        _id: post._id.toString(),
+        author: post.author ? {
+          ...post.author,
+          _id: post.author._id.toString(),
+        } : null,
+        likes: likeCount,
+        comments: commentCount,
+        createdAt: post.createdAt?.toISOString(),
+      };
+    });
+
+    console.log(`✅ Trending: ${trending.length} hashtags, ${formattedTrendingPosts.length} posts`);
+
     return NextResponse.json({
-      trending: sortedHashtags.map(([tag, data]) => ({
-        tag,
-        count: data.count,
-      })),
-      trendingData,
-      trendingPosts: trendingPostsWithStatus,
+      trending,
+      trendingPosts: formattedTrendingPosts,
     });
   } catch (error) {
-    console.error("GET /api/trending error:", error);
+    console.error("❌ Trending API Error:", error);
     return NextResponse.json(
       {
         trending: [],
-        trendingData: [],
         trendingPosts: [],
-        message: "Failed to fetch trending",
+        error: error instanceof Error ? error.message : "Failed to fetch trending",
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }
 
-// POST /api/trending - Update trending (recalculate)
+// POST /api/trending - Recalculate trending
 export async function POST(req: Request) {
   try {
+    console.log("🔵 Trending API: Recalculating...");
+    
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    // Only admin can trigger recalculation
-    if (session.user.role !== "admin") {
-      return NextResponse.json(
-        { message: "Only admins can recalculate trending" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
 
-    // Force a recalc by fetching and counting all hashtags
     const allPosts = await Post.find({
       hashtags: { $exists: true, $ne: [] },
-      isPublished: true,
     }).select("hashtags");
 
     const hashtagCount: Record<string, number> = {};
-    allPosts.forEach((post) => {
+    allPosts.forEach((post: any) => {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
-          hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
+          const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
+          if (cleanTag && cleanTag.length > 0) {
+            hashtagCount[cleanTag] = (hashtagCount[cleanTag] || 0) + 1;
+          }
         });
       }
     });
@@ -163,13 +167,14 @@ export async function POST(req: Request) {
       .slice(0, 20);
 
     return NextResponse.json({
+      success: true,
       message: "Trending recalculated",
       trending: sorted.map(([tag, count]) => ({ tag, count })),
     });
   } catch (error) {
-    console.error("POST /api/trending error:", error);
+    console.error("❌ Trending POST Error:", error);
     return NextResponse.json(
-      { message: "Failed to recalculate trending" },
+      { error: error instanceof Error ? error.message : "Failed to recalculate trending" },
       { status: 500 }
     );
   }

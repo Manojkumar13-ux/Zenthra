@@ -1,19 +1,7 @@
 // lib/db/models/Notification.ts
 import mongoose from "mongoose";
 
-export interface INotification extends mongoose.Document {
-  recipient: mongoose.Types.ObjectId;
-  sender: mongoose.Types.ObjectId;
-  type: "like" | "comment" | "mention" | "follow" | "repost" | "message" | "community";
-  content: string;
-  post?: mongoose.Types.ObjectId;
-  comment?: mongoose.Types.ObjectId;
-  read: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const NotificationSchema = new mongoose.Schema<INotification>(
+const NotificationSchema = new mongoose.Schema(
   {
     recipient: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,7 +15,7 @@ const NotificationSchema = new mongoose.Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ["like", "comment", "mention", "follow", "repost", "message", "community"],
+      enum: ["like", "comment", "mention", "follow", "message", "repost", "community", "achievement"],
       required: true,
     },
     content: {
@@ -37,22 +25,20 @@ const NotificationSchema = new mongoose.Schema<INotification>(
     post: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Post",
+      default: null,
     },
     comment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Comment",
+      default: null,
     },
     read: {
       type: Boolean,
       default: false,
     },
-    createdAt: {
+    readAt: {
       type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
+      default: null,
     },
   },
   {
@@ -60,10 +46,11 @@ const NotificationSchema = new mongoose.Schema<INotification>(
   }
 );
 
-// Indexes for performance
+// Indexes
 NotificationSchema.index({ recipient: 1, createdAt: -1 });
 NotificationSchema.index({ recipient: 1, read: 1 });
 NotificationSchema.index({ sender: 1 });
 NotificationSchema.index({ type: 1 });
 
-export const Notification = mongoose.models.Notification || mongoose.model<INotification>("Notification", NotificationSchema);
+// Register the model - using function to prevent overwrite
+export const Notification = mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);

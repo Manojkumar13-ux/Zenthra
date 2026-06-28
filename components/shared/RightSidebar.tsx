@@ -1,342 +1,355 @@
 // components/shared/RightSidebar.tsx
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import {
+  Hash,
+  TrendingUp,
+  Plus,
+  Smile,
+  ChevronDown,
+  Film,
+  Trophy,
+  Database,
+  Music,
+  Gamepad2,
+  Briefcase,
+  GraduationCap,
+  Tv,
+  X,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Users, TrendingUp, Hash, UserCheck, UserPlus, UserX } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
-export default function RightSidebar() {
-  const { data: session, status } = useSession();
+interface TrendingHashtag {
+  id: string;
+  tag: string;
+  count: number;
+  isActive?: boolean;
+}
+
+const emojis = [
+  { icon: "😊", label: "Smile" },
+  { icon: "😂", label: "Laugh" },
+  { icon: "❤️", label: "Love" },
+  { icon: "👍", label: "Like" },
+  { icon: "👎", label: "Dislike" },
+  { icon: "😡", label: "Angry" },
+  { icon: "😐", label: "Meh" },
+  { icon: "😢", label: "Sad" },
+  { icon: "☕", label: "Coffee" },
+  { icon: "🍕", label: "Pizza" },
+  { icon: "🚀", label: "Rocket" },
+  { icon: "👑", label: "Crown" },
+  { icon: "🎁", label: "Gift" },
+  { icon: "🐛", label: "Bug" },
+  { icon: "💡", label: "Idea" },
+  { icon: "🔥", label: "Fire" },
+  { icon: "🎉", label: "Party" },
+  { icon: "✨", label: "Sparkle" },
+  { icon: "⭐", label: "Star" },
+  { icon: "⚡", label: "Zap" },
+];
+
+const categories = [
+  { name: "Movies", icon: Film, href: "/explore?category=movies" },
+  { name: "Sports", icon: Trophy, href: "/explore?category=sports" },
+  { name: "Technology", icon: Database, href: "/explore?category=technology" },
+  { name: "Music", icon: Music, href: "/explore?category=music" },
+  { name: "Gaming", icon: Gamepad2, href: "/explore?category=gaming" },
+  { name: "Business", icon: Briefcase, href: "/explore?category=business" },
+  { name: "Education", icon: GraduationCap, href: "/explore?category=education" },
+];
+
+export function RightSidebar() {
+  const { data: session } = useSession();
   const router = useRouter();
-  const [suggestedUsers, setSuggestedUsers] = useState([]);
-  const [trendingHashtags, setTrendingHashtags] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [trendingHashtags, setTrendingHashtags] = useState<TrendingHashtag[]>([]);
+  const [selectedEmoji, setSelectedEmoji] = useState<string>("😊");
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [newHashtag, setNewHashtag] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
+    fetchTrendingHashtags();
+    
+    // Set up event listener for new posts with hashtags
+    const handleNewPost = (event: CustomEvent) => {
+      const { hashtags } = event.detail;
+      if (hashtags && hashtags.length > 0) {
+        updateTrendingHashtags(hashtags);
+      }
+    };
+
+    window.addEventListener('newPost' as any, handleNewPost);
+    return () => {
+      window.removeEventListener('newPost' as any, handleNewPost);
+    };
   }, []);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      // Fetch trending hashtags
-      const trendingRes = await fetch("/api/explore/trending", {
-        credentials: "include",
-        cache: 'no-store'
-      });
-      if (trendingRes.ok) {
-        const trendingData = await trendingRes.json();
-        setTrendingHashtags(trendingData.hashtags || []);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setIsEmojiPickerOpen(false);
       }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-      // Fetch suggested users
-      const usersRes = await fetch("/api/users/suggested", {
-        credentials: "include",
-        cache: 'no-store'
-      });
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        setSuggestedUsers(usersData.users || []);
+  const fetchTrendingHashtags = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/hashtags/trending");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hashtags && data.hashtags.length > 0) {
+          setTrendingHashtags(data.hashtags);
+        }
       }
     } catch (error) {
-      console.error("Failed to fetch sidebar data:", error);
+      console.error("Failed to fetch trending hashtags:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchData();
-    } else {
-      setLoading(false);
-    }
-  }, [status]);
+  const updateTrendingHashtags = (hashtags: string[]) => {
+    setTrendingHashtags(prev => {
+      const updated = [...prev];
+      
+      hashtags.forEach(tag => {
+        const cleanTag = tag.startsWith('#') ? tag.slice(1) : tag;
+        const existing = updated.find(h => h.tag.toLowerCase() === cleanTag.toLowerCase());
+        
+        if (existing) {
+          existing.count += 1;
+        } else {
+          updated.push({
+            id: Date.now().toString() + Math.random(),
+            tag: cleanTag,
+            count: 1,
+          });
+        }
+      });
+      
+      return updated.sort((a, b) => b.count - a.count);
+    });
+  };
 
-  // Refresh data when posts are created (polling)
-  useEffect(() => {
-    if (status !== "authenticated") return;
+  const handleAddHashtag = async () => {
+    if (!newHashtag.trim()) {
+      toast.error("Please enter a hashtag");
+      return;
+    }
     
-    const interval = setInterval(() => {
-      fetchData();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [status]);
-
-  // ============================================
-  // FOLLOW HANDLER
-  // ============================================
-  const handleFollow = async (userId: string, userName: string) => {
-    if (!session) {
-      toast.error("Please login to follow users");
-      return;
-    }
-
-    setLoadingStates(prev => ({ ...prev, [userId]: true }));
-
+    const cleanTag = newHashtag.trim().startsWith('#') ? newHashtag.trim().slice(1) : newHashtag.trim();
+    
     try {
-      const res = await fetch(`/api/users/${userId}/follow?action=follow`, {
+      const res = await fetch("/api/hashtags/trending", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        body: JSON.stringify({ tag: cleanTag }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to follow");
+      
+      if (res.ok) {
+        const data = await res.json();
+        setTrendingHashtags(prev => {
+          const existing = prev.find(h => h.tag.toLowerCase() === cleanTag.toLowerCase());
+          if (existing) {
+            existing.count += 1;
+            return [...prev].sort((a, b) => b.count - a.count);
+          }
+          const newHashtag = {
+            id: data.hashtag?.id || Date.now().toString(),
+            tag: cleanTag,
+            count: 1,
+            isActive: true,
+          };
+          return [newHashtag, ...prev].sort((a, b) => b.count - a.count);
+        });
+        setNewHashtag("");
+        toast.success(`#${cleanTag} added to trending!`);
       }
-
-      setSuggestedUsers((prevUsers: any[]) =>
-        prevUsers.map((user: any) =>
-          user._id === userId
-            ? { 
-                ...user, 
-                isFollowing: true,
-                followersCount: (user.followersCount || 0) + 1
-              }
-            : user
-        )
-      );
-
-      toast.success(data.message || `Following ${userName}`);
     } catch (error) {
-      console.error("Follow error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to follow user");
-    } finally {
-      setLoadingStates(prev => ({ ...prev, [userId]: false }));
+      console.error("Failed to add hashtag:", error);
+      toast.error("Failed to add hashtag");
     }
   };
 
-  // ============================================
-  // UNFOLLOW HANDLER
-  // ============================================
-  const handleUnfollow = async (userId: string, userName: string) => {
-    if (!session) {
-      toast.error("Please login to unfollow");
-      return;
-    }
-
-    setLoadingStates(prev => ({ ...prev, [userId]: true }));
-
-    try {
-      const res = await fetch(`/api/users/${userId}/follow?action=unfollow`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to unfollow");
-      }
-
-      setSuggestedUsers((prevUsers: any[]) =>
-        prevUsers.map((user: any) =>
-          user._id === userId
-            ? { 
-                ...user, 
-                isFollowing: false,
-                followersCount: Math.max((user.followersCount || 0) - 1, 0)
-              }
-            : user
-        )
-      );
-
-      toast.success(data.message || `Unfollowed ${userName}`);
-    } catch (error) {
-      console.error("Unfollow error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to unfollow user");
-    } finally {
-      setLoadingStates(prev => ({ ...prev, [userId]: false }));
-    }
+  const handleEmojiSelect = (emoji: string) => {
+    setSelectedEmoji(emoji);
+    setIsEmojiPickerOpen(false);
+    toast.success(`Selected ${emoji}`);
   };
 
   if (!mounted) {
     return (
-      <div className="space-y-4">
-        <div className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm border h-[200px] animate-pulse" />
-        <div className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm border h-[200px] animate-pulse" />
-      </div>
-    );
-  }
-
-  if (status === "loading") {
-    return (
-      <div className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm border">
-        <div className="flex justify-center py-6">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      <div className="hidden lg:block w-80 flex-shrink-0 p-4">
+        <div className="animate-pulse space-y-4">
+          <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+          <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
         </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm border">
-        <h3 className="font-semibold mb-2">Welcome to Zenthra!</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Sign in to connect with others and discover amazing content.
-        </p>
-        <Button
-          onClick={() => router.push("/login")}
-          className="w-full"
-        >
-          Sign In
-        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Trending Hashtags */}
-      <Card className="p-4">
+    <div className="hidden lg:block w-80 flex-shrink-0 p-4 space-y-4">
+      {/* Trending Hashtags Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
         <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="h-4 w-4 text-orange-500" />
-          <h3 className="font-semibold">Trending</h3>
+          <TrendingUp className="h-5 w-5 text-blue-500" />
+          <h2 className="font-semibold text-lg">Trending Hashtags</h2>
         </div>
-        {loading ? (
+
+        {isLoading ? (
           <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          </div>
-        ) : trendingHashtags.length === 0 ? (
-          <div className="text-center py-4 text-sm text-gray-500">
-            <Hash className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-            <p>No trending hashtags yet</p>
-            <p className="text-xs mt-1">Posts with #hashtags will appear here</p>
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
           </div>
         ) : (
           <div className="space-y-2">
-            {trendingHashtags.slice(0, 5).map((tag: any, index: number) => (
-              <Link
-                key={tag.tag || index}
-                href={`/explore?q=${tag.tag}`}
-                className="flex items-center justify-between p-2 hover:bg-muted rounded-lg transition-colors"
-                onClick={() => {
-                  // Close any open menus
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <Hash className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-sm font-medium">#{tag.tag}</span>
-                </div>
-                <Badge variant="secondary" className="text-xs">
-                  {tag.count} posts
-                </Badge>
-              </Link>
-            ))}
+            {trendingHashtags.length === 0 ? (
+              <div className="text-center py-4">
+                <Hash className="h-8 w-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500">No trending hashtags yet</p>
+                <p className="text-xs text-gray-400 mt-1">Start using #hashtags in your posts!</p>
+              </div>
+            ) : (
+              trendingHashtags.slice(0, 10).map((hashtag, index) => (
+                <Link
+                  key={hashtag.id}
+                  href={`/explore?q=${hashtag.tag}`}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 rounded-lg transition-all group",
+                    index < 3 ? "hover:bg-blue-50 dark:hover:bg-blue-900/20" : "hover:bg-gray-100 dark:hover:bg-gray-700",
+                    hashtag.isActive && "bg-blue-50 dark:bg-blue-900/20"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-sm font-medium",
+                      index === 0 && "text-yellow-500",
+                      index === 1 && "text-gray-400",
+                      index === 2 && "text-orange-400"
+                    )}>
+                      #{hashtag.tag}
+                    </span>
+                    {index < 3 && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5">
+                        {index === 0 ? "🔥" : index === 1 ? "⭐" : "💫"}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500">{hashtag.count}</span>
+                </Link>
+              ))
+            )}
           </div>
         )}
-      </Card>
 
-      {/* Suggested Users */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Users className="h-4 w-4 text-blue-500" />
-            Suggested for you
-          </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-7"
-            onClick={() => router.push("/find-people")}
-          >
-            View all
+        {/* Add Hashtag Input */}
+        <div className="mt-3 flex gap-2">
+          <Input
+            placeholder="Add #hashtag"
+            className="flex-1 h-8 text-sm rounded-full bg-gray-100 dark:bg-gray-700 border-0"
+            value={newHashtag}
+            onChange={(e) => setNewHashtag(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAddHashtag()}
+          />
+          <Button size="sm" className="rounded-full h-8 px-3" onClick={handleAddHashtag}>
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
+      </div>
 
-        {loading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+      {/* Emoji Picker Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{selectedEmoji}</span>
+            <span className="text-sm text-gray-500">Selected emoji</span>
           </div>
-        ) : suggestedUsers.length === 0 ? (
-          <div className="text-center py-4 text-sm text-gray-500">
-            No suggestions available
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {suggestedUsers.slice(0, 5).map((user: any) => {
-              const isFollowing = user.isFollowing || false;
-              const isLoading = loadingStates[user._id] || false;
-              
-              return (
-                <div 
-                  key={user._id} 
-                  className="flex items-center gap-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 px-2 rounded-lg transition-colors"
-                >
-                  <Link href={`/profile/${user._id}`}>
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.image} />
-                      <AvatarFallback>{user.name?.[0]?.toUpperCase() || "U"}</AvatarFallback>
-                    </Avatar>
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/profile/${user._id}`} className="hover:underline">
-                      <p className="font-medium text-sm truncate">{user.name}</p>
-                    </Link>
-                    <p className="text-xs text-gray-500 truncate">@{user.username}</p>
-                    <p className="text-xs text-gray-400">
-                      {user.followersCount || 0} followers
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    {!isFollowing && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="h-7 px-3 text-xs"
-                        onClick={() => handleFollow(user._id, user.name)}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <UserPlus className="h-3 w-3 mr-1" />
-                            Follow
-                          </>
-                        )}
-                      </Button>
-                    )}
-                    
-                    {isFollowing && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="h-7 px-3 text-xs"
-                        onClick={() => handleUnfollow(user._id, user.name)}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <UserX className="h-3 w-3 mr-1" />
-                            Unfollow
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
+          <div className="relative" ref={emojiPickerRef}>
+            <Button
+              variant="outline"
+              className="rounded-full gap-2 text-sm h-9"
+              onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+            >
+              <Smile className="h-4 w-4" />
+              <span>Choose</span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+
+            {isEmojiPickerOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border dark:border-gray-700 z-50 p-3">
+                <div className="grid grid-cols-5 gap-1">
+                  {emojis.map((emoji) => (
+                    <button
+                      key={emoji.label}
+                      onClick={() => handleEmojiSelect(emoji.icon)}
+                      className={cn(
+                        "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl",
+                        selectedEmoji === emoji.icon && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500"
+                      )}
+                      title={emoji.label}
+                    >
+                      {emoji.icon}
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
+                <div className="mt-2 text-center text-xs text-gray-500">
+                  Click any emoji to select
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </Card>
+        </div>
+      </div>
+
+      {/* Categories Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
+        <h2 className="font-semibold text-lg mb-3">Categories</h2>
+        <div className="space-y-1">
+          {categories.map((category) => (
+            <Link
+              key={category.name}
+              href={category.href}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
+            >
+              <category.icon className="h-5 w-5 text-gray-500 group-hover:text-blue-500 transition-colors" />
+              <span className="text-sm font-medium">{category.name}</span>
+              <ChevronDown className="h-4 w-4 ml-auto text-gray-400 group-hover:text-blue-500 transition-colors rotate-[-90deg]" />
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Weather Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-3xl">🌤️</span>
+            <div>
+              <p className="text-2xl font-bold">28°C</p>
+              <p className="text-sm text-gray-500">Partly cloudy</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            Today
+          </Badge>
+        </div>
+      </div>
     </div>
   );
 }

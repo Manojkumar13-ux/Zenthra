@@ -1,4 +1,4 @@
-// app/api/explore/trending/route.ts
+// app/api/trending/refresh/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -14,41 +14,34 @@ export async function GET() {
 
     await connectDB();
 
-    // Get ALL posts with hashtags
     const allPosts = await Post.find({
       hashtags: { $exists: true, $ne: [] },
-    })
-      .select("hashtags")
-      .lean();
+    }).select("hashtags");
 
-    // Count hashtag occurrences
-    const hashtagCountMap: Record<string, number> = {};
-
+    const hashtagCount: Record<string, number> = {};
     allPosts.forEach((post: any) => {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
-          // Clean the tag (remove # if present)
           const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
           if (cleanTag && cleanTag.length > 0) {
-            hashtagCountMap[cleanTag] = (hashtagCountMap[cleanTag] || 0) + 1;
+            hashtagCount[cleanTag] = (hashtagCount[cleanTag] || 0) + 1;
           }
         });
       }
     });
 
-    // Sort and format
-    const trending = Object.entries(hashtagCountMap)
-      .map(([hashtag, count]) => ({ hashtag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    const sorted = Object.entries(hashtagCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20);
 
-    console.log("📊 Trending hashtags:", trending);
-
-    return NextResponse.json({ trending });
+    return NextResponse.json({
+      success: true,
+      message: "Trending refreshed",
+      trending: sorted.map(([tag, count]) => ({ tag, count })),
+    });
   } catch (error) {
-    console.error("Trending error:", error);
     return NextResponse.json(
-      { trending: [] },
+      { error: "Failed to refresh trending" },
       { status: 500 }
     );
   }

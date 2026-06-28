@@ -1,7 +1,7 @@
 ﻿// app/(main)/feed/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useSession } from "next-auth/react";
@@ -12,16 +12,37 @@ import FeedSkeleton from "@/components/feed/FeedSkeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, RefreshCw, AlertCircle, TrendingUp, Users, Loader2 } from "lucide-react";
+import { 
+  Sparkles, 
+  RefreshCw, 
+  AlertCircle, 
+  TrendingUp, 
+  Users, 
+  Loader2,
+  Globe
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 type TabType = "for-you" | "following" | "trending" | "communities";
+type CategoryType = "all" | "movie" | "sports" | "technology" | "music" | "gaming" | "business" | "education";
+
+const categories: { value: CategoryType; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "movie", label: "Movies" },
+  { value: "sports", label: "Sports" },
+  { value: "technology", label: "Technology" },
+  { value: "music", label: "Music" },
+  { value: "gaming", label: "Gaming" },
+  { value: "business", label: "Business" },
+  { value: "education", label: "Education" },
+];
 
 export default function FeedPage() {
   const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabType>("for-you");
-  const { ref, inView } = useInView();
+  const [category, setCategory] = useState<CategoryType>("all");
+  const { ref, inView } = useInView({ threshold: 0.1 });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -37,29 +58,25 @@ export default function FeedPage() {
     isError,
     error,
     refetch,
+    isFetching,
   } = useInfiniteQuery({
-    queryKey: ["feed", tab],
+    queryKey: ["feed", tab, category],
     queryFn: async ({ pageParam = 1 }) => {
-      try {
-        console.log(`🔵 Fetching feed: tab=${tab}, page=${pageParam}`);
-        
-        const res = await fetch(`/api/feed?tab=${tab}&page=${pageParam}&limit=10`, {
+      const res = await fetch(
+        `/api/feed?tab=${tab}&category=${category}&page=${pageParam}&limit=10`,
+        {
           credentials: "include",
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          console.error("🔴 Feed API Error:", errorData);
-          throw new Error(errorData.error || "Failed to fetch feed");
+          headers: { "Content-Type": "application/json" },
         }
-        
-        const data = await res.json();
-        console.log(`🟢 Feed API Success: ${data.posts?.length || 0} posts, total: ${data.pagination?.total || 0}`);
-        return data;
-      } catch (error) {
-        console.error("❌ Feed fetch error:", error);
-        throw error;
+      );
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch feed: ${res.status}`);
       }
+      
+      const data = await res.json();
+      return data;
     },
     getNextPageParam: (lastPage) => {
       if (lastPage?.pagination?.hasNext) {
@@ -71,7 +88,7 @@ export default function FeedPage() {
     enabled: status === "authenticated" && mounted,
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: 2,
   });
 
   useEffect(() => {
@@ -80,17 +97,31 @@ export default function FeedPage() {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const allPosts = data?.pages?.flatMap((page) => page.posts || []) || [];
-  const totalPosts = data?.pages?.[0]?.pagination?.total || 0;
+  const allPosts = useMemo(() => {
+    return data?.pages?.flatMap((page) => page.posts || []) || [];
+  }, [data]);
+
+  const totalPosts = useMemo(() => {
+    return data?.pages?.[0]?.pagination?.total || 0;
+  }, [data]);
 
   const handleTabChange = useCallback((value: string) => {
     setTab(value as TabType);
-    queryClient.invalidateQueries({ queryKey: ["feed", value] });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ["feed", value, category] });
+  }, [queryClient, category]);
+
+  const handleCategoryChange = useCallback((value: CategoryType) => {
+    setCategory(value);
+    queryClient.invalidateQueries({ queryKey: ["feed", tab, value] });
+  }, [queryClient, tab]);
 
   const handleRefresh = useCallback(() => {
     refetch();
     toast.success("Feed refreshed!");
+  }, [refetch]);
+
+  const handlePostCreated = useCallback(() => {
+    refetch();
   }, [refetch]);
 
   const handlePostDeleted = useCallback(() => {
@@ -101,7 +132,13 @@ export default function FeedPage() {
   // LOADING STATE
   // ============================================
   if (status === "loading" || !mounted) {
-    return <FeedSkeleton />;
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="h-[120px] bg-muted/20 rounded-xl animate-pulse" />
+        <div className="h-[50px] bg-muted/20 rounded-lg animate-pulse" />
+        <FeedSkeleton count={3} />
+      </div>
+    );
   }
 
   // ============================================
@@ -156,12 +193,27 @@ export default function FeedPage() {
   }
 
   // ============================================
-  // MAIN FEED RENDER
+  // MAIN FEED RENDER - ✅ SEARCH BAR REMOVED
   // ============================================
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Categories - ✅ No search bar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {categories.map((cat) => (
+          <Button
+            key={cat.value}
+            variant={category === cat.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleCategoryChange(cat.value)}
+            className="rounded-full text-sm whitespace-nowrap capitalize"
+          >
+            {cat.label}
+          </Button>
+        ))}
+      </div>
+
       {/* Create Post */}
-      <CreatePost onPostCreated={() => refetch()} />
+      <CreatePost onPostCreated={handlePostCreated} />
 
       {/* Feed Tabs */}
       <div className="flex items-center justify-between">
@@ -180,7 +232,7 @@ export default function FeedPage() {
               Trending
             </TabsTrigger>
             <TabsTrigger value="communities" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
+              <Globe className="h-4 w-4" />
               Communities
             </TabsTrigger>
           </TabsList>
@@ -191,8 +243,9 @@ export default function FeedPage() {
           size="sm"
           onClick={handleRefresh}
           className="ml-2"
+          disabled={isFetching}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
@@ -205,9 +258,7 @@ export default function FeedPage() {
         )}
 
         <AnimatePresence mode="wait">
-          {isLoading && allPosts.length === 0 ? (
-            <FeedSkeleton />
-          ) : allPosts.length === 0 ? (
+          {allPosts.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -221,24 +272,22 @@ export default function FeedPage() {
               </div>
               <h3 className="text-xl font-semibold mb-2">No posts to show</h3>
               <p className="text-muted-foreground max-w-sm mx-auto">
-                {tab === "for-you" && "Create your first post or follow people to see their posts here!"}
-                {tab === "following" && "Follow some people to see their posts here"}
-                {tab === "trending" && "No trending posts yet. Create a post with #hashtags to start trending!"}
-                {tab === "communities" && "Join communities to see posts from members"}
+                {category !== "all" ? (
+                  <>No posts in <span className="font-medium">{category}</span> category yet.<br />Create a post with relevant hashtags!</>
+                ) : tab === "for-you" ? (
+                  "Create your first post or follow people to see their posts here!"
+                ) : tab === "following" ? (
+                  "Follow some people to see their posts here"
+                ) : tab === "trending" ? (
+                  "No trending posts yet. Create a post with #hashtags to start trending!"
+                ) : (
+                  "Join communities to see posts from members"
+                )}
               </p>
-              {tab === "trending" && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  💡 Tip: Use #hashtags like #movie in your posts to appear in trending!
+              {category !== "all" && (
+                <p className="text-sm text-muted-foreground mt-4">
+                  💡 Tip: Use #{category} in your posts to appear in this category!
                 </p>
-              )}
-              {tab === "for-you" && (
-                <Button
-                  onClick={() => handleTabChange("following")}
-                  variant="outline"
-                  className="mt-4"
-                >
-                  Check Following
-                </Button>
               )}
             </motion.div>
           ) : (
@@ -250,7 +299,7 @@ export default function FeedPage() {
             >
               {allPosts.map((post: any, index: number) => (
                 <motion.div
-                  key={post._id}
+                  key={post._id || index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}

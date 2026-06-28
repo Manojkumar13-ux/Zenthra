@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarSimple } from "@/components/ui/avatar-simple"; // ✅ Changed to AvatarSimple
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -343,12 +343,14 @@ const PostCardComponent = ({ post, isComment = false, onDelete, onEdit }: PostCa
         )}
 
         <div className="flex items-start gap-3">
-          {/* Avatar */}
+          {/* ✅ Avatar - Using AvatarSimple instead */}
           <Link href={`/profile/${displayAuthor?._id}`}>
-            <Avatar className="h-10 w-10 ring-2 ring-background">
-              <AvatarImage src={displayAuthor?.image} />
-              <AvatarFallback>{displayAuthor?.name?.[0]}</AvatarFallback>
-            </Avatar>
+            <AvatarSimple
+              src={displayAuthor?.image}
+              fallback={displayAuthor?.name || "User"}
+              alt={displayAuthor?.name || "User"}
+              size="md"
+            />
           </Link>
 
           <div className="flex-1 min-w-0">
@@ -573,7 +575,7 @@ const PostCardComponent = ({ post, isComment = false, onDelete, onEdit }: PostCa
                   <Share2 className="h-4 w-4" />
                 </Button>
 
-                {/* 3-Dot Menu - FIXED POSITIONING */}
+                {/* 3-Dot Menu */}
                 <div className="relative" ref={menuRef}>
                   <Button 
                     variant="ghost" 
@@ -585,7 +587,7 @@ const PostCardComponent = ({ post, isComment = false, onDelete, onEdit }: PostCa
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                   
-                  {/* Dropdown Menu - Positioned absolutely above other content */}
+                  {/* Dropdown Menu */}
                   {showActions && (
                     <div 
                       className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border dark:border-gray-700 z-[9999] py-1 min-w-[180px]"
