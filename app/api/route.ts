@@ -1,8 +1,9 @@
+// app/api/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
-import { connectDB } from "@/lib/db/connect";
-import { User } from "@/lib/db/models/User";
+import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export async function POST(req: Request) {
   try {
@@ -20,15 +21,23 @@ export async function POST(req: Request) {
       return NextResponse.json([]);
     }
 
-    await connectDB();
-
-    const users = await User.find({
-      _id: { $in: userIds }
+    const db = await connectToDatabase();
+    const usersCollection = db.collection("users");
+    
+    const objectIds = userIds.map((id: string) => new ObjectId(id));
+    
+    const users = await usersCollection.find({
+      _id: { $in: objectIds }
     })
-    .select("_id name username image")
-    .lean();
+    .project({ _id: 1, name: 1, username: 1, image: 1 })
+    .toArray();
 
-    return NextResponse.json(users);
+    const formattedUsers = users.map((user: any) => ({
+      ...user,
+      _id: user._id.toString(),
+    }));
+
+    return NextResponse.json(formattedUsers);
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json(
@@ -52,7 +61,8 @@ export async function GET(req: Request) {
     const search = searchParams.get("search") || "";
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    await connectDB();
+    const db = await connectToDatabase();
+    const usersCollection = db.collection("users");
 
     let query: any = {};
     if (search) {
@@ -62,21 +72,26 @@ export async function GET(req: Request) {
       ];
     }
 
-    const users = await User.find(query)
-      .select("_id name username image bio followers following")
+    const users = await usersCollection.find(query)
       .limit(limit)
-      .lean();
+      .toArray();
 
-    const currentUser = await User.findById(session.user.id).select("following");
+    // Get current user's following list
+    const currentUser = await usersCollection.findOne({
+      _id: new ObjectId(session.user.id)
+    });
+
+    const followingIds = currentUser?.following?.map((id: string) => id.toString()) || [];
 
     const usersWithStatus = users.map((user: any) => ({
-      ...user,
       _id: user._id.toString(),
-      isFollowing: currentUser?.following?.some(
-        (id: any) => id.toString() === user._id.toString()
-      ) || false,
+      name: user.name,
+      username: user.username,
+      image: user.image,
+      bio: user.bio,
       followersCount: user.followers?.length || 0,
       followingCount: user.following?.length || 0,
+      isFollowing: followingIds.includes(user._id.toString()),
     }));
 
     return NextResponse.json(usersWithStatus);

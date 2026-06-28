@@ -104,3 +104,5 @@ temp/
 *.swo
 *~
 .DS_Store" > .gitignore
+.vercel
+.env*

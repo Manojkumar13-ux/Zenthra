@@ -2,8 +2,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { connectDB } from "./db/connect";
-import { User } from "./db/models/User";
+import { connectToDatabase } from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
@@ -11,6 +10,13 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code",
+        },
+      },
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -24,9 +30,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          await connectDB();
+          const db = await connectToDatabase();
+          const usersCollection = db.collection("users");
           
-          const user = await User.findOne({
+          const user = await usersCollection.findOne({
             email: credentials.email.toLowerCase()
           });
 
@@ -69,15 +76,16 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         try {
-          await connectDB();
+          const db = await connectToDatabase();
+          const usersCollection = db.collection("users");
           
-          let existingUser = await User.findOne({
+          let existingUser = await usersCollection.findOne({
             email: user.email
           });
 
@@ -94,25 +102,30 @@ export const authOptions: NextAuthOptions = {
               website: "",
               followers: [],
               following: [],
+              followersCount: 0,
+              followingCount: 0,
               postsCount: 0,
               isVerified: false,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
             
-            const result = await User.create(newUser);
-            user.id = result._id.toString();
+            const result = await usersCollection.insertOne(newUser);
+            user.id = result.insertedId.toString();
             console.log("✅ New Google user created:", user.email);
           } else {
             user.id = existingUser._id.toString();
-            await User.findByIdAndUpdate(existingUser._id, {
-              $set: { 
-                image: user.image || existingUser.image,
-                name: user.name || existingUser.name,
-                googleId: account.providerAccountId,
-                updatedAt: new Date()
+            await usersCollection.updateOne(
+              { _id: existingUser._id },
+              { 
+                $set: { 
+                  image: user.image || existingUser.image,
+                  name: user.name || existingUser.name,
+                  googleId: account.providerAccountId,
+                  updatedAt: new Date()
+                } 
               }
-            });
+            );
             console.log("✅ Existing Google user updated:", user.email);
           }
         } catch (error) {
