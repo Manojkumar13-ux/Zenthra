@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Follow</title>
+</head>
+<body>
+    <h1>Test Follow API</h1>
+    <button onclick="testFollow()">Follow User</button>
+    <button onclick="testUnfollow()">Unfollow User</button>
+    <pre id="result"></pre>
+
+    <script>
+        const userId = '6a3e6d487c602e5c38fc5530';
+
+        async function testFollow() {
+            try {
+                const res = await fetch(`/api/users/${userId}/follow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ action: 'follow' }),
+                });
+                const text = await res.text();
+                document.getElementById('result').textContent = `Status: ${res.status}\nResponse: ${text}`;
+            } catch (error) {
+                document.getElementById('result').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function testUnfollow() {
+            try {
+                const res = await fetch(`/api/users/${userId}/follow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ action: 'unfollow' }),
+                });
+                const text = await res.text();
+                document.getElementById('result').textContent = `Status: ${res.status}\nResponse: ${text}`;
+            } catch (error) {
+                document.getElementById('result').textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
