@@ -21,10 +21,8 @@ export default async function MainLayout({
       <Navbar>
         <div className="flex gap-6">
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
-            {children}
-          </div>
-          
+          <div className="min-w-0 flex-1">{children}</div>
+
           {/* Right Sidebar */}
           <RightSidebar />
         </div>

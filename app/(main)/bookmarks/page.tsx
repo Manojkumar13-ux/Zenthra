@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Bookmark, Loader2 } from "lucide-react";
-import PostCard from "@/components/posts/PostCard"; // ✅ Fixed import
+import PostCard from "@/components/posts/PostCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -74,12 +74,12 @@ export default function BookmarksPage() {
   };
 
   const handleRemoveBookmark = (postId: string) => {
-    setBookmarks(prev => prev.filter(post => post._id !== postId));
+    setBookmarks((prev) => prev.filter((post) => post._id !== postId));
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
@@ -87,8 +87,8 @@ export default function BookmarksPage() {
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        <div className="text-center py-12">
+      <div className="mx-auto max-w-2xl p-4">
+        <div className="py-12 text-center">
           <p className="text-red-500">{error}</p>
           <Button variant="outline" className="mt-4" onClick={fetchBookmarks}>
             Try Again
@@ -99,8 +99,8 @@ export default function BookmarksPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="mx-auto max-w-2xl p-4">
+      <div className="mb-6 flex items-center gap-3">
         <Bookmark className="h-8 w-8 text-blue-500" />
         <h1 className="text-2xl font-bold">Bookmarks</h1>
         <span className="text-sm text-gray-500">({bookmarks.length})</span>
@@ -108,12 +108,10 @@ export default function BookmarksPage() {
 
       {bookmarks.length === 0 ? (
         <Card>
-          <CardContent className="text-center py-12">
-            <Bookmark className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <CardContent className="py-12 text-center">
+            <Bookmark className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
             <p className="text-gray-500">No bookmarks yet</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Save posts you want to read later
-            </p>
+            <p className="mt-1 text-sm text-gray-400">Save posts you want to read later</p>
           </CardContent>
         </Card>
       ) : (

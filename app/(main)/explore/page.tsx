@@ -4,393 +4,470 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { 
-  Search, 
-  Users, 
-  Hash, 
+import {
+  Search,
+  Hash,
   TrendingUp,
+  Users,
+  UserPlus,
   Loader2,
+  Flame,
   Sparkles,
-  X,
-  Film,
-  Music,
-  Gamepad,
-  Code,
-  GraduationCap,
-  Briefcase,
-  Trophy
+  Clock,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
-type CategoryType = "all" | "movie" | "sports" | "technology" | "music" | "gaming" | "business" | "education";
+interface Post {
+  _id: string;
+  content: string;
+  author: {
+    _id: string;
+    name: string;
+    username: string;
+    image?: string;
+  };
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  repostsCount: number;
+  hashtags: string[];
+  media?: string[];
+}
 
-const categoryIcons: Record<CategoryType, any> = {
-  all: Sparkles,
-  movie: Film,
-  sports: Trophy,
-  technology: Code,
-  music: Music,
-  gaming: Gamepad,
-  business: Briefcase,
-  education: GraduationCap,
-};
+interface User {
+  _id: string;
+  name: string;
+  username: string;
+  image?: string;
+  bio?: string;
+  followersCount: number;
+  isFollowing: boolean;
+}
 
-const categoryColors: Record<CategoryType, string> = {
-  all: "text-purple-500",
-  movie: "text-red-500",
-  sports: "text-green-500",
-  technology: "text-blue-500",
-  music: "text-pink-500",
-  gaming: "text-orange-500",
-  business: "text-yellow-500",
-  education: "text-indigo-500",
+interface Hashtag {
+  tag: string;
+  count: number;
+}
+
+type CategoryType =
+  | "all"
+  | "movie"
+  | "sports"
+  | "technology"
+  | "music"
+  | "gaming"
+  | "business"
+  | "education";
+
+const categories: CategoryType[] = [
+  "all",
+  "movie",
+  "sports",
+  "technology",
+  "music",
+  "gaming",
+  "business",
+  "education",
+];
+
+const categoryLabels: Record<CategoryType, string> = {
+  all: "All",
+  movie: "Movies",
+  sports: "Sports",
+  technology: "Technology",
+  music: "Music",
+  gaming: "Gaming",
+  business: "Business",
+  education: "Education",
 };
 
 export default function ExplorePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryType>("all");
-  
-  const [trendingHashtags, setTrendingHashtags] = useState([]);
-  const [categoryPosts, setCategoryPosts] = useState([]);
-  const [searchResults, setSearchResults] = useState(null);
+  const [activeTab, setActiveTab] = useState<"posts" | "hashtags" | "users">(
+    "posts"
+  );
+  const [category, setCategory] = useState<CategoryType>("all");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [hashtags, setHashtags] = useState<Hashtag[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    fetchTrendingHashtags();
-    fetchCategoryPosts("all");
-  }, []);
-
-  const fetchTrendingHashtags = async () => {
-    try {
-      const res = await fetch("/api/explore/trending", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch trending");
-      const data = await res.json();
-      setTrendingHashtags(data.hashtags || []);
-    } catch (error) {
-      console.error("Error fetching trending:", error);
-      toast.error("Failed to load trending");
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
     }
-  };
+  }, [status, router]);
 
-  const fetchCategoryPosts = async (category: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/explore?type=posts&category=${category}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch category posts");
-      const data = await res.json();
-      setCategoryPosts(data.results || []);
-    } catch (error) {
-      console.error("Error fetching category posts:", error);
-      toast.error("Failed to load posts");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category as CategoryType);
-    fetchCategoryPosts(category);
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast.error("Please enter a search term");
       return;
     }
-    
-    setLoading(true);
+
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const postsRes = await fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=posts`, {
-        credentials: "include",
-      });
-      const postsData = await postsRes.json();
-      
-      const hashtagsRes = await fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=hashtags`, {
-        credentials: "include",
-      });
-      const hashtagsData = await hashtagsRes.json();
-      
-      setSearchResults({
-        posts: postsData.results || [],
-        hashtags: hashtagsData.results || [],
-      });
-      
-      router.push(`/explore?q=${encodeURIComponent(searchQuery)}`);
-    } catch (error) {
-      toast.error("Search failed");
+      const promises = [];
+      const baseUrl = `/api/explore?q=${encodeURIComponent(searchQuery)}&category=${category}`;
+
+      if (activeTab === "posts" || activeTab === "posts") {
+        promises.push(
+          fetch(`${baseUrl}&type=posts`).then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch posts");
+            return res.json();
+          })
+        );
+      }
+      if (activeTab === "hashtags" || activeTab === "hashtags") {
+        promises.push(
+          fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=hashtags`).then(
+            (res) => {
+              if (!res.ok) throw new Error("Failed to fetch hashtags");
+              return res.json();
+            }
+          )
+        );
+      }
+      if (activeTab === "users" || activeTab === "users") {
+        promises.push(
+          fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=users`).then(
+            (res) => {
+              if (!res.ok) throw new Error("Failed to fetch users");
+              return res.json();
+            }
+          )
+        );
+      }
+
+      const results = await Promise.allSettled(promises);
+
+      let postIndex = 0;
+      let hashtagIndex = 0;
+      let userIndex = 0;
+
+      if (activeTab === "posts" || activeTab === "posts") {
+        const result = results[postIndex++];
+        if (result.status === "fulfilled") {
+          setPosts(result.value.posts || []);
+        }
+      }
+      if (activeTab === "hashtags" || activeTab === "hashtags") {
+        const result = results[hashtagIndex + (activeTab === "posts" ? 1 : 0)];
+        if (result?.status === "fulfilled") {
+          setHashtags(result.value.hashtags || []);
+        }
+      }
+      if (activeTab === "users" || activeTab === "users") {
+        const result =
+          results[
+            userIndex +
+            (activeTab === "posts" ? 1 : 0) +
+            (activeTab === "hashtags" ? 1 : 0)
+          ];
+        if (result?.status === "fulfilled") {
+          setUsers(result.value.users || []);
+        }
+      }
+    } catch (err) {
+      setError("Failed to fetch results. Please try again.");
+      console.error(err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const clearSearch = () => {
-    setSearchQuery("");
-    setSearchResults(null);
-    router.push("/explore");
+  const handleFollow = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "follow" }),
+      });
+      if (!res.ok) throw new Error("Failed to follow user");
+      setUsers((prev) =>
+        prev.map((user) =>
+          user._id === userId ? { ...user, isFollowing: true } : user
+        )
+      );
+      toast.success("User followed!");
+    } catch (error) {
+      toast.error("Failed to follow user");
+      console.error(error);
+    }
   };
 
-  if (!mounted) {
-    return <ExploreSkeleton />;
-  }
+  const handleUnfollow = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unfollow" }),
+      });
+      if (!res.ok) throw new Error("Failed to unfollow user");
+      setUsers((prev) =>
+        prev.map((user) =>
+          user._id === userId ? { ...user, isFollowing: false } : user
+        )
+      );
+      toast.success("User unfollowed!");
+    } catch (error) {
+      toast.error("Failed to unfollow user");
+      console.error(error);
+    }
+  };
 
-  const categories: CategoryType[] = ["all", "movie", "sports", "technology", "music", "gaming", "business", "education"];
-
-  return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      {/* Search Bar */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 -mx-4 px-4 py-4 -mt-4">
-        <form onSubmit={handleSearch} className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search for hashtags, users, or posts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-24 h-12 rounded-full bg-muted/50 border-muted focus:ring-2 focus:ring-primary"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={clearSearch}
-              className="absolute right-20 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-          <Button 
-            type="submit" 
-            size="sm" 
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
-          </Button>
-        </form>
-      </div>
-
-      {/* Categories */}
-      {!searchResults && (
-        <div className="space-y-4">
-          <Tabs defaultValue="all" onValueChange={handleCategoryChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 bg-muted/50">
-              {categories.map((category) => {
-                const Icon = categoryIcons[category];
-                return (
-                  <TabsTrigger 
-                    key={category} 
-                    value={category}
-                    className="flex items-center gap-1 capitalize"
-                  >
-                    <Icon className={`h-4 w-4 ${categoryColors[category]}`} />
-                    <span className="hidden sm:inline">{category}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
-
-          {/* Category Posts */}
-          <div className="space-y-4">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : categoryPosts.length === 0 ? (
-              <Card className="p-8 text-center text-muted-foreground">
-                <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                <p>No posts in {selectedCategory} category yet</p>
-                <p className="text-sm mt-1">Create a post with relevant hashtags!</p>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {categoryPosts.map((post: any) => (
-                  <Card key={post._id} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={post.author?.image} />
-                        <AvatarFallback>{post.author?.name?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{post.author?.name}</p>
-                        <p className="text-xs text-muted-foreground">@{post.author?.username}</p>
-                      </div>
-                      <Badge variant="outline" className="ml-auto">
-                        {post.category || "general"}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-sm">{post.content}</p>
-                    {post.hashtags && post.hashtags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {post.hashtags.map((tag: string) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                      <span>❤️ {post.likes?.length || 0}</span>
-                      <span>💬 {post.comments?.length || 0}</span>
-                      <span>🔄 {post.reposts?.length || 0}</span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+  if (status === "loading") {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6 p-4">
+        <div className="animate-pulse rounded-full bg-muted p-4">
+          <div className="h-12 rounded-full bg-muted/50" />
         </div>
-      )}
-
-      {/* Search Results */}
-      {searchResults && searchQuery && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Results for "{searchQuery}"</h2>
-            <Button variant="ghost" size="sm" onClick={clearSearch}>
-              Clear results
-            </Button>
-          </div>
-
-          {searchResults.hashtags.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Hashtags</h3>
-              <div className="flex flex-wrap gap-2">
-                {searchResults.hashtags.slice(0, 5).map((tag: any) => (
-                  <Link key={tag.tag} href={`/explore?q=${tag.tag}`}>
-                    <Badge variant="secondary" className="text-sm px-3 py-1">
-                      #{tag.tag} ({tag.count})
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {searchResults.posts.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Posts</h3>
-              <div className="space-y-3">
-                {searchResults.posts.slice(0, 3).map((post: any) => (
-                  <Card key={post._id} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={post.author?.image} />
-                        <AvatarFallback>{post.author?.name?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{post.author?.name}</p>
-                        <p className="text-xs text-muted-foreground">@{post.author?.username}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-sm line-clamp-2">{post.content}</p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {searchResults.hashtags.length === 0 && 
-           searchResults.posts.length === 0 && (
-            <Card className="p-8 text-center text-muted-foreground">
-              <Search className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p>No results found for "{searchQuery}"</p>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Trending Hashtags */}
-      {!searchResults && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-orange-500" />
-              Trending Hashtags
-            </h2>
-          </div>
-
-          {trendingHashtags.length === 0 ? (
-            <Card className="p-8 text-center text-muted-foreground">
-              <Hash className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p>No trending hashtags yet</p>
-              <p className="text-sm mt-1">Create a post with hashtags to start trending!</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {trendingHashtags.slice(0, 8).map((tag: any, index: number) => (
-                <motion.div
-                  key={tag.tag || index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Link href={`/explore?q=${tag.tag}`}>
-                    <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer hover:bg-muted/50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                            index === 0 ? 'bg-gradient-to-br from-yellow-500 to-orange-500' :
-                            index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' :
-                            index === 2 ? 'bg-gradient-to-br from-orange-600 to-orange-700' :
-                            'bg-gradient-to-br from-blue-400 to-blue-500'
-                          }`}>
-                            #{index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium">#{tag.tag}</p>
-                            <p className="text-xs text-muted-foreground">{tag.count} posts</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {tag.count}
-                        </Badge>
-                      </div>
-                    </Card>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ExploreSkeleton() {
-  return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <div className="h-12 w-full bg-muted rounded-full animate-pulse" />
-      <div className="grid grid-cols-4 gap-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 bg-muted rounded-lg animate-pulse" />
-        ))}
-      </div>
-      <div className="space-y-4">
-        <div className="h-6 w-40 bg-muted rounded animate-pulse" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+            <div key={i} className="h-32 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6 p-4">
+      {/* Search Bar */}
+      <div className="sticky top-0 z-10 -mx-4 -mt-4 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search posts, hashtags, people..."
+            className="h-12 rounded-full border-muted bg-muted/50 pl-10 pr-24"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <Button
+            className="absolute right-1 top-1 rounded-full px-4"
+            onClick={handleSearch}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+          </Button>
+        </div>
+
+        {/* Categories */}
+        <div className="mt-3 flex flex-wrap gap-1">
+          {categories.map((cat) => (
+            <Button
+              key={cat}
+              variant={category === cat ? "default" : "outline"}
+              size="sm"
+              className="rounded-full text-xs"
+              onClick={() => {
+                setCategory(cat);
+                if (searchQuery) handleSearch();
+              }}
+            >
+              {categoryLabels[cat]}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "posts" | "hashtags" | "users")}
+      >
+        <TabsList className="w-full bg-muted/50 lg:grid-cols-8">
+          <TabsTrigger value="posts" className="flex-1">
+            Posts
+          </TabsTrigger>
+          <TabsTrigger value="hashtags" className="flex-1">
+            Hashtags
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex-1">
+            People
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Results */}
+      {isLoading ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 animate-pulse rounded-lg bg-muted" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="py-12 text-center">
+          <p className="text-red-500">{error}</p>
+          <Button variant="outline" className="mt-4" onClick={handleSearch}>
+            Try Again
+          </Button>
+        </div>
+      ) : activeTab === "posts" ? (
+        posts.length === 0 ? (
+          <div className="py-12 text-center">
+            <Search className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">No posts found</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try searching for something else
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {posts.map((post) => (
+              <Card key={post._id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Link href={`/profile/${post.author._id}`}>
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={post.author.image} />
+                        <AvatarFallback>
+                          {post.author.name?.[0]?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/profile/${post.author._id}`}
+                          className="font-medium text-sm hover:underline"
+                        >
+                          {post.author.name}
+                        </Link>
+                        <span className="text-xs text-muted-foreground">
+                          @{post.author.username}
+                        </span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm">{post.content}</p>
+                      {post.hashtags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {post.hashtags.map((tag) => (
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-3 flex items-center gap-4">
+                        <span className="text-xs text-muted-foreground">
+                          ❤️ {post.likesCount || 0}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          💬 {post.commentsCount || 0}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          🔄 {post.repostsCount || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
+      ) : activeTab === "hashtags" ? (
+        hashtags.length === 0 ? (
+          <div className="py-12 text-center">
+            <Hash className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">No hashtags found</p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {hashtags.map((hashtag) => (
+              <Link
+                key={hashtag.tag}
+                href={`/explore?q=${hashtag.tag}`}
+                className="inline-flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1 text-sm hover:bg-muted"
+              >
+                <Hash className="h-3 w-3" />
+                <span>{hashtag.tag}</span>
+                <Badge variant="secondary" className="text-[10px]">
+                  {hashtag.count}
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        )
+      ) : users.length === 0 ? (
+        <div className="py-12 text-center">
+          <Users className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No users found</p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {users.map((user) => (
+            <Card key={user._id} className="cursor-pointer p-4 transition-shadow hover:bg-muted/50 hover:shadow-md">
+              <CardContent className="p-0">
+                <div className="flex items-center gap-3">
+                  <Link href={`/profile/${user._id}`}>
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={user.image} />
+                      <AvatarFallback>
+                        {user.name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/profile/${user._id}`}
+                      className="font-medium text-sm hover:underline"
+                    >
+                      {user.name}
+                    </Link>
+                    <p className="text-sm text-muted-foreground">
+                      @{user.username}
+                    </p>
+                    {user.bio && (
+                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                        {user.bio}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {user.followersCount || 0} followers
+                    </p>
+                  </div>
+                  {session?.user?.id !== user._id && (
+                    <Button
+                      variant={user.isFollowing ? "outline" : "default"}
+                      size="sm"
+                      onClick={() =>
+                        user.isFollowing
+                          ? handleUnfollow(user._id)
+                          : handleFollow(user._id)
+                      }
+                    >
+                      {user.isFollowing ? "Unfollow" : "Follow"}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

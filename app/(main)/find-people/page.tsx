@@ -1,11 +1,11 @@
 // app/(main)/find-people/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Search, UserPlus, Loader2 } from "lucide-react";
-import UserCard from "@/components/shared/UserCard"; // ✅ Fixed: default import
+import UserCard from "@/components/shared/UserCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,39 +32,44 @@ export default function FindPeoplePage() {
   const [tab, setTab] = useState("all");
   const [error, setError] = useState<string | null>(null);
 
+  const fetchUsers = useCallback(
+    async (search?: string) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const url = new URL("/api/users/find", window.location.origin);
+        url.searchParams.set("tab", tab);
+        if (search || searchQuery) {
+          url.searchParams.set("q", search || searchQuery);
+        }
+
+        const res = await fetch(url.toString());
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to fetch users");
+        }
+        const data = await res.json();
+        setUsers(data.users || []);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        setError(error instanceof Error ? error.message : "Failed to load users");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [tab, searchQuery]
+  );
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
       return;
     }
 
-    fetchUsers();
-  }, [session, status, router, tab]);
-
-  const fetchUsers = async (search?: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const url = new URL("/api/users/find", window.location.origin);
-      url.searchParams.set("tab", tab);
-      if (search || searchQuery) {
-        url.searchParams.set("q", search || searchQuery);
-      }
-
-      const res = await fetch(url.toString());
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to fetch users");
-      }
-      const data = await res.json();
-      setUsers(data.users || []);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      setError(error instanceof Error ? error.message : "Failed to load users");
-    } finally {
-      setIsLoading(false);
+    if (session?.user) {
+      fetchUsers();
     }
-  };
+  }, [session, status, router, tab, fetchUsers]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,9 +77,8 @@ export default function FindPeoplePage() {
   };
 
   const handleFollowChange = (userId: string, isFollowing: boolean) => {
-    // Update local state
-    setUsers(prev =>
-      prev.map(user =>
+    setUsers((prev) =>
+      prev.map((user) =>
         user._id === userId ? { ...user, isFollowing } : user
       )
     );
@@ -82,21 +86,21 @@ export default function FindPeoplePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="mx-auto max-w-3xl p-4">
+      <div className="mb-6 flex items-center gap-3">
         <UserPlus className="h-8 w-8 text-blue-500" />
         <h1 className="text-2xl font-bold">Find People</h1>
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -120,17 +124,17 @@ export default function FindPeoplePage() {
 
       {/* User List */}
       {error ? (
-        <div className="text-center py-12">
+        <div className="py-12 text-center">
           <p className="text-red-500">{error}</p>
           <Button variant="outline" className="mt-4" onClick={() => fetchUsers()}>
             Try Again
           </Button>
         </div>
       ) : users.length === 0 ? (
-        <div className="text-center py-12">
-          <UserPlus className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+        <div className="py-12 text-center">
+          <UserPlus className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
           <p className="text-gray-500">No users found</p>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="mt-1 text-sm text-gray-400">
             Try searching for someone or explore suggestions
           </p>
         </div>

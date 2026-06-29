@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import toast from "react-hot-toast"; // ✅ Added import
+import toast from "react-hot-toast";
 import {
   AreaChart,
   Area,
@@ -17,8 +17,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,29 +26,70 @@ import { Badge } from "@/components/ui/badge";
 import {
   Download,
   TrendingUp,
-  TrendingDown,
   Users,
   Eye,
   Heart,
   MessageCircle,
   Share2,
-  Clock,
-  Calendar,
-  MapPin,
-  Globe,
   Sparkles,
-  BarChart3,
-  PieChart as PieChartIcon,
 } from "lucide-react";
 
 const COLORS = ["#4F46E5", "#7C3AED", "#EC4899", "#EF4444", "#F59E0B", "#10B981", "#3B82F6"];
 
+interface LocationData {
+  city: string;
+  value: number;
+}
+
+interface AgeGroupData {
+  age: string;
+  value: number;
+}
+
+interface PostData {
+  id: string;
+  content: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  engagement: number;
+}
+
+interface AnalyticsStats {
+  profileViews: number;
+  engagementRate: number;
+  reach: number;
+  followersGrowth: number;
+}
+
+interface AnalyticsData {
+  stats: AnalyticsStats;
+  engagement: Array<{
+    date: string;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
+  growth: Array<{
+    date: string;
+    followers: number;
+    engagement: number;
+  }>;
+  demographics: {
+    ageGroups: AgeGroupData[];
+    locations: LocationData[];
+  };
+  topPosts: PostData[];
+}
+
 export default function AnalyticsPage() {
   const { data: session } = useSession();
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("week");
-  const [chartType, setChartType] = useState<"overview" | "engagement" | "demographics">("overview");
+  const [chartType, setChartType] = useState<
+    "overview" | "engagement" | "demographics"
+  >("overview");
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["analytics", timeRange],
     queryFn: async () => {
       const res = await fetch(`/api/analytics?timeRange=${timeRange}`);
@@ -71,13 +110,13 @@ export default function AnalyticsPage() {
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
         <Skeleton className="h-64 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
@@ -102,11 +141,20 @@ export default function AnalyticsPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as any)}>
+          <Tabs
+            value={timeRange}
+            onValueChange={(v) => setTimeRange(v as "week" | "month" | "year")}
+          >
             <TabsList className="h-8">
-              <TabsTrigger value="week" className="text-xs">Week</TabsTrigger>
-              <TabsTrigger value="month" className="text-xs">Month</TabsTrigger>
-              <TabsTrigger value="year" className="text-xs">Year</TabsTrigger>
+              <TabsTrigger value="week" className="text-xs">
+                Week
+              </TabsTrigger>
+              <TabsTrigger value="month" className="text-xs">
+                Month
+              </TabsTrigger>
+              <TabsTrigger value="year" className="text-xs">
+                Year
+              </TabsTrigger>
             </TabsList>
           </Tabs>
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
@@ -117,7 +165,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -192,7 +240,10 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Chart Type Tabs */}
-      <Tabs value={chartType} onValueChange={(v) => setChartType(v as any)}>
+      <Tabs
+        value={chartType}
+        onValueChange={(v) => setChartType(v as "overview" | "engagement" | "demographics")}
+      >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
@@ -249,7 +300,7 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
             )}
             {chartType === "demographics" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 h-full">
                 <div>
                   <p className="text-sm font-medium mb-2">Age Distribution</p>
                   <ResponsiveContainer width="100%" height="90%">
@@ -263,9 +314,14 @@ export default function AnalyticsPage() {
                         paddingAngle={5}
                         dataKey="value"
                       >
-                        {(demographics.ageGroups || []).map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
+                        {(demographics.ageGroups || []).map(
+                          (entry: AgeGroupData, index: number) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          )
+                        )}
                       </Pie>
                       <Tooltip />
                     </PieChart>
@@ -274,12 +330,14 @@ export default function AnalyticsPage() {
                 <div>
                   <p className="text-sm font-medium mb-2">Top Locations</p>
                   <div className="space-y-2">
-                    {(demographics.locations || []).map((loc: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm">{loc.city}</span>
-                        <span className="text-sm font-medium">{loc.value}%</span>
-                      </div>
-                    ))}
+                    {(demographics.locations || []).map(
+                      (loc: LocationData, i: number) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-sm">{loc.city}</span>
+                          <span className="text-sm font-medium">{loc.value}%</span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </div>
@@ -313,16 +371,16 @@ export default function AnalyticsPage() {
 
       {/* Top Performing Posts */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">Top Performing Posts</h2>
+        <h2 className="mb-3 text-lg font-semibold">Top Performing Posts</h2>
         <div className="space-y-3">
-          {topPosts.map((post: any, i: number) => (
+          {topPosts.map((post: PostData, i: number) => (
             <Card key={i}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   <Badge variant="outline" className="text-xs">
                     #{i + 1}
                   </Badge>
-                  <p className="flex-1 text-sm line-clamp-1">{post.content}</p>
+                  <p className="line-clamp-1 flex-1 text-sm">{post.content}</p>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span className="flex items-center gap-0.5">
                       <Heart className="h-3 w-3" /> {post.likes}
@@ -333,7 +391,7 @@ export default function AnalyticsPage() {
                     <span className="flex items-center gap-0.5">
                       <Share2 className="h-3 w-3" /> {post.shares}
                     </span>
-                    <span className="text-green-500 flex items-center gap-0.5">
+                    <span className="flex items-center gap-0.5 text-green-500">
                       <TrendingUp className="h-3 w-3" /> {post.engagement}%
                     </span>
                   </div>

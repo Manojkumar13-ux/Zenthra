@@ -4,27 +4,31 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import {
+  Bell,
   Heart,
   MessageCircle,
   UserPlus,
-  Repeat2,
-  AtSign,
+  Repeat,
+  Mail,
   Users,
-  Bell,
-  Loader2,
-  Sparkles
+  Trophy,
+  CheckCheck,
+  Clock,
+  Filter,
+  X,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
-type Notification = {
+interface Notification {
   _id: string;
-  type: "like" | "comment" | "mention" | "follow" | "repost" | "message" | "community";
+  type: "like" | "comment" | "mention" | "follow" | "message" | "repost" | "community" | "achievement";
   content: string;
   read: boolean;
   createdAt: string;
@@ -42,84 +46,87 @@ type Notification = {
     _id: string;
     content: string;
   };
-};
-
-const notificationIcons: Record<string, React.ReactNode> = {
-  like: <Heart className="h-5 w-5 text-red-500" />,
-  comment: <MessageCircle className="h-5 w-5 text-blue-500" />,
-  mention: <AtSign className="h-5 w-5 text-purple-500" />,
-  follow: <UserPlus className="h-5 w-5 text-green-500" />,
-  repost: <Repeat2 className="h-5 w-5 text-emerald-500" />,
-  message: <MessageCircle className="h-5 w-5 text-indigo-500" />,
-  community: <Users className="h-5 w-5 text-amber-500" />,
-};
+}
 
 const notificationMessages: Record<string, string> = {
   like: "liked your post",
   comment: "commented on your post",
   mention: "mentioned you",
   follow: "started following you",
-  repost: "reposted your post",
   message: "sent you a message",
+  repost: "reposted your post",
   community: "invited you to a community",
+  achievement: "unlocked a new achievement",
+};
+
+const notificationIcons: Record<string, React.ReactNode> = {
+  like: <Heart className="h-4 w-4 text-red-500" />,
+  comment: <MessageCircle className="h-4 w-4 text-blue-500" />,
+  mention: <Mail className="h-4 w-4 text-purple-500" />,
+  follow: <UserPlus className="h-4 w-4 text-green-500" />,
+  message: <Mail className="h-4 w-4 text-indigo-500" />,
+  repost: <Repeat className="h-4 w-4 text-orange-500" />,
+  community: <Users className="h-4 w-4 text-cyan-500" />,
+  achievement: <Trophy className="h-4 w-4 text-yellow-500" />,
 };
 
 export default function NotificationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "unread" | "likes" | "comments" | "follows">("all");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
 
-  useEffect(() => {
-    if (status === "authenticated") {
+    if (session?.user) {
       fetchNotifications();
     }
-  }, [status]);
+  }, [session, status, router, filter]);
 
   const fetchNotifications = async () => {
-    setLoading(true);
     try {
-      const res = await fetch("/api/notifications", {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch notifications");
+      setIsLoading(true);
+      setError(null);
+      const url = new URL("/api/notifications", window.location.origin);
+      if (filter !== "all") {
+        url.searchParams.set("filter", filter);
       }
-
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to fetch notifications");
+      }
       const data = await res.json();
       setNotifications(data.notifications || []);
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      toast.error("Failed to load notifications");
+      setError(error instanceof Error ? error.message : "Failed to load notifications");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const res = await fetch("/api/notifications", {
+      const res = await fetch(`/api/notifications/${notificationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId, read: true }),
-        credentials: "include",
+        body: JSON.stringify({ read: true }),
       });
-
-      if (res.ok) {
-        setNotifications(prev =>
-          prev.map(notif =>
-            notif._id === notificationId ? { ...notif, read: true } : notif
-          )
-        );
-      }
+      if (!res.ok) throw new Error("Failed to mark as read");
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif._id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
     } catch (error) {
-      console.error("Error marking as read:", error);
+      console.error("Error marking notification as read:", error);
     }
   };
 
@@ -129,23 +136,21 @@ export default function NotificationsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ read: true }),
-        credentials: "include",
       });
-
-      if (res.ok) {
-        setNotifications(prev =>
-          prev.map(notif => ({ ...notif, read: true }))
-        );
-        toast.success("All notifications marked as read");
-      }
+      if (!res.ok) throw new Error("Failed to mark all as read");
+      setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
+      toast.success("All notifications marked as read");
     } catch (error) {
+      console.error("Error marking all as read:", error);
       toast.error("Failed to mark all as read");
     }
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification._id);
-    
+    if (!notification.read) {
+      markAsRead(notification._id);
+    }
+
     if (notification.post) {
       router.push(`/post/${notification.post._id}`);
     } else if (notification.sender) {
@@ -153,164 +158,200 @@ export default function NotificationsPage() {
     }
   };
 
-  if (!mounted) {
-    return <NotificationsSkeleton />;
-  }
+  const getTimeAgo = (date: string) => {
+    return formatDistanceToNow(new Date(date), { addSuffix: true });
+  };
 
-  if (status === "loading") {
-    return <NotificationsSkeleton />;
-  }
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  if (status === "unauthenticated") {
+  if (status === "loading" || isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-4">
-        <Card className="p-12 text-center">
-          <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Please Sign In</h3>
-          <p className="text-muted-foreground mb-4">
-            Sign in to view your notifications
-          </p>
-          <Button onClick={() => router.push("/login")}>Sign In</Button>
-        </Card>
+      <div className="mx-auto max-w-4xl space-y-6 p-4">
+        <div className="animate-pulse rounded bg-muted p-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 animate-pulse rounded-full bg-muted" />
+            <div className="flex-1">
+              <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+              <div className="mt-1 h-3 w-24 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="h-4 w-full animate-pulse rounded bg-muted" />
+            <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-4 p-3">
+              <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+              <div className="flex-1">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="mt-1 h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  if (!session) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6 p-4 text-center">
+        <Bell className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+        <h2 className="mb-2 text-lg font-semibold">No notifications</h2>
+        <p className="mb-4 text-muted-foreground">Sign in to view your notifications</p>
+        <Button onClick={() => router.push("/login")}>Sign In</Button>
+      </div>
+    );
+  }
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (filter === "unread") return !n.read;
+    if (filter === "likes") return n.type === "like";
+    if (filter === "comments") return n.type === "comment" || n.type === "mention";
+    if (filter === "follows") return n.type === "follow";
+    return true;
+  });
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-6">
-      {/* Header */}
+    <div className="mx-auto max-w-3xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3">
+          <Bell className="h-8 w-8 text-blue-500" />
           <h1 className="text-2xl font-bold">Notifications</h1>
-          {notifications.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
-            </p>
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="ml-2">
+              {unreadCount}
+            </Badge>
           )}
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={markAllAsRead}>
-            Mark all as read
+            <CheckCheck className="mr-1 h-4 w-4" />
+            Mark all read
           </Button>
         )}
       </div>
 
+      {/* Filter Tabs */}
+      <Tabs
+        value={filter}
+        onValueChange={(v) => setFilter(v as "all" | "unread" | "likes" | "comments" | "follows")}
+      >
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="unread">Unread</TabsTrigger>
+          <TabsTrigger value="likes">Likes</TabsTrigger>
+          <TabsTrigger value="comments">Comments</TabsTrigger>
+          <TabsTrigger value="follows">Follows</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Notifications List */}
-      {loading ? (
-        <NotificationsSkeleton />
-      ) : notifications.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Bell className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No notifications</h3>
-          <p className="text-muted-foreground">
-            When someone interacts with your posts, you'll see it here.
+      {error ? (
+        <div className="py-12 text-center">
+          <p className="text-red-500">{error}</p>
+          <Button variant="outline" className="mt-4" onClick={fetchNotifications}>
+            Try Again
+          </Button>
+        </div>
+      ) : filteredNotifications.length === 0 ? (
+        <div className="py-12 text-center">
+          <Bell className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+          <h3 className="mb-2 text-lg font-semibold">No notifications</h3>
+          <p className="text-sm text-muted-foreground">
+            {filter === "all"
+              ? "You're all caught up!"
+              : `No ${filter} notifications found`}
           </p>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notification) => (
+          {filteredNotifications.map((notification) => (
             <div
               key={notification._id}
-              className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                !notification.read
-                  ? "bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-100/50 dark:hover:bg-blue-900/30"
-                  : "hover:bg-muted/50"
-              }`}
               onClick={() => handleNotificationClick(notification)}
+              className={cn(
+                "cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors",
+                !notification.read
+                  ? "bg-blue-50 hover:bg-blue-100/50 dark:bg-blue-900/20"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              )}
             >
-              {/* Icon */}
-              <div className="flex-shrink-0 mt-1">
-                {notificationIcons[notification.type] || (
-                  <Bell className="h-5 w-5 text-gray-400" />
-                )}
-              </div>
-
-              {/* Avatar */}
-              {notification.sender && (
-                <Link
-                  href={`/profile/${notification.sender._id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-shrink-0"
-                >
+              {/* Avatar / Icon */}
+              <div className="mt-1 flex-shrink-0">
+                {notification.sender?.image ? (
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={notification.sender.image} />
                     <AvatarFallback>
                       {notification.sender.name?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                </Link>
-              )}
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                    {notificationIcons[notification.type] || (
+                      <Bell className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm">
-                      {notification.sender && (
-                        <Link
-                          href={`/profile/${notification.sender._id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="font-semibold hover:underline"
-                        >
-                          {notification.sender.name}
-                        </Link>
-                      )}
-                      <span className="text-muted-foreground ml-1">
-                        {notification.content || notificationMessages[notification.type] || "interacted with you"}
-                      </span>
-                    </p>
-                    {notification.post && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-                        {notification.post.content}
-                      </p>
-                    )}
-                    {notification.comment && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-                        {notification.comment.content}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1">
+                  {notification.sender && (
+                    <span
+                      className="cursor-pointer text-sm font-semibold hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/profile/${notification.sender._id}`);
+                      }}
+                    >
+                      {notification.sender.name}
                     </span>
-                    {!notification.read && (
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
-                    )}
-                  </div>
+                  )}
+                  <span className="text-sm text-muted-foreground">
+                    {notificationMessages[notification.type] ||
+                      notification.content}
+                  </span>
+                </div>
+
+                {notification.post && (
+                  <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                    "{notification.post.content}"
+                  </p>
+                )}
+
+                {notification.comment && (
+                  <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                    "{notification.comment.content}"
+                  </p>
+                )}
+
+                <div className="mt-1 flex items-center gap-3">
+                  <span className="whitespace-nowrap text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {getTimeAgo(notification.createdAt)}
+                  </span>
+                  {!notification.read && (
+                    <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                      New
+                    </Badge>
+                  )}
                 </div>
               </div>
+
+              {/* Unread indicator */}
+              {!notification.read && (
+                <div className="shrink-0 flex-col items-end gap-1">
+                  <span className="h-2 w-2 rounded-full bg-blue-500" />
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function NotificationsSkeleton() {
-  return (
-    <div className="max-w-3xl mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-          <div className="h-4 w-32 bg-muted rounded animate-pulse mt-1" />
-        </div>
-        <div className="h-9 w-32 bg-muted rounded animate-pulse" />
-      </div>
-      <div className="space-y-2">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-start gap-3 p-3">
-            <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 w-48 bg-muted rounded animate-pulse" />
-              <div className="h-3 w-32 bg-muted rounded animate-pulse" />
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
