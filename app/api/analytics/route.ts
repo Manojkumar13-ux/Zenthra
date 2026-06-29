@@ -87,7 +87,7 @@ export async function GET(req: Request) {
     // Get user data
     const user = await User.findById(userId)
       .select("followers following postsCount createdAt")
-      .lean() as UserDocument | null;
+      .lean() as any;
 
     // Get posts
     const posts = await Post.find({
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
       createdAt: { $gte: startDate },
     })
       .sort({ createdAt: -1 })
-      .lean() as PostDocument[];
+      .lean() as any[];
 
     // Get engagement data (likes, comments, shares)
     const postIds = posts.map((p) => p._id);
@@ -103,17 +103,17 @@ export async function GET(req: Request) {
     const likes = await Like.find({
       post: { $in: postIds },
       createdAt: { $gte: startDate },
-    }).lean() as LikeDocument[];
+    }).lean() as any[];
 
     const comments = await Comment.find({
       post: { $in: postIds },
       createdAt: { $gte: startDate },
-    }).lean() as CommentDocument[];
+    }).lean() as any[];
 
     const reposts = await Repost.find({
       post: { $in: postIds },
       createdAt: { $gte: startDate },
-    }).lean() as RepostDocument[];
+    }).lean() as any[];
 
     // Calculate engagement data by date
     const engagementData: { date: string; likes: number; comments: number; shares: number }[] = [];
@@ -147,7 +147,7 @@ export async function GET(req: Request) {
     const topPosts = await Post.find({ author: userId })
       .sort({ likes: -1, comments: -1, reposts: -1 })
       .limit(5)
-      .lean() as PostDocument[];
+      .lean() as any[];
 
     const formattedTopPosts = topPosts.map((post) => ({
       id: post._id.toString(),
