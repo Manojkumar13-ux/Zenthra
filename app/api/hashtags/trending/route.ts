@@ -1,9 +1,19 @@
 // app/api/hashtags/trending/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { Hashtag } from "@/lib/db/models/Hashtag";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {

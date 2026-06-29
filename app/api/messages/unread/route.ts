@@ -1,9 +1,19 @@
 // app/api/messages/unread/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth"; // ✅ Fixed import
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { Message } from "@/lib/db/models/Message";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {

@@ -1,10 +1,20 @@
 // app/api/notifications/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 // Import models to ensure they're registered
 import "@/lib/db/models";
+
+export const dynamic = 'force-dynamic';
 
 // Mock data for fallback (keep this for when DB fails)
 const mockNotifications = [

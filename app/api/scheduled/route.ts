@@ -1,15 +1,28 @@
 // app/api/scheduled/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // ✅ Fixed import
+
+export const dynamic = 'force-dynamic';
+import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { Post } from "@/lib/db/models/Post";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
@@ -29,15 +42,20 @@ export async function GET(req: Request) {
       .sort({ scheduledAt: 1 })
       .skip(skip)
       .limit(limit)
-      .select("content media hashtags scheduledAt category mood")
+      .select("content media hashtags scheduledAt category mood visibility")
       .lean();
 
     const total = await Post.countDocuments(query);
 
     const formattedPosts = scheduledPosts.map((post: any) => ({
-      ...post,
       _id: post._id.toString(),
+      content: post.content,
+      media: post.media || [],
+      hashtags: post.hashtags || [],
       scheduledAt: post.scheduledAt?.toISOString(),
+      category: post.category || "general",
+      mood: post.mood || null,
+      visibility: post.visibility || "public",
       createdAt: post.createdAt?.toISOString(),
     }));
 
@@ -53,7 +71,10 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error fetching scheduled posts:", error);
-    return NextResponse.json({ error: "Failed to fetch scheduled posts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch scheduled posts" },
+      { status: 500 }
+    );
   }
 }
 
@@ -61,22 +82,35 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { content, media, hashtags, scheduledAt, category, mood, visibility } = await req.json();
+    const body = await req.json();
+    const { content, media, hashtags, scheduledAt, category, mood, visibility } = body;
 
     if (!content || content.trim().length === 0) {
-      return NextResponse.json({ error: "Content is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Content is required" },
+        { status: 400 }
+      );
     }
 
     if (!scheduledAt) {
-      return NextResponse.json({ error: "Scheduled date is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Scheduled date is required" },
+        { status: 400 }
+      );
     }
 
     const scheduledDate = new Date(scheduledAt);
     if (scheduledDate < new Date()) {
-      return NextResponse.json({ error: "Scheduled date must be in the future" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Scheduled date must be in the future" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
@@ -106,28 +140,44 @@ export async function POST(req: Request) {
       .populate("author", "name username image")
       .lean();
 
-    return NextResponse.json(
-      {
-        success: true,
-        post: {
-          ...populatedPost,
-          _id: populatedPost._id.toString(),
-          author: populatedPost.author
-            ? {
-                ...populatedPost.author,
-                _id: populatedPost.author._id.toString(),
-              }
-            : null,
-          scheduledAt: populatedPost.scheduledAt?.toISOString(),
-          createdAt: populatedPost.createdAt?.toISOString(),
-        },
-        message: "Post scheduled successfully",
+    // Check if populatedPost exists before using it
+    if (!populatedPost) {
+      return NextResponse.json(
+        { error: "Failed to create scheduled post" },
+        { status: 500 }
+      );
+    }
+
+    const populatedPostData = populatedPost as any;
+
+    return NextResponse.json({
+      success: true,
+      post: {
+        _id: populatedPostData._id.toString(),
+        content: populatedPostData.content,
+        author: populatedPostData.author ? {
+          _id: populatedPostData.author._id.toString(),
+          name: populatedPostData.author.name,
+          username: populatedPostData.author.username,
+          image: populatedPostData.author.image,
+        } : null,
+        media: populatedPostData.media || [],
+        hashtags: populatedPostData.hashtags || [],
+        category: populatedPostData.category || "general",
+        mood: populatedPostData.mood || null,
+        visibility: populatedPostData.visibility || "public",
+        isScheduled: true,
+        scheduledAt: populatedPostData.scheduledAt?.toISOString(),
+        createdAt: populatedPostData.createdAt?.toISOString(),
       },
-      { status: 201 }
-    );
+      message: "Post scheduled successfully",
+    }, { status: 201 });
   } catch (error) {
     console.error("Error scheduling post:", error);
-    return NextResponse.json({ error: "Failed to schedule post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to schedule post" },
+      { status: 500 }
+    );
   }
 }
 
@@ -135,14 +185,20 @@ export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
     const postId = searchParams.get("id");
 
     if (!postId) {
-      return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Post ID is required" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
@@ -154,7 +210,10 @@ export async function DELETE(req: Request) {
     });
 
     if (!post) {
-      return NextResponse.json({ error: "Scheduled post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Scheduled post not found" },
+        { status: 404 }
+      );
     }
 
     await Post.findByIdAndDelete(postId);
@@ -165,6 +224,9 @@ export async function DELETE(req: Request) {
     });
   } catch (error) {
     console.error("Error deleting scheduled post:", error);
-    return NextResponse.json({ error: "Failed to delete scheduled post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete scheduled post" },
+      { status: 500 }
+    );
   }
 }

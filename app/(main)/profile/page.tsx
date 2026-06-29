@@ -98,7 +98,10 @@ export default function ProfilePage() {
   const fetchUserProfile = async () => {
     try {
       const res = await fetch("/api/users/profile");
-      if (!res.ok) throw new Error("Failed to fetch profile");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to fetch profile");
+      }
       const data = await res.json();
       setUser(data.user);
       setEditForm({
@@ -109,7 +112,7 @@ export default function ProfilePage() {
       });
     } catch (error) {
       console.error("Error fetching profile:", error);
-      toast.error("Failed to load profile");
+      toast.error(error instanceof Error ? error.message : "Failed to load profile");
     }
   };
 
@@ -162,16 +165,21 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeletePost = (postId: string) => {
+    setPosts((prev) => prev.filter((post) => post._id !== postId));
+    toast.success("Post deleted");
+  };
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl p-4">
         <div className="animate-pulse">
-          <div className="h-48 rounded-xl bg-gray-200 dark:bg-gray-700" />
+          <div className="rounded-xl bg-gray-200 dark:bg-gray-700 h-48" />
           <div className="mt-4 flex items-center gap-4">
-            <div className="h-24 w-24 rounded-xl bg-gray-200 dark:bg-gray-700" />
+            <div className="rounded-xl bg-gray-200 dark:bg-gray-700 h-24 w-24" />
             <div className="flex-1">
-              <div className="h-6 w-32 rounded bg-gray-200 dark:bg-gray-700" />
-              <div className="mt-1 h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="mt-1 h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
             </div>
           </div>
         </div>
@@ -199,6 +207,9 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-3xl p-4 text-center">
         <h1 className="mb-2 text-2xl font-bold">Profile</h1>
         <p className="text-gray-500">No user data available</p>
+        <Button variant="outline" className="mt-4" onClick={fetchUserProfile}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -216,7 +227,12 @@ export default function ProfilePage() {
       <div className="flex flex-col gap-6 md:flex-row">
         {/* Profile Image */}
         <div className="relative flex-shrink-0">
-          <AvatarSimple src={user.image} fallback={user.name} alt={user.name} size="xl" />
+          <AvatarSimple
+            src={user.image}
+            fallback={user.name}
+            alt={user.name}
+            size="xl"
+          />
           <button
             className="absolute bottom-0 right-0 rounded-full bg-blue-500 p-1.5 text-white transition-colors hover:bg-blue-600"
             onClick={() => setIsEditing(true)}
@@ -229,13 +245,14 @@ export default function ProfilePage() {
         <div className="flex-1">
           <div className="flex flex-wrap items-start justify-between">
             <div>
-              <h2 className="flex items-center gap-2 text-2xl font-bold">
-                {user.name}
-                {user.isVerified && <Badge className="bg-blue-500 text-white">Verified</Badge>}
-              </h2>
+              <h2 className="text-2xl font-bold">{user.name}</h2>
               <p className="text-gray-500">@{user.username}</p>
             </div>
-            <Button onClick={() => setIsEditing(true)} variant="outline" className="gap-2">
+            <Button
+              onClick={() => setIsEditing(true)}
+              variant="outline"
+              className="gap-2"
+            >
               <Edit3 className="h-4 w-4" />
               Edit Profile
             </Button>
@@ -299,14 +316,18 @@ export default function ProfilePage() {
               <label className="mb-1 block text-sm font-medium">Name</label>
               <Input
                 value={editForm.name}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                }
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Bio</label>
               <Textarea
                 value={editForm.bio}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, bio: e.target.value }))
+                }
                 rows={3}
               />
             </div>
@@ -314,14 +335,18 @@ export default function ProfilePage() {
               <label className="mb-1 block text-sm font-medium">Location</label>
               <Input
                 value={editForm.location}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, location: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, location: e.target.value }))
+                }
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Website</label>
               <Input
                 value={editForm.website}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, website: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, website: e.target.value }))
+                }
               />
             </div>
             <Button onClick={handleUpdateProfile} className="w-full">
@@ -358,14 +383,21 @@ export default function ProfilePage() {
           <div className="py-12 text-center">
             <Sparkles className="mx-auto mb-2 h-8 w-8 text-gray-300" />
             <p className="text-gray-500">No posts yet</p>
-            <a href="/create-post" className="mt-2 inline-block text-blue-500 hover:underline">
+            <a
+              href="/create-post"
+              className="mt-2 inline-block text-blue-500 hover:underline"
+            >
               Create your first post
             </a>
           </div>
         ) : (
-          <div className="mt-4 space-y-4">
+          <div className="space-y-4 mt-4">
             {posts.map((post) => (
-              <PostCard key={post._id} post={post} />
+              <PostCard
+                key={post._id}
+                post={post}
+                onDelete={() => handleDeletePost(post._id)}
+              />
             ))}
           </div>
         ))}

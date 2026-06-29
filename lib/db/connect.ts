@@ -1,26 +1,24 @@
 // lib/db/connect.ts
 import mongoose from "mongoose";
-import "./models"; // This imports all models
 
 const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_DB = process.env.MONGODB_DB || "zenthra";
 
 if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  throw new Error("Please define MONGODB_URI environment variable");
 }
 
+// Define the global mongoose cache
 interface GlobalMongoose {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
 }
 
-declare global {
-  var mongoose: GlobalMongoose;
-}
-
-let cached = global.mongoose;
+// Use a different variable name to avoid redeclaration
+let cached: GlobalMongoose = (global as any).mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 export async function connectDB() {
@@ -38,18 +36,19 @@ export async function connectDB() {
 
     cached.promise = mongoose
       .connect(MONGODB_URI, opts)
-      .then(async (mongoose) => {
+      .then((mongoose) => {
         console.log("✅ MongoDB connected successfully");
-
+        
         if (process.env.NODE_ENV === "development") {
           try {
-            await mongoose.syncIndexes();
-            console.log("✅ Indexes synced");
+            // Sync indexes in development
+            // Using any to avoid type issues
+            (mongoose as any).syncIndexes?.();
           } catch (error) {
             console.warn("⚠️ Could not sync indexes:", error);
           }
         }
-
+        
         return mongoose;
       })
       .catch((error) => {
@@ -67,3 +66,5 @@ export async function connectDB() {
 
   return cached.conn;
 }
+
+export { mongoose };

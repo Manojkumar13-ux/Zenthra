@@ -27,7 +27,7 @@ const UserSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: function (this: any) {
+      required: function(this: any) {
         return !this.googleId && !this.githubId;
       },
       minlength: [6, "Password must be at least 6 characters"],
@@ -55,41 +55,31 @@ const UserSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    following: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: [],
-      },
-    ],
-    followers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: [],
-      },
-    ],
-    blocked: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: [],
-      },
-    ],
-    blockedBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: [],
-      },
-    ],
-    muted: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: [],
-      },
-    ],
+    following: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: [],
+    }],
+    followers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: [],
+    }],
+    blocked: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: [],
+    }],
+    blockedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: [],
+    }],
+    muted: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: [],
+    }],
     isVerified: {
       type: Boolean,
       default: false,
@@ -205,75 +195,77 @@ const UserSchema = new mongoose.Schema(
 );
 
 // ============================================
-// INDEXES - All indexes defined here
+// INDEXES
 // ============================================
-// Unique indexes
 UserSchema.index({ username: 1 }, { unique: true });
 UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ googleId: 1 }, { unique: true, sparse: true });
 UserSchema.index({ githubId: 1 }, { unique: true, sparse: true });
 UserSchema.index({ twitterId: 1 }, { unique: true, sparse: true });
 UserSchema.index({ facebookId: 1 }, { unique: true, sparse: true });
-
-// Regular indexes
 UserSchema.index({ createdAt: -1 });
 UserSchema.index({ "stats.followersCount": -1 });
 UserSchema.index({ online: 1, lastActive: -1 });
 
-// Text index for search
-UserSchema.index({ name: "text", username: "text" });
-
 // ============================================
-// VIRTUALS & METHODS (keep as is)
+// VIRTUALS
 // ============================================
-
-UserSchema.virtual("followerCount").get(function () {
+UserSchema.virtual("followerCount").get(function() {
   return this.followers?.length || 0;
 });
 
-UserSchema.virtual("followingCount").get(function () {
+UserSchema.virtual("followingCount").get(function() {
   return this.following?.length || 0;
 });
 
-UserSchema.methods.isFollowingUser = function (userId: string) {
+// ============================================
+// METHODS
+// ============================================
+UserSchema.methods.isFollowingUser = function(userId: string) {
   return this.following?.some((id: any) => id.toString() === userId) || false;
 };
 
-UserSchema.methods.isFollowedByUser = function (userId: string) {
+UserSchema.methods.isFollowedByUser = function(userId: string) {
   return this.followers?.some((id: any) => id.toString() === userId) || false;
 };
 
-UserSchema.methods.incrementPostCount = async function () {
+UserSchema.methods.incrementPostCount = async function() {
   this.stats.postsCount = (this.stats.postsCount || 0) + 1;
   await this.save();
 };
 
-UserSchema.methods.decrementPostCount = async function () {
+UserSchema.methods.decrementPostCount = async function() {
   if (this.stats.postsCount > 0) {
     this.stats.postsCount = (this.stats.postsCount || 0) - 1;
     await this.save();
   }
 };
 
-UserSchema.methods.updateLastActive = function () {
+UserSchema.methods.updateLastActive = function() {
   this.lastActive = new Date();
   this.online = true;
   return this.save();
 };
 
-UserSchema.methods.setOffline = function () {
+UserSchema.methods.setOffline = function() {
   this.online = false;
   this.lastSeen = new Date();
   return this.save();
 };
 
-UserSchema.statics.findByEmailOrUsername = function (identifier: string) {
+// ============================================
+// STATICS
+// ============================================
+UserSchema.statics.findByEmailOrUsername = function(identifier: string) {
   return this.findOne({
-    $or: [{ email: identifier.toLowerCase() }, { username: identifier.toLowerCase() }],
+    $or: [
+      { email: identifier.toLowerCase() },
+      { username: identifier.toLowerCase() },
+    ],
   });
 };
 
-UserSchema.statics.findSuggested = function (userId: string, limit = 5) {
+UserSchema.statics.findSuggested = function(userId: string, limit = 5) {
   return this.find({
     _id: { $ne: userId },
     isActive: true,
@@ -284,7 +276,7 @@ UserSchema.statics.findSuggested = function (userId: string, limit = 5) {
     .limit(limit);
 };
 
-UserSchema.statics.searchUsers = function (query: string, limit = 10) {
+UserSchema.statics.searchUsers = function(query: string, limit = 10) {
   return this.find({
     $or: [
       { name: { $regex: query, $options: "i" } },
@@ -300,8 +292,19 @@ UserSchema.statics.searchUsers = function (query: string, limit = 10) {
 // ============================================
 // MIDDLEWARE
 // ============================================
-
-UserSchema.pre("save", function (next) {
+UserSchema.pre("save", function(next) {
+  // Ensure stats object exists
+  if (!this.stats) {
+    this.stats = {
+      postsCount: 0,
+      commentsCount: 0,
+      likesReceived: 0,
+      repostsReceived: 0,
+      followersCount: 0,
+      followingCount: 0,
+    };
+  }
+  
   if (this.followers) {
     this.stats.followersCount = this.followers.length;
   }
@@ -311,39 +314,62 @@ UserSchema.pre("save", function (next) {
   next();
 });
 
-UserSchema.pre("remove", async function (next) {
-  await this.model("User").updateMany(
-    { $or: [{ following: this._id }, { followers: this._id }] },
-    { $pull: { following: this._id, followers: this._id } }
-  );
-  await this.model("Post").deleteMany({ author: this._id });
-  await this.model("Comment").deleteMany({ author: this._id });
-  await this.model("Notification").deleteMany({ recipient: this._id });
-  next();
+// Use 'findOneAndDelete' middleware for cleanup
+UserSchema.pre("findOneAndDelete", async function(next) {
+  try {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc) {
+      // Remove user from followers/following lists
+      await mongoose.model("User").updateMany(
+        { $or: [{ following: doc._id }, { followers: doc._id }] },
+        { $pull: { following: doc._id, followers: doc._id } }
+      );
+      
+      // Delete user's posts
+      await mongoose.model("Post").deleteMany({ author: doc._id });
+      
+      // Delete user's comments
+      await mongoose.model("Comment").deleteMany({ author: doc._id });
+      
+      // Delete user's notifications
+      await mongoose.model("Notification").deleteMany({ recipient: doc._id });
+    }
+    next();
+  } catch (error) {
+    next(error as any);
+  }
 });
 
+// ============================================
+// TO JSON / TO OBJECT
+// ============================================
 UserSchema.set("toJSON", {
   virtuals: true,
-  transform: function (doc, ret) {
+  transform: function(doc, ret) {
     delete ret.password;
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;
     delete ret.emailVerificationToken;
-    delete ret.__v;
+    // Use delete with type assertion to avoid TypeScript error
+    delete (ret as any).__v;
     return ret;
   },
 });
 
 UserSchema.set("toObject", {
   virtuals: true,
-  transform: function (doc, ret) {
+  transform: function(doc, ret) {
     delete ret.password;
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;
     delete ret.emailVerificationToken;
-    delete ret.__v;
+    // Use delete with type assertion to avoid TypeScript error
+    delete (ret as any).__v;
     return ret;
   },
 });
 
+// ============================================
+// EXPORT
+// ============================================
 export const User = mongoose.models.User || mongoose.model("User", UserSchema);

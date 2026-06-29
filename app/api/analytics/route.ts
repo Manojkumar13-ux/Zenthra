@@ -1,13 +1,31 @@
 // app/api/analytics/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { Post } from "@/lib/db/models/Post";
+
+export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
+
+export const dynamic = 'force-dynamic';
 import { Comment } from "@/lib/db/models/Comment";
+
+export const dynamic = 'force-dynamic';
 import { Like } from "@/lib/db/models/Like";
+
+export const dynamic = 'force-dynamic';
 import { Repost } from "@/lib/db/models/Repost";
+
+export const dynamic = 'force-dynamic';
 
 interface PostDocument {
   _id: { toString(): string };

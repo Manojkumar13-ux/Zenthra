@@ -1,8 +1,16 @@
 // app/api/auth/forgot-password/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
+
+export const dynamic = 'force-dynamic';
 import crypto from "crypto";
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {

@@ -1,15 +1,28 @@
 // app/api/users/find/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
@@ -35,20 +48,30 @@ export async function GET(req: Request) {
       ];
     }
 
-    // Tab-specific filters
-    const currentUser = await User.findById(session.user.id).select("following").lean();
+    // Get current user's following list
+    const currentUser = await User.findById(session.user.id)
+      .select("following")
+      .lean();
 
+    // Type assertion to handle the following array
+    const currentUserData = currentUser as any;
+    const followingIds = currentUserData?.following?.map((id: any) => id.toString()) || [];
+
+    // Tab-specific filters
     if (tab === "following") {
-      query._id = { $in: currentUser?.following || [] };
+      query._id = { $in: followingIds };
     } else if (tab === "suggested") {
+      // Users not followed and not current user
       query._id = {
-        $nin: [...(currentUser?.following || []), session.user.id],
+        $nin: [...followingIds, session.user.id]
       };
+      // Prioritize users with more followers
+      query.followersCount = { $gt: 0 };
     }
 
     // Fetch users with pagination
     const users = await User.find(query)
-      .select("name username email image bio followers following posts")
+      .select("name username email image bio followers following postsCount")
       .sort({ followersCount: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -57,20 +80,26 @@ export async function GET(req: Request) {
     // Get total count
     const total = await User.countDocuments(query);
 
-    // Check if current user is following each user
-    const followingIds = new Set(currentUser?.following?.map((id: any) => id.toString()) || []);
+    // Format users with follow status
+    const followingIdsSet = new Set(followingIds);
 
     const usersWithFollowStatus = users.map((user: any) => ({
-      ...user,
       _id: user._id.toString(),
-      isFollowing: followingIds.has(user._id.toString()),
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      image: user.image || null,
+      bio: user.bio || "",
+      isFollowing: followingIdsSet.has(user._id.toString()),
       isCurrentUser: user._id.toString() === session.user.id,
       followersCount: user.followers?.length || 0,
       followingCount: user.following?.length || 0,
-      postsCount: user.posts?.length || 0,
+      postsCount: user.postsCount || 0,
+      createdAt: user.createdAt?.toISOString(),
     }));
 
     return NextResponse.json({
+      success: true,
       users: usersWithFollowStatus,
       pagination: {
         total,
@@ -83,6 +112,13 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error finding users:", error);
-    return NextResponse.json({ error: "Failed to find users" }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: "Failed to find users",
+        message: error instanceof Error ? error.message : "Unknown error",
+        users: [],
+      },
+      { status: 500 }
+    );
   }
 }

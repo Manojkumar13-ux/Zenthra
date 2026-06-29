@@ -1,9 +1,9 @@
 // lib/auth.ts
 import { NextAuthOptions } from "next-auth";
-
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { connectToDatabase } from "@/lib/mongodb";
+import { connectDB } from "./db/connect";
+import { User } from "./db/models/User";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
@@ -11,19 +11,12 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: "select_account",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
     }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -31,11 +24,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const db = await connectToDatabase();
-          const usersCollection = db.collection("users");
-
-          const user = await usersCollection.findOne({
-            email: credentials.email.toLowerCase(),
+          await connectDB();
+          
+          const user = await User.findOne({
+            email: credentials.email.toLowerCase()
           });
 
           if (!user) {
@@ -48,7 +40,10 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          const passwordMatch = await bcrypt.compare(credentials.password, user.password);
+          const passwordMatch = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
 
           if (!passwordMatch) {
             console.log("❌ Password mismatch for:", credentials.email);
@@ -66,11 +61,11 @@ export const authOptions: NextAuthOptions = {
             username: user.username || null,
           };
         } catch (error) {
-          console.error("❌ Auth error:", error);
+          console.error('❌ Auth error:', error);
           return null;
         }
-      },
-    }),
+      }
+    })
   ],
   session: {
     strategy: "jwt",
@@ -80,11 +75,10 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         try {
-          const db = await connectToDatabase();
-          const usersCollection = db.collection("users");
-
-          let existingUser = await usersCollection.findOne({
-            email: user.email,
+          await connectDB();
+          
+          let existingUser = await User.findOne({
+            email: user.email
           });
 
           if (!existingUser) {
@@ -92,7 +86,7 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               name: user.name || profile?.name || "",
               username: user.email?.split("@")[0] || "user",
-              image: user.image || profile?.picture || "",
+              image: user.image || (profile as any)?.picture || "",
               googleId: account.providerAccountId,
               role: "user",
               bio: "",
@@ -100,30 +94,25 @@ export const authOptions: NextAuthOptions = {
               website: "",
               followers: [],
               following: [],
-              followersCount: 0,
-              followingCount: 0,
               postsCount: 0,
               isVerified: false,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
-
-            const result = await usersCollection.insertOne(newUser);
-            user.id = result.insertedId.toString();
+            
+            const result = await User.create(newUser);
+            user.id = result._id.toString();
             console.log("✅ New Google user created:", user.email);
           } else {
             user.id = existingUser._id.toString();
-            await usersCollection.updateOne(
-              { _id: existingUser._id },
-              {
-                $set: {
-                  image: user.image || existingUser.image,
-                  name: user.name || existingUser.name,
-                  googleId: account.providerAccountId,
-                  updatedAt: new Date(),
-                },
+            await User.findByIdAndUpdate(existingUser._id, {
+              $set: { 
+                image: user.image || existingUser.image,
+                name: user.name || existingUser.name,
+                googleId: account.providerAccountId,
+                updatedAt: new Date()
               }
-            );
+            });
             console.log("✅ Existing Google user updated:", user.email);
           }
         } catch (error) {
@@ -139,19 +128,19 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role || "user";
         token.email = user.email;
         token.name = user.name;
-        token.username = user.username || null;
-        token.image = user.image || null;
+        token.username = user.username || undefined;
+        token.image = user.image || undefined;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = (token.role as string) || "user";
+        session.user.role = token.role as string || "user";
         session.user.email = token.email as string;
         session.user.name = token.name as string;
-        session.user.username = (token.username as string) || undefined;
-        session.user.image = (token.image as string) || undefined;
+        session.user.username = token.username as string || undefined;
+        session.user.image = token.image as string || undefined;
       }
       return session;
     },

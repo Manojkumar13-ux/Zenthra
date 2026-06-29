@@ -1,12 +1,28 @@
 // app/api/messages/chats/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { Chat } from "@/lib/db/models/Chat";
+
+export const dynamic = 'force-dynamic';
 import { Message } from "@/lib/db/models/Message";
+
+export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
+
+export const dynamic = 'force-dynamic';
 import mongoose from "mongoose";
+
+export const dynamic = 'force-dynamic';
 
 // GET /api/messages/chats - Get all chats for current user
 export async function GET(req: Request) {

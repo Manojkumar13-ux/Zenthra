@@ -1,8 +1,16 @@
 // app/api/ai/generate-post/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth"; // ✅ Fixed import
+
+export const dynamic = 'force-dynamic';
 import { OpenAI } from "openai";
+
+export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

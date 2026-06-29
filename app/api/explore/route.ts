@@ -1,11 +1,25 @@
 // app/api/explore/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { Post } from "@/lib/db/models/Post";
+
+export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
+
+export const dynamic = 'force-dynamic';
 import { Hashtag } from "@/lib/db/models/Hashtag";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
@@ -129,7 +143,9 @@ export async function GET(req: Request) {
         .select("following")
         .lean();
 
-      const followingIds = currentUser?.following?.map((id: any) => id.toString()) || [];
+      // Type assertion to handle the following array
+      const currentUserData = currentUser as any;
+      const followingIds = currentUserData?.following?.map((id: any) => id.toString()) || [];
 
       const usersWithFollow = users.map((user: any) => ({
         _id: user._id.toString(),

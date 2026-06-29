@@ -1,16 +1,25 @@
 // app/api/posts/[id]/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // ✅ Fixed import
+import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
 import { User } from "@/lib/db/models/User";
+import { Comment } from "@/lib/db/models/Comment";
+import { Like } from "@/lib/db/models/Like";
+import { Repost } from "@/lib/db/models/Repost";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     await connectDB();
@@ -27,67 +36,98 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       .lean();
 
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
     }
 
-    // Check if current user has liked the post
-    const isLiked = post.likes?.includes(session.user.id) || false;
-    const isBookmarked = post.bookmarks?.includes(session.user.id) || false;
-    const isReposted = post.reposts?.includes(session.user.id) || false;
+    // Type assertion to handle the post data
+    const postData = post as any;
+
+    // Check if current user has liked, bookmarked, or reposted the post
+    const isLiked = postData.likes?.includes(session.user.id) || false;
+    const isBookmarked = postData.bookmarks?.includes(session.user.id) || false;
+    const isReposted = postData.reposts?.includes(session.user.id) || false;
 
     const formattedPost = {
-      ...post,
-      _id: post._id.toString(),
-      author: post.author
-        ? {
-            ...post.author,
-            _id: post.author._id.toString(),
-          }
-        : null,
-      comments:
-        post.comments?.map((comment: any) => ({
-          ...comment,
-          _id: comment._id.toString(),
-          author: comment.author
-            ? {
-                ...comment.author,
-                _id: comment.author._id.toString(),
-              }
-            : null,
-        })) || [],
-      likesCount: post.likes?.length || 0,
-      commentsCount: post.comments?.length || 0,
-      repostsCount: post.reposts?.length || 0,
+      _id: postData._id.toString(),
+      content: postData.content,
+      author: postData.author ? {
+        _id: postData.author._id.toString(),
+        name: postData.author.name,
+        username: postData.author.username,
+        image: postData.author.image,
+        bio: postData.author.bio,
+      } : null,
+      comments: postData.comments?.map((comment: any) => ({
+        _id: comment._id.toString(),
+        content: comment.content,
+        author: comment.author ? {
+          _id: comment.author._id.toString(),
+          name: comment.author.name,
+          username: comment.author.username,
+          image: comment.author.image,
+        } : null,
+        createdAt: comment.createdAt?.toISOString(),
+        updatedAt: comment.updatedAt?.toISOString(),
+      })) || [],
+      likesCount: postData.likes?.length || 0,
+      commentsCount: postData.comments?.length || 0,
+      repostsCount: postData.reposts?.length || 0,
+      viewsCount: postData.viewsCount || 0,
+      hashtags: postData.hashtags || [],
+      media: postData.media || [],
+      mood: postData.mood || null,
+      category: postData.category || "general",
+      isPinned: postData.isPinned || false,
       isLiked,
       isBookmarked,
       isReposted,
-      createdAt: post.createdAt?.toISOString(),
-      updatedAt: post.updatedAt?.toISOString(),
+      createdAt: postData.createdAt?.toISOString(),
+      updatedAt: postData.updatedAt?.toISOString(),
     };
 
-    // Increment view count
-    await Post.findByIdAndUpdate(params.id, {
-      $inc: { viewsCount: 1 },
-    });
+    // Increment view count (do this asynchronously, don't wait)
+    try {
+      await Post.findByIdAndUpdate(params.id, {
+        $inc: { viewsCount: 1 },
+      });
+    } catch (viewError) {
+      console.error("Error incrementing view count:", viewError);
+    }
 
     return NextResponse.json({ post: formattedPost });
   } catch (error) {
     console.error("Error fetching post:", error);
-    return NextResponse.json({ error: "Failed to fetch post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch post" },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { content, media, hashtags, category, mood, visibility } = await req.json();
+    const body = await req.json();
+    const { content, media, hashtags, category, mood, visibility } = body;
 
     if (!content || content.trim().length === 0) {
-      return NextResponse.json({ error: "Content is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Content is required" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
@@ -95,7 +135,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const post = await Post.findById(params.id);
 
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
     }
 
     // Check if user is the author
@@ -133,33 +176,59 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       .populate("author", "name username image")
       .lean();
 
+    if (!updatedPost) {
+      return NextResponse.json(
+        { error: "Failed to update post" },
+        { status: 500 }
+      );
+    }
+
+    const updatedPostData = updatedPost as any;
+
     return NextResponse.json({
       success: true,
       post: {
-        ...updatedPost,
-        _id: updatedPost._id.toString(),
-        author: updatedPost.author
-          ? {
-              ...updatedPost.author,
-              _id: updatedPost.author._id.toString(),
-            }
-          : null,
-        createdAt: updatedPost.createdAt?.toISOString(),
-        updatedAt: updatedPost.updatedAt?.toISOString(),
+        _id: updatedPostData._id.toString(),
+        content: updatedPostData.content,
+        author: updatedPostData.author ? {
+          _id: updatedPostData.author._id.toString(),
+          name: updatedPostData.author.name,
+          username: updatedPostData.author.username,
+          image: updatedPostData.author.image,
+        } : null,
+        likesCount: updatedPostData.likes?.length || 0,
+        commentsCount: updatedPostData.comments?.length || 0,
+        repostsCount: updatedPostData.reposts?.length || 0,
+        hashtags: updatedPostData.hashtags || [],
+        media: updatedPostData.media || [],
+        category: updatedPostData.category || "general",
+        mood: updatedPostData.mood || null,
+        isEdited: updatedPostData.isEdited || false,
+        createdAt: updatedPostData.createdAt?.toISOString(),
+        updatedAt: updatedPostData.updatedAt?.toISOString(),
       },
       message: "Post updated successfully",
     });
   } catch (error) {
     console.error("Error updating post:", error);
-    return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update post" },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     await connectDB();
@@ -167,7 +236,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const post = await Post.findById(params.id);
 
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
     }
 
     // Check if user is the author or admin
@@ -181,8 +253,20 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       );
     }
 
-    // Delete post
-    await Post.findByIdAndDelete(params.id);
+    // Delete related data
+    const postId = params.id;
+    
+    // Delete likes
+    await Like.deleteMany({ post: postId });
+    
+    // Delete reposts
+    await Repost.deleteMany({ post: postId });
+    
+    // Delete comments
+    await Comment.deleteMany({ post: postId });
+    
+    // Delete the post
+    await Post.findByIdAndDelete(postId);
 
     // Update user's post count
     await User.findByIdAndUpdate(session.user.id, {
@@ -195,6 +279,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     });
   } catch (error) {
     console.error("Error deleting post:", error);
-    return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete post" },
+      { status: 500 }
+    );
   }
 }

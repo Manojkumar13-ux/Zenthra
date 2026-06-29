@@ -1,49 +1,93 @@
 // app/api/users/suggested/route.ts
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
+
+export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
+
+export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
+
+export const dynamic = 'force-dynamic';
 import mongoose from "mongoose";
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const currentUserId = session.user.id;
 
     await connectDB();
 
-    const currentUserId = session.user.id;
-
-    // Get current user to check following list
-    const currentUser = await User.findById(currentUserId);
-    const followingIds = currentUser?.following?.map((id: any) => id.toString()) || [];
-
-    // Get suggested users (excluding self and already followed)
-    const suggestedUsers = await User.find({
-      _id: {
-        $ne: new mongoose.Types.ObjectId(currentUserId),
-        $nin: followingIds.map((id) => new mongoose.Types.ObjectId(id)),
-      },
-    })
-      .select("name username image bio followers following")
-      .limit(10)
+    // Get current user's following list
+    const currentUser = await User.findById(currentUserId)
+      .select("following")
       .lean();
 
-    // Add isFollowing flag
-    const usersWithFollowStatus = suggestedUsers.map((user: any) => ({
-      ...user,
-      isFollowing: false, // Since we already excluded followed users
+    // Type assertion to handle the following array
+    const currentUserData = currentUser as any;
+    const followingIds = currentUserData?.following?.map((id: any) => id.toString()) || [];
+
+    // Convert following IDs to ObjectId
+    const followingObjectIds = followingIds
+      .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
+      .map((id: string) => new mongoose.Types.ObjectId(id));
+
+    // Find suggested users (users not followed and not current user)
+    const query: any = {
+      _id: {
+        $ne: new mongoose.Types.ObjectId(currentUserId),
+        $nin: followingObjectIds,
+      },
+    };
+
+    // Prioritize users with more followers
+    const suggestedUsers = await User.find(query)
+      .select("name username image bio followers following")
+      .sort({ followersCount: -1, createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // Format suggested users
+    const formattedUsers = suggestedUsers.map((user: any) => ({
+      _id: user._id.toString(),
+      name: user.name,
+      username: user.username,
+      image: user.image || null,
+      bio: user.bio || "",
       followersCount: user.followers?.length || 0,
+      followingCount: user.following?.length || 0,
+      isFollowing: false,
     }));
 
     return NextResponse.json({
-      users: usersWithFollowStatus,
+      success: true,
+      users: formattedUsers,
     });
   } catch (error) {
-    console.error("Suggested users error:", error);
-    return NextResponse.json({ error: "Failed to fetch suggested users" }, { status: 500 });
+    console.error("Error fetching suggested users:", error);
+    return NextResponse.json(
+      { 
+        error: "Failed to fetch suggested users",
+        message: error instanceof Error ? error.message : "Unknown error",
+        users: [],
+      },
+      { status: 500 }
+    );
   }
 }
