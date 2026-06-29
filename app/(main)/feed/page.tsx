@@ -5,7 +5,11 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, RefreshCw, AlertCircle } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
 import PostCard from "@/components/posts/PostCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,8 +55,20 @@ interface Post {
   aiSummary?: string;
 }
 
+interface FeedResponse {
+  posts: Post[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
 export default function FeedPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabType>("for-you");
@@ -65,11 +81,11 @@ export default function FeedPage() {
   }, [status, router]);
 
   const {
-    data: posts,
+    data,
     isLoading,
     error,
     refetch,
-  } = useQuery<Post[]>({
+  } = useQuery<FeedResponse>({
     queryKey: ["feed", tab, category],
     queryFn: async () => {
       const url = new URL("/api/feed", window.location.origin);
@@ -87,6 +103,10 @@ export default function FeedPage() {
     enabled: status === "authenticated",
   });
 
+  // ✅ Extract posts array safely
+  const posts = data?.posts || [];
+  const pagination = data?.pagination;
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["feed", tab, category] });
     refetch();
@@ -94,9 +114,12 @@ export default function FeedPage() {
   };
 
   const handlePostDeleted = (postId: string) => {
-    queryClient.setQueryData<Post[]>(["feed", tab, category], (oldData) => {
+    queryClient.setQueryData<FeedResponse>(["feed", tab, category], (oldData) => {
       if (!oldData) return oldData;
-      return oldData.filter((post) => post._id !== postId);
+      return {
+        ...oldData,
+        posts: oldData.posts.filter((post) => post._id !== postId),
+      };
     });
   };
 
@@ -140,7 +163,11 @@ export default function FeedPage() {
         <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
           Sign in to see personalized content and connect with others.
         </p>
-        <Button onClick={() => (window.location.href = "/login")} className="gap-2" size="lg">
+        <Button
+          onClick={() => (window.location.href = "/login")}
+          className="gap-2"
+          size="lg"
+        >
           Get Started
         </Button>
       </div>
@@ -183,7 +210,11 @@ export default function FeedPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabType)} className="mb-4">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as TabType)}
+        className="mb-4"
+      >
         <TabsList className="w-full">
           <TabsTrigger value="for-you" className="flex-1">
             For You
@@ -271,17 +302,34 @@ export default function FeedPage() {
             <Button variant="outline" onClick={() => router.push("/explore")}>
               Explore
             </Button>
-            <Button onClick={() => router.push("/create-post")}>Create Post</Button>
+            <Button onClick={() => router.push("/create-post")}>
+              Create Post
+            </Button>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard key={post._id} post={post} onDelete={() => handlePostDeleted(post._id)} />
+            <PostCard
+              key={post._id}
+              post={post}
+              onDelete={() => handlePostDeleted(post._id)}
+            />
           ))}
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            You've reached the end of your feed
-          </div>
+          {pagination?.hasNext && (
+            <div className="py-4 text-center">
+              <Button variant="outline" className="w-full" onClick={() => {
+                // Load more logic here
+              }}>
+                Load More
+              </Button>
+            </div>
+          )}
+          {pagination && !pagination.hasNext && posts.length > 0 && (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              You've reached the end of your feed
+            </div>
+          )}
         </div>
       )}
     </div>

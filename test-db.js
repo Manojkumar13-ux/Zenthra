@@ -1,23 +1,18 @@
-const mongoose = require("mongoose");
-require("dotenv").config({ path: ".env.local" });
+// test-db.js
+const mongoose = require('mongoose');
 
-const MONGODB_URI = "mongodb://localhost:27017/zenthra";
+const MONGODB_URI = "mongodb+srv://manojkumar:manoj1234@cluster0.hcrcwnx.mongodb.net/zenthra?retryWrites=true&w=majority&appName=Cluster0";
 
 async function testConnection() {
   try {
+    console.log("🔄 Connecting to MongoDB...");
     await mongoose.connect(MONGODB_URI);
-    console.log("✅ Connected to MongoDB successfully!");
-
-    // List databases
-    const db = mongoose.connection.db;
-    const dbs = await db.admin().listDatabases();
-    console.log("📊 Available databases:", dbs.databases.map((d) => d.name).join(", "));
-
+    console.log("✅ Connected successfully!");
+    console.log("✅ Database:", mongoose.connection.db.databaseName);
     await mongoose.disconnect();
-    process.exit(0);
+    console.log("✅ Disconnected");
   } catch (error) {
-    console.error("❌ Failed to connect:", error.message);
-    process.exit(1);
+    console.error("❌ Connection failed:", error.message);
   }
 }
 

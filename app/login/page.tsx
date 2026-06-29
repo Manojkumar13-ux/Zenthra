@@ -41,7 +41,6 @@ export default function LoginPage() {
     return null;
   }
 
-  // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -58,19 +57,21 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
         toast.error("Invalid credentials");
+        console.error("Login error:", result.error);
       } else {
         toast.success("Welcome back! 🎉");
         router.push("/feed");
+        router.refresh();
       }
     } catch (error) {
       setError("Something went wrong. Please try again.");
       toast.error("Login failed");
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle Registration
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -78,61 +79,65 @@ export default function LoginPage() {
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      toast.error("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
+      toast.error("Password too short");
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log("📝 Registering user:", { name, email });
+
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       });
 
       const data = await response.json();
+      console.log("📝 Registration response:", data);
 
       if (!response.ok) {
-        setError(data.message || "Registration failed");
-        toast.error(data.message || "Registration failed");
-        setIsLoading(false);
-        return;
+        throw new Error(data.message || "Registration failed");
       }
 
-      toast.success("Account created! Please sign in.");
-      setIsRegistering(false);
-      setPassword("");
-      setConfirmPassword("");
-      setError("");
+      toast.success("Account created! Signing you in...");
 
-      // Auto sign in after registration
+      // Auto sign in
       const result = await signIn("credentials", {
-        email,
+        email: email.trim(),
         password,
         redirect: false,
-        callbackUrl: "/feed",
       });
 
       if (result?.error) {
-        setError("Account created but auto-login failed. Please sign in manually.");
+        toast.success("Account created! Please sign in manually.");
+        setIsRegistering(false);
+        setPassword("");
+        setConfirmPassword("");
+        setEmail("");
+        setName("");
+        setError("");
       } else {
         toast.success("Welcome to Zenthra! 🎉");
         router.push("/feed");
+        router.refresh();
       }
-    } catch (error) {
-      setError("Something went wrong. Please try again.");
-      toast.error("Registration failed");
+    } catch (error: any) {
+      console.error("❌ Registration error:", error);
+      setError(error.message || "Something went wrong");
+      toast.error(error.message || "Registration failed");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Toggle between Login and Register
   const toggleMode = () => {
     setIsRegistering(!isRegistering);
     setError("");
@@ -142,14 +147,12 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      {/* Animated Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -right-40 -top-40 h-80 w-80 animate-blob rounded-full bg-blue-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-blue-900/30" />
         <div className="animation-delay-2000 absolute -bottom-40 -left-40 h-80 w-80 animate-blob rounded-full bg-purple-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-purple-900/30" />
         <div className="animation-delay-4000 absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 animate-blob rounded-full bg-pink-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-pink-900/30" />
       </div>
 
-      {/* Login/Register Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -157,7 +160,6 @@ export default function LoginPage() {
         className="relative z-10 w-full max-w-md"
       >
         <div className="rounded-2xl border border-white/20 bg-white/80 p-8 shadow-2xl backdrop-blur-xl dark:border-gray-700/30 dark:bg-gray-900/80">
-          {/* Header */}
           <div className="mb-8 text-center">
             <motion.div
               initial={{ scale: 0 }}
@@ -182,7 +184,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -193,14 +194,10 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          {/* Login Form */}
           {!isRegistering && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label
-                  htmlFor="email"
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Email Address
                 </label>
                 <div className="relative">
@@ -220,16 +217,10 @@ export default function LoginPage() {
 
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
+                  <Link href="/forgot-password" className="text-sm text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                     Forgot password?
                   </Link>
                 </div>
@@ -275,14 +266,10 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Register Form */}
           {isRegistering && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label
-                  htmlFor="name"
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Full Name
                 </label>
                 <div className="relative">
@@ -301,10 +288,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="reg-email"
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="reg-email" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Email Address
                 </label>
                 <div className="relative">
@@ -323,10 +307,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="reg-password"
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="reg-password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Password
                 </label>
                 <div className="relative">
@@ -352,10 +333,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="confirm-password"
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="confirm-password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Confirm Password
                 </label>
                 <div className="relative">
@@ -393,9 +371,6 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* ✅ REMOVED: Google Sign In Button - Completely removed */}
-
-          {/* Toggle between Login and Register */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {isRegistering ? "Already have an account?" : "Don't have an account?"}

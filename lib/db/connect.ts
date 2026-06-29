@@ -1,24 +1,17 @@
 // lib/db/connect.ts
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-const MONGODB_DB = process.env.MONGODB_DB || "zenthra";
+// Use environment variable or fallback to local for development
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/zenthra";
 
 if (!MONGODB_URI) {
   throw new Error("Please define MONGODB_URI environment variable");
 }
 
-// Define the global mongoose cache
-interface GlobalMongoose {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-}
+let cached = (global as any).mongoose || { conn: null, promise: null };
 
-// Use a different variable name to avoid redeclaration
-let cached: GlobalMongoose = (global as any).mongoose;
-
-if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
+if (!(global as any).mongoose) {
+  (global as any).mongoose = cached;
 }
 
 export async function connectDB() {
@@ -32,27 +25,21 @@ export async function connectDB() {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      family: 4,
     };
 
+    console.log("🔄 Connecting to MongoDB...");
+    console.log(`📚 Using environment: ${process.env.NODE_ENV || 'development'}`);
+    
     cached.promise = mongoose
       .connect(MONGODB_URI, opts)
       .then((mongoose) => {
         console.log("✅ MongoDB connected successfully");
-        
-        if (process.env.NODE_ENV === "development") {
-          try {
-            // Sync indexes in development
-            // Using any to avoid type issues
-            (mongoose as any).syncIndexes?.();
-          } catch (error) {
-            console.warn("⚠️ Could not sync indexes:", error);
-          }
-        }
-        
+        console.log(`📚 Database: ${mongoose.connection.db?.databaseName || 'zenthra'}`);
         return mongoose;
       })
       .catch((error) => {
-        console.error("❌ MongoDB connection error:", error);
+        console.error("❌ MongoDB connection error:", error.message);
         throw error;
       });
   }
@@ -66,5 +53,3 @@ export async function connectDB() {
 
   return cached.conn;
 }
-
-export { mongoose };
