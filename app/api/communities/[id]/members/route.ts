@@ -1,20 +1,88 @@
+// app/api/communities/[id]/members/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { Community } from "@/lib/db/models/Community";
+import { User } from "@/lib/db/models/User";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    const community = await Community.findById(params.id)
+      .populate("members", "name username image bio")
+      .populate("admins", "name username image bio")
+      .lean();
+
+    if (!community) {
+      return NextResponse.json(
+        { error: "Community not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is a member
+    const isMember = community.members?.some(
+      (member: any) => member._id.toString() === session.user.id
+    ) || false;
+
+    if (!isMember && community.isPrivate) {
+      return NextResponse.json(
+        { error: "This community is private" },
+        { status: 403 }
+      );
+    }
+
+    const members = community.members || [];
+    const admins = community.admins || [];
+
+    return NextResponse.json({
+      members: members,
+      admins: admins,
+      memberCount: members.length || 0,
+      adminCount: admins.length || 0,
+      isMember,
+      isAdmin: admins.some(
+        (admin: any) => admin._id.toString() === session.user.id
+      ) || false,
+    });
+  } catch (error) {
+    console.error("Error fetching community members:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch community members" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { action } = await req.json();
-    const userId = session.user.id;
 
-    if (!["join", "leave"].includes(action)) {
+    if (!action || !["join", "leave"].includes(action)) {
       return NextResponse.json(
         { error: "Invalid action. Must be 'join' or 'leave'" },
         { status: 400 }
@@ -24,97 +92,270 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await connectDB();
 
     const community = await Community.findById(params.id);
+
     if (!community) {
-      return NextResponse.json({ error: "Community not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Community not found" },
+        { status: 404 }
+      );
     }
 
-    // Convert to strings for comparison
-    const memberIds = community.members?.map((id: any) => id.toString()) || [];
-    const isMember = memberIds.includes(userId);
+    const userId = session.user.id;
+    const isMember = community.members?.includes(userId) || false;
 
     if (action === "join") {
       if (isMember) {
-        return NextResponse.json({ message: "Already a member" }, { status: 400 });
+        return NextResponse.json(
+          { error: "You are already a member" },
+          { status: 400 }
+        );
       }
 
-      // Add to members
+      // Add user to members
       community.members.push(userId);
+      await community.save();
 
-      // Create notification for owner
-      try {
-        const user = await fetch(`${process.env.NEXTAUTH_URL}/api/users/me`, {
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        });
-        const userData = await user.json();
+      return NextResponse.json({
+        success: true,
+        message: "Joined community successfully",
+        isMember: true,
+      });
+    }
 
-        await fetch(`${process.env.NEXTAUTH_URL}/api/notifications`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            userId: community.owner.toString(),
-            type: "community",
-            message: `${userData.name || "Someone"} joined your community "${community.name}"`,
-            communityId: community._id.toString(),
-          }),
-        });
-      } catch (notifError) {
-        console.error("Failed to create notification:", notifError);
-      }
-    } else {
-      // Leave
+    if (action === "leave") {
       if (!isMember) {
-        return NextResponse.json({ message: "Not a member" }, { status: 400 });
+        return NextResponse.json(
+          { error: "You are not a member of this community" },
+          { status: 400 }
+        );
       }
 
-      // Remove from members
-      community.members = community.members.filter((id: any) => id.toString() !== userId);
+      // Remove user from members
+      community.members = community.members.filter(
+        (id: string) => id.toString() !== userId
+      );
 
-      // Remove from moderators if present
-      if (community.moderators) {
-        community.moderators = community.moderators.filter((id: any) => id.toString() !== userId);
+      // Remove from admins if they were an admin
+      if (community.admins?.includes(userId)) {
+        community.admins = community.admins.filter(
+          (id: string) => id.toString() !== userId
+        );
       }
+
+      await community.save();
+
+      return NextResponse.json({
+        success: true,
+        message: "Left community successfully",
+        isMember: false,
+      });
+    }
+
+    return NextResponse.json(
+      { error: "Invalid action" },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error("Error updating community membership:", error);
+    return NextResponse.json(
+      { error: "Failed to update community membership" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { userId, action } = await req.json();
+
+    if (!userId || !action || !["add_admin", "remove_admin"].includes(action)) {
+      return NextResponse.json(
+        { error: "Invalid request. Requires userId and action" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const community = await Community.findById(params.id);
+
+    if (!community) {
+      return NextResponse.json(
+        { error: "Community not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if current user is an admin
+    if (!community.admins?.includes(session.user.id)) {
+      return NextResponse.json(
+        { error: "Only admins can manage moderators" },
+        { status: 403 }
+      );
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is a member
+    if (!community.members?.includes(userId)) {
+      return NextResponse.json(
+        { error: "User is not a member of this community" },
+        { status: 400 }
+      );
+    }
+
+    if (action === "add_admin") {
+      if (community.admins?.includes(userId)) {
+        return NextResponse.json(
+          { error: "User is already an admin" },
+          { status: 400 }
+        );
+      }
+
+      community.admins.push(userId);
+      await community.save();
+
+      return NextResponse.json({
+        success: true,
+        message: "User added as admin successfully",
+        isAdmin: true,
+      });
+    }
+
+    if (action === "remove_admin") {
+      if (!community.admins?.includes(userId)) {
+        return NextResponse.json(
+          { error: "User is not an admin" },
+          { status: 400 }
+        );
+      }
+
+      // Prevent removing the last admin
+      if (community.admins.length <= 1) {
+        return NextResponse.json(
+          { error: "Cannot remove the last admin" },
+          { status: 400 }
+        );
+      }
+
+      community.admins = community.admins.filter(
+        (id: string) => id.toString() !== userId
+      );
+      await community.save();
+
+      return NextResponse.json({
+        success: true,
+        message: "Admin privileges removed successfully",
+        isAdmin: false,
+      });
+    }
+
+    return NextResponse.json(
+      { error: "Invalid action" },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error("Error updating community admins:", error);
+    return NextResponse.json(
+      { error: "Failed to update community admins" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const community = await Community.findById(params.id);
+
+    if (!community) {
+      return NextResponse.json(
+        { error: "Community not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if current user is an admin or the user themselves
+    const isAdmin = community.admins?.includes(session.user.id) || false;
+    const isSelf = session.user.id === userId;
+
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json(
+        { error: "Unauthorized to remove this user" },
+        { status: 403 }
+      );
+    }
+
+    // Cannot remove the last admin
+    if (isAdmin && community.admins?.includes(userId) && community.admins.length <= 1) {
+      return NextResponse.json(
+        { error: "Cannot remove the last admin" },
+        { status: 400 }
+      );
+    }
+
+    // Remove user from members
+    community.members = community.members.filter(
+      (id: string) => id.toString() !== userId
+    );
+
+    // Remove from admins if they were an admin
+    if (community.admins?.includes(userId)) {
+      community.admins = community.admins.filter(
+        (id: string) => id.toString() !== userId
+      );
     }
 
     await community.save();
 
     return NextResponse.json({
       success: true,
-      isMember: action === "join",
-      memberCount: community.members?.length || 0,
+      message: "User removed from community successfully",
     });
   } catch (error) {
-    console.error("Error updating community membership:", error);
-    return NextResponse.json({ error: "Failed to update membership" }, { status: 500 });
-  }
-}
-
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectDB();
-
-    const community = await Community.findById(params.id)
-      .populate("members", "name username image")
-      .populate("moderators", "name username image")
-      .lean();
-
-    if (!community) {
-      return NextResponse.json({ error: "Community not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      members: community.members || [],
-      moderators: community.moderators || [],
-      memberCount: community.members?.length || 0,
-    });
-  } catch (error) {
-    console.error("Error fetching community members:", error);
-    return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
+    console.error("Error removing user from community:", error);
+    return NextResponse.json(
+      { error: "Failed to remove user from community" },
+      { status: 500 }
+    );
   }
 }
