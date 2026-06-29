@@ -33,20 +33,21 @@ export async function GET(
       );
     }
 
-    // Check if user is a member
-    const isMember = community.members?.some(
+    // Check if user is a member - using type assertion
+    const communityData = community as any;
+    const members = communityData.members || [];
+    const admins = communityData.admins || [];
+
+    const isMember = members.some(
       (member: any) => member._id.toString() === session.user.id
     ) || false;
 
-    if (!isMember && community.isPrivate) {
+    if (!isMember && communityData.isPrivate) {
       return NextResponse.json(
         { error: "This community is private" },
         { status: 403 }
       );
     }
-
-    const members = community.members || [];
-    const admins = community.admins || [];
 
     return NextResponse.json({
       members: members,
@@ -80,7 +81,8 @@ export async function POST(
       );
     }
 
-    const { action } = await req.json();
+    const body = await req.json();
+    const { action } = body;
 
     if (!action || !["join", "leave"].includes(action)) {
       return NextResponse.json(
@@ -101,7 +103,8 @@ export async function POST(
     }
 
     const userId = session.user.id;
-    const isMember = community.members?.includes(userId) || false;
+    const communityData = community as any;
+    const isMember = communityData.members?.includes(userId) || false;
 
     if (action === "join") {
       if (isMember) {
@@ -112,8 +115,8 @@ export async function POST(
       }
 
       // Add user to members
-      community.members.push(userId);
-      await community.save();
+      communityData.members.push(userId);
+      await communityData.save();
 
       return NextResponse.json({
         success: true,
@@ -131,18 +134,18 @@ export async function POST(
       }
 
       // Remove user from members
-      community.members = community.members.filter(
+      communityData.members = communityData.members.filter(
         (id: string) => id.toString() !== userId
       );
 
       // Remove from admins if they were an admin
-      if (community.admins?.includes(userId)) {
-        community.admins = community.admins.filter(
+      if (communityData.admins?.includes(userId)) {
+        communityData.admins = communityData.admins.filter(
           (id: string) => id.toString() !== userId
         );
       }
 
-      await community.save();
+      await communityData.save();
 
       return NextResponse.json({
         success: true,
@@ -177,7 +180,8 @@ export async function PUT(
       );
     }
 
-    const { userId, action } = await req.json();
+    const body = await req.json();
+    const { userId, action } = body;
 
     if (!userId || !action || !["add_admin", "remove_admin"].includes(action)) {
       return NextResponse.json(
@@ -197,8 +201,10 @@ export async function PUT(
       );
     }
 
+    const communityData = community as any;
+
     // Check if current user is an admin
-    if (!community.admins?.includes(session.user.id)) {
+    if (!communityData.admins?.includes(session.user.id)) {
       return NextResponse.json(
         { error: "Only admins can manage moderators" },
         { status: 403 }
@@ -214,7 +220,7 @@ export async function PUT(
     }
 
     // Check if user is a member
-    if (!community.members?.includes(userId)) {
+    if (!communityData.members?.includes(userId)) {
       return NextResponse.json(
         { error: "User is not a member of this community" },
         { status: 400 }
@@ -222,15 +228,15 @@ export async function PUT(
     }
 
     if (action === "add_admin") {
-      if (community.admins?.includes(userId)) {
+      if (communityData.admins?.includes(userId)) {
         return NextResponse.json(
           { error: "User is already an admin" },
           { status: 400 }
         );
       }
 
-      community.admins.push(userId);
-      await community.save();
+      communityData.admins.push(userId);
+      await communityData.save();
 
       return NextResponse.json({
         success: true,
@@ -240,7 +246,7 @@ export async function PUT(
     }
 
     if (action === "remove_admin") {
-      if (!community.admins?.includes(userId)) {
+      if (!communityData.admins?.includes(userId)) {
         return NextResponse.json(
           { error: "User is not an admin" },
           { status: 400 }
@@ -248,17 +254,17 @@ export async function PUT(
       }
 
       // Prevent removing the last admin
-      if (community.admins.length <= 1) {
+      if (communityData.admins.length <= 1) {
         return NextResponse.json(
           { error: "Cannot remove the last admin" },
           { status: 400 }
         );
       }
 
-      community.admins = community.admins.filter(
+      communityData.admins = communityData.admins.filter(
         (id: string) => id.toString() !== userId
       );
-      await community.save();
+      await communityData.save();
 
       return NextResponse.json({
         success: true,
@@ -314,8 +320,10 @@ export async function DELETE(
       );
     }
 
+    const communityData = community as any;
+
     // Check if current user is an admin or the user themselves
-    const isAdmin = community.admins?.includes(session.user.id) || false;
+    const isAdmin = communityData.admins?.includes(session.user.id) || false;
     const isSelf = session.user.id === userId;
 
     if (!isAdmin && !isSelf) {
@@ -326,7 +334,7 @@ export async function DELETE(
     }
 
     // Cannot remove the last admin
-    if (isAdmin && community.admins?.includes(userId) && community.admins.length <= 1) {
+    if (isAdmin && communityData.admins?.includes(userId) && communityData.admins.length <= 1) {
       return NextResponse.json(
         { error: "Cannot remove the last admin" },
         { status: 400 }
@@ -334,18 +342,18 @@ export async function DELETE(
     }
 
     // Remove user from members
-    community.members = community.members.filter(
+    communityData.members = communityData.members.filter(
       (id: string) => id.toString() !== userId
     );
 
     // Remove from admins if they were an admin
-    if (community.admins?.includes(userId)) {
-      community.admins = community.admins.filter(
+    if (communityData.admins?.includes(userId)) {
+      communityData.admins = communityData.admins.filter(
         (id: string) => id.toString() !== userId
       );
     }
 
-    await community.save();
+    await communityData.save();
 
     return NextResponse.json({
       success: true,
