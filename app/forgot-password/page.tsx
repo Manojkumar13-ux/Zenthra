@@ -51,11 +51,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -right-40 -top-40 h-80 w-80 animate-blob rounded-full bg-blue-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-blue-900/30" />
-        <div className="animation-delay-2000 absolute -bottom-40 -left-40 h-80 w-80 animate-blob rounded-full bg-purple-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-purple-900/30" />
-      </div>
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -73,7 +68,7 @@ export default function ForgotPasswordPage() {
               Reset Password
             </h1>
             <p className="mt-2 text-gray-500 dark:text-gray-400">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
           </div>
 
@@ -100,7 +95,7 @@ export default function ForgotPasswordPage() {
                 Check Your Email
               </h2>
               <p className="mb-6 text-gray-500 dark:text-gray-400">
-                We've sent a password reset link to <strong>{email}</strong>
+                We&apos;ve sent a password reset link to <strong>{email}</strong>
               </p>
               <Link href="/login">
                 <Button variant="outline" className="w-full">
