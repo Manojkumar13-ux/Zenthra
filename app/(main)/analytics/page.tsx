@@ -124,7 +124,12 @@ export default function AnalyticsPage() {
     );
   }
 
-  const stats = data?.stats || {};
+  const stats: AnalyticsStats = data?.stats || {
+    profileViews: 0,
+    engagementRate: 0,
+    reach: 0,
+    followersGrowth: 0,
+  };
   const engagementData = data?.engagement || [];
   const growthData = data?.growth || [];
   const demographics = data?.demographics || {};
