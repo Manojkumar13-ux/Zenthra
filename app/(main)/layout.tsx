@@ -1,5 +1,5 @@
 // app/(main)/layout.tsx
-import { Navbar } from "@/components/shared/navbar";
+import { Navbar } from "@/components/shared/Navbar";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
