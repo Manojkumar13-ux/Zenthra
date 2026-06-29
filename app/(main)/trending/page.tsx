@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TrendingUp, Hash, Loader2, Flame, Sparkles, Clock } from "lucide-react";
-import PostCard from "@/components/posts/PostCard"; // ✅ Default import
+import PostCard from "@/components/posts/PostCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +74,10 @@ export default function TrendingPage() {
     }
   };
 
+  const handleDeletePost = (postId: string) => {
+    setPosts((prev) => prev.filter((post) => post._id !== postId));
+  };
+
   if (status === "loading" || isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -97,7 +101,10 @@ export default function TrendingPage() {
       </div>
 
       {/* Time Range Tabs */}
-      <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as "today" | "week" | "month")}>
+      <Tabs
+        value={timeRange}
+        onValueChange={(v) => setTimeRange(v as "today" | "week" | "month")}
+      >
         <TabsList className="w-full">
           <TabsTrigger value="today" className="flex-1">
             Today
@@ -156,6 +163,7 @@ export default function TrendingPage() {
                     viewsCount: post.viewsCount || 0,
                     isPinned: post.isPinned || false,
                   }}
+                  onDelete={() => handleDeletePost(post._id)}
                 />
                 {post.trendingScore && (
                   <div className="mt-1 flex items-center gap-2 text-xs text-orange-500">

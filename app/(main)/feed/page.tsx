@@ -277,7 +277,7 @@ export default function FeedPage() {
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard key={post._id} post={post} onDelete={handlePostDeleted} />
+            <PostCard key={post._id} post={post} onDelete={() => handlePostDeleted(post._id)} />
           ))}
           <div className="py-8 text-center text-sm text-muted-foreground">
             You've reached the end of your feed

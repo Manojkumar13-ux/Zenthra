@@ -132,7 +132,10 @@ export default function AnalyticsPage() {
   };
   const engagementData = data?.engagement || [];
   const growthData = data?.growth || [];
-  const demographics = data?.demographics || {};
+  const demographics: { ageGroups: AgeGroupData[]; locations: LocationData[] } = data?.demographics || {
+    ageGroups: [],
+    locations: [],
+  };
   const topPosts = data?.topPosts || [];
 
   return (
@@ -311,7 +314,7 @@ export default function AnalyticsPage() {
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={demographics.ageGroups || []}
+                        data={demographics.ageGroups}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
@@ -319,7 +322,7 @@ export default function AnalyticsPage() {
                         paddingAngle={5}
                         dataKey="value"
                       >
-                        {(demographics.ageGroups || []).map(
+                        {demographics.ageGroups.map(
                           (entry: AgeGroupData, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           )
@@ -332,7 +335,7 @@ export default function AnalyticsPage() {
                 <div>
                   <p className="mb-2 text-sm font-medium">Top Locations</p>
                   <div className="space-y-2">
-                    {(demographics.locations || []).map((loc: LocationData, i: number) => (
+                    {demographics.locations.map((loc: LocationData, i: number) => (
                       <div key={i} className="flex items-center justify-between">
                         <span className="text-sm">{loc.city}</span>
                         <span className="text-sm font-medium">{loc.value}%</span>

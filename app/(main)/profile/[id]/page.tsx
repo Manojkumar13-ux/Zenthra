@@ -164,7 +164,9 @@ export default function ProfilePage() {
         return {
           ...prev,
           isFollowing: data.isFollowing,
-          followersCount: data.isFollowing ? prev.followersCount + 1 : prev.followersCount - 1,
+          followersCount: data.isFollowing
+            ? prev.followersCount + 1
+            : prev.followersCount - 1,
         };
       });
       toast.success(data.isFollowing ? "Followed!" : "Unfollowed!");
@@ -201,6 +203,11 @@ export default function ProfilePage() {
       console.error("Error updating profile:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update profile");
     }
+  };
+
+  const handleDeletePost = (postId: string) => {
+    setPosts((prev) => prev.filter((post) => post._id !== postId));
+    toast.success("Post deleted");
   };
 
   if (isLoading) {
@@ -244,7 +251,12 @@ export default function ProfilePage() {
       {/* Cover Image */}
       <div className="relative h-48 w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-purple-500">
         {profile.coverImage ? (
-          <Image src={profile.coverImage} alt="Cover" fill className="object-cover" />
+          <Image
+            src={profile.coverImage}
+            alt="Cover"
+            fill
+            className="object-cover"
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-white/30">
             <Camera className="h-12 w-12" />
@@ -295,14 +307,18 @@ export default function ProfilePage() {
                       <label className="text-sm font-medium">Name</label>
                       <Input
                         value={editForm.name}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Bio</label>
                       <Textarea
                         value={editForm.bio}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({ ...prev, bio: e.target.value }))
+                        }
                         rows={3}
                       />
                     </div>
@@ -410,14 +426,18 @@ export default function ProfilePage() {
             {activeTab === "posts"
               ? "No posts yet"
               : activeTab === "likes"
-                ? "No liked posts"
-                : "No bookmarked posts"}
+              ? "No liked posts"
+              : "No bookmarked posts"}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard key={post._id} post={post} />
+            <PostCard
+              key={post._id}
+              post={post}
+              onDelete={() => handleDeletePost(post._id)}
+            />
           ))}
         </div>
       )}

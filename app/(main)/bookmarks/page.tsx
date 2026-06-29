@@ -139,7 +139,7 @@ export default function BookmarksPage() {
                 viewsCount: post.viewsCount || 0,
                 isPinned: post.isPinned || false,
               }}
-              onDelete={handleRemoveBookmark}
+              onDelete={() => handleRemoveBookmark(post._id)}
             />
           ))}
         </div>
