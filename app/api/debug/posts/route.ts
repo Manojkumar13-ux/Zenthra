@@ -1,7 +1,7 @@
 // app/api/debug/posts/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
 import mongoose from "mongoose";
