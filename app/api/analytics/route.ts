@@ -9,6 +9,47 @@ import { Comment } from "@/lib/db/models/Comment";
 import { Like } from "@/lib/db/models/Like";
 import { Repost } from "@/lib/db/models/Repost";
 
+interface PostDocument {
+  _id: { toString(): string };
+  content: string;
+  likes?: string[];
+  comments?: string[];
+  reposts?: string[];
+  viewsCount?: number;
+  createdAt: Date;
+  author: string;
+}
+
+interface UserDocument {
+  _id: string;
+  followers: string[];
+  following: string[];
+  postsCount: number;
+  createdAt: Date;
+}
+
+interface LikeDocument {
+  _id: string;
+  post: string;
+  user: string;
+  createdAt: Date;
+}
+
+interface CommentDocument {
+  _id: string;
+  post: string;
+  author: string;
+  content: string;
+  createdAt: Date;
+}
+
+interface RepostDocument {
+  _id: string;
+  post: string;
+  user: string;
+  createdAt: Date;
+}
+
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -46,7 +87,7 @@ export async function GET(req: Request) {
     // Get user data
     const user = await User.findById(userId)
       .select("followers following postsCount createdAt")
-      .lean();
+      .lean() as UserDocument | null;
 
     // Get posts
     const posts = await Post.find({
@@ -54,23 +95,25 @@ export async function GET(req: Request) {
       createdAt: { $gte: startDate },
     })
       .sort({ createdAt: -1 })
-      .lean();
+      .lean() as PostDocument[];
 
     // Get engagement data (likes, comments, shares)
+    const postIds = posts.map((p) => p._id);
+    
     const likes = await Like.find({
-      post: { $in: posts.map((p) => p._id) },
+      post: { $in: postIds },
       createdAt: { $gte: startDate },
-    });
+    }).lean() as LikeDocument[];
 
     const comments = await Comment.find({
-      post: { $in: posts.map((p) => p._id) },
+      post: { $in: postIds },
       createdAt: { $gte: startDate },
-    });
+    }).lean() as CommentDocument[];
 
     const reposts = await Repost.find({
-      post: { $in: posts.map((p) => p._id) },
+      post: { $in: postIds },
       createdAt: { $gte: startDate },
-    });
+    }).lean() as RepostDocument[];
 
     // Calculate engagement data by date
     const engagementData: { date: string; likes: number; comments: number; shares: number }[] = [];
@@ -104,27 +147,30 @@ export async function GET(req: Request) {
     const topPosts = await Post.find({ author: userId })
       .sort({ likes: -1, comments: -1, reposts: -1 })
       .limit(5)
-      .lean();
+      .lean() as PostDocument[];
 
     const formattedTopPosts = topPosts.map((post) => ({
       id: post._id.toString(),
-      content: post.content.slice(0, 100),
+      content: post.content ? post.content.slice(0, 100) : "",
       likes: post.likes?.length || 0,
       comments: post.comments?.length || 0,
       shares: post.reposts?.length || 0,
       engagement: Math.round(
         ((post.likes?.length || 0) + (post.comments?.length || 0) + (post.reposts?.length || 0)) / 
-        (post.viewsCount || 1) * 100
+        ((post.viewsCount || 1) * 100)
       ),
     }));
 
     // Calculate stats
+    const totalLikes = likes.length;
+    const totalComments = comments.length;
+    const totalReposts = reposts.length;
+    const totalEngagement = totalLikes + totalComments + totalReposts;
+
     const stats = {
       profileViews: Math.floor(Math.random() * 1000) + 500,
       engagementRate: posts.length > 0 
-        ? Math.round(
-            (likes.length + comments.length + reposts.length) / posts.length * 100
-          ) / 100
+        ? Number(((totalLikes + totalComments + totalReposts) / posts.length * 100).toFixed(2))
         : 0,
       reach: Math.floor(Math.random() * 2000) + 1000,
       followersGrowth: Math.floor(Math.random() * 100) + 50,
@@ -157,14 +203,14 @@ export async function GET(req: Request) {
       ).length;
       
       const dayEngagement = engagementData.find((e) => e.date === dateStr);
-      const totalEngagement = dayEngagement 
+      const totalDayEngagement = dayEngagement 
         ? dayEngagement.likes + dayEngagement.comments + dayEngagement.shares
         : 0;
 
       growthData.push({
         date: dateStr,
         followers: user?.followers?.length || 0,
-        engagement: totalEngagement,
+        engagement: totalDayEngagement,
       });
     }
 
