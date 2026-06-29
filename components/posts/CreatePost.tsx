@@ -28,7 +28,7 @@ import {
   BarChart3,
   Sparkles,
   RefreshCw,
-  Languages
+  Languages,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
@@ -38,7 +38,15 @@ import Picker from "@emoji-mart/react";
 
 // Types
 type AudienceType = "everyone" | "followers" | "mentioned";
-type MoodType = "neutral" | "happy" | "excited" | "sad" | "angry" | "thoughtful" | "funny" | "inspirational";
+type MoodType =
+  | "neutral"
+  | "happy"
+  | "excited"
+  | "sad"
+  | "angry"
+  | "thoughtful"
+  | "funny"
+  | "inspirational";
 
 interface CreatePostProps {
   onPostCreated?: () => void;
@@ -60,15 +68,15 @@ const moodEmojis: Record<MoodType, string> = {
   inspirational: "💫",
 };
 
-export default function CreatePost({ 
-  onPostCreated, 
-  onSaveDraft, 
+export default function CreatePost({
+  onPostCreated,
+  onSaveDraft,
   communityId,
-  placeholder = "What's on your mind? Use # for hashtags and @ for mentions"
+  placeholder = "What's on your mind? Use # for hashtags and @ for mentions",
 }: CreatePostProps) {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
-  
+
   const [content, setContent] = useState("");
   const [media, setMedia] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
@@ -90,7 +98,7 @@ export default function CreatePost({
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [pollDuration, setPollDuration] = useState(24);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -108,8 +116,8 @@ export default function CreatePost({
   useEffect(() => {
     const hashtags = content.match(/#[\w]+/g) || [];
     const mentions = content.match(/@[\w]+/g) || [];
-    setExtractedHashtags(hashtags.map(tag => tag.substring(1)));
-    setExtractedMentions(mentions.map(mention => mention.substring(1)));
+    setExtractedHashtags(hashtags.map((tag) => tag.substring(1)));
+    setExtractedMentions(mentions.map((mention) => mention.substring(1)));
   }, [content]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -151,16 +159,16 @@ export default function CreatePost({
 
     setUploading(true);
     setUploadProgress(0);
-    
+
     try {
       const uploadedUrls: string[] = [];
-      
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const formData = new FormData();
         formData.append("file", file);
         formData.append("type", type);
-        
+
         setUploadProgress(((i + 1) / files.length) * 50);
 
         const res = await fetch("/api/upload", {
@@ -179,16 +187,15 @@ export default function CreatePost({
           uploadedUrls.push(data.url);
           setMedia((prev) => [...prev, data.url]);
         }
-        
+
         setUploadProgress(((i + 1) / files.length) * 100);
       }
 
       toast.success(`${uploadedUrls.length} file(s) uploaded successfully!`);
-      
+
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (videoInputRef.current) videoInputRef.current.value = "";
       if (audioInputRef.current) audioInputRef.current.value = "";
-      
     } catch (error) {
       console.error("Upload error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to upload files");
@@ -245,7 +252,7 @@ export default function CreatePost({
       toast.error("Please write some content first");
       return;
     }
-    
+
     toast.loading("AI is writing...");
     try {
       const res = await fetch("/api/ai/rewrite", {
@@ -253,9 +260,9 @@ export default function CreatePost({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to rewrite");
-      
+
       const data = await res.json();
       setContent(data.content);
       setCharCount(data.content.length);
@@ -272,7 +279,7 @@ export default function CreatePost({
       toast.error("Please write some content first");
       return;
     }
-    
+
     toast.loading("Generating hashtags...");
     try {
       const res = await fetch("/api/ai/hashtags", {
@@ -280,13 +287,13 @@ export default function CreatePost({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to generate hashtags");
-      
+
       const data = await res.json();
       const hashtags = data.hashtags.map((tag: string) => `#${tag}`).join(" ");
-      setContent(prev => prev + " " + hashtags);
-      setCharCount(prev => prev + hashtags.length);
+      setContent((prev) => prev + " " + hashtags);
+      setCharCount((prev) => prev + hashtags.length);
       toast.success("Hashtags added!");
     } catch (error) {
       toast.error("Failed to generate hashtags");
@@ -300,7 +307,7 @@ export default function CreatePost({
       toast.error("Please write some content first");
       return;
     }
-    
+
     toast.loading("Summarizing...");
     try {
       const res = await fetch("/api/ai/summarize", {
@@ -308,9 +315,9 @@ export default function CreatePost({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to summarize");
-      
+
       const data = await res.json();
       setContent(data.summary);
       setCharCount(data.summary.length);
@@ -350,10 +357,12 @@ export default function CreatePost({
         hashtags: hashtags,
         mentions: mentions,
         communityId: communityId || undefined,
-        poll: showPoll ? {
-          options: pollOptions.filter(o => o.trim()),
-          duration: pollDuration,
-        } : undefined,
+        poll: showPoll
+          ? {
+              options: pollOptions.filter((o) => o.trim()),
+              duration: pollDuration,
+            }
+          : undefined,
       };
 
       const res = await fetch("/api/posts", {
@@ -369,7 +378,7 @@ export default function CreatePost({
       }
 
       toast.success(isScheduled ? "Post scheduled!" : "Post created!");
-      
+
       // Reset form
       setContent("");
       setCharCount(0);
@@ -384,13 +393,13 @@ export default function CreatePost({
       setShowPoll(false);
       localStorage.removeItem("postDraft");
       setIsDraft(false);
-      
+
       // Invalidate queries to refresh feed
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       queryClient.invalidateQueries({ queryKey: ["profile-feed"] });
       queryClient.invalidateQueries({ queryKey: ["explore"] });
-      
+
       if (onPostCreated) onPostCreated();
     } catch (error) {
       console.error("CreatePost error:", error);
@@ -441,7 +450,7 @@ export default function CreatePost({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white dark:bg-gray-900 rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-200",
+        "rounded-xl border bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md dark:bg-gray-900",
         moodColors[mood]
       )}
       onDrop={handleDrop}
@@ -450,14 +459,14 @@ export default function CreatePost({
     >
       <form onSubmit={handleSubmit}>
         {/* Header */}
-        <div className="flex items-center gap-3 mb-3">
+        <div className="mb-3 flex items-center gap-3">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={session.user?.image || ""} />
             <AvatarFallback>{session.user?.name?.[0] || "U"}</AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">{session.user?.name}</p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">{session.user?.name}</p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>@{session.user?.username || session.user?.email?.split("@")[0]}</span>
               <Badge variant="outline" className="text-[10px] capitalize">
                 {audience}
@@ -482,16 +491,18 @@ export default function CreatePost({
             placeholder={placeholder}
             value={content}
             onChange={handleContentChange}
-            className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-base min-h-[80px]"
+            className="min-h-[80px] resize-none border-0 p-0 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
             rows={3}
             disabled={loading || uploading}
           />
           <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
             {charCount > 0 && (
-              <span className={cn(
-                isNearLimit ? "text-yellow-500" : "",
-                isOverLimit ? "text-red-500" : ""
-              )}>
+              <span
+                className={cn(
+                  isNearLimit ? "text-yellow-500" : "",
+                  isOverLimit ? "text-red-500" : ""
+                )}
+              >
                 {charCount}/{MAX_CHARS}
               </span>
             )}
@@ -499,7 +510,7 @@ export default function CreatePost({
         </div>
 
         {/* Hashtag and mention hints */}
-        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>💡 Use # for hashtags</span>
           <span>·</span>
           <span>@ for mentions</span>
@@ -518,12 +529,9 @@ export default function CreatePost({
         {/* Progress bar */}
         {charCount > 0 && (
           <div className="mt-1">
-            <Progress 
-              value={charPercentage} 
-              className={cn(
-                "h-1",
-                isOverLimit ? "bg-red-200" : isNearLimit ? "bg-yellow-200" : ""
-              )}
+            <Progress
+              value={charPercentage}
+              className={cn("h-1", isOverLimit ? "bg-red-200" : isNearLimit ? "bg-yellow-200" : "")}
             />
           </div>
         )}
@@ -531,7 +539,7 @@ export default function CreatePost({
         {/* Upload progress */}
         {uploading && (
           <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
               <span>Uploading...</span>
               <span>{Math.round(uploadProgress)}%</span>
             </div>
@@ -543,24 +551,24 @@ export default function CreatePost({
         {media.length > 0 && (
           <div className="mt-3 grid grid-cols-3 gap-2">
             {media.map((url, index) => (
-              <div key={index} className="relative group aspect-square">
+              <div key={index} className="group relative aspect-square">
                 {url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
-                  <video src={url} className="w-full h-full object-cover rounded-lg" />
+                  <video src={url} className="h-full w-full rounded-lg object-cover" />
                 ) : url.match(/\.(mp3|wav|ogg|aac)$/i) ? (
-                  <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center">
+                  <div className="flex h-full w-full items-center justify-center rounded-lg bg-muted">
                     <Music className="h-8 w-8 text-muted-foreground" />
                   </div>
                 ) : (
                   <img
                     src={url}
                     alt={`Media ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="h-full w-full rounded-lg object-cover"
                   />
                 )}
                 <button
                   type="button"
                   onClick={() => removeMedia(index)}
-                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -571,26 +579,21 @@ export default function CreatePost({
 
         {/* Poll */}
         {showPoll && (
-          <div className="mt-3 p-3 border rounded-lg">
-            <div className="flex items-center justify-between mb-2">
+          <div className="mt-3 rounded-lg border p-3">
+            <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium">Poll</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPoll(false)}
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPoll(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             {pollOptions.map((option, index) => (
-              <div key={index} className="flex items-center gap-2 mb-2">
+              <div key={index} className="mb-2 flex items-center gap-2">
                 <input
                   type="text"
                   placeholder={`Option ${index + 1}`}
                   value={option}
                   onChange={(e) => handlePollOptionChange(index, e.target.value)}
-                  className="flex-1 p-2 text-sm border rounded"
+                  className="flex-1 rounded border p-2 text-sm"
                 />
                 {pollOptions.length > 2 && (
                   <Button
@@ -605,12 +608,7 @@ export default function CreatePost({
               </div>
             ))}
             {pollOptions.length < 4 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddPollOption}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={handleAddPollOption}>
                 Add option
               </Button>
             )}
@@ -620,7 +618,7 @@ export default function CreatePost({
                 type="number"
                 value={pollDuration}
                 onChange={(e) => setPollDuration(parseInt(e.target.value) || 24)}
-                className="w-full p-2 text-sm border rounded mt-1"
+                className="mt-1 w-full rounded border p-2 text-sm"
                 min={1}
                 max={168}
               />
@@ -630,22 +628,22 @@ export default function CreatePost({
 
         {/* Drag drop overlay */}
         {isDragging && (
-          <div className="mt-3 border-2 border-dashed border-primary rounded-lg p-8 text-center">
+          <div className="mt-3 rounded-lg border-2 border-dashed border-primary p-8 text-center">
             <p className="text-sm text-muted-foreground">Drop your images here</p>
           </div>
         )}
 
         {/* Toolbar */}
-        <div className="mt-3 flex items-center gap-1 flex-wrap border-t pt-3 dark:border-gray-700">
+        <div className="mt-3 flex flex-wrap items-center gap-1 border-t pt-3 dark:border-gray-700">
           {/* Media buttons */}
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => triggerFileUpload("image")}
             disabled={uploading}
           >
-            <ImageIcon className="h-4 w-4 mr-1" />
+            <ImageIcon className="mr-1 h-4 w-4" />
             Media
           </Button>
           <input
@@ -662,14 +660,14 @@ export default function CreatePost({
             disabled={uploading}
           />
 
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => triggerFileUpload("video")}
             disabled={uploading}
           >
-            <Film className="h-4 w-4 mr-1" />
+            <Film className="mr-1 h-4 w-4" />
             Video
           </Button>
           <input
@@ -685,14 +683,14 @@ export default function CreatePost({
             disabled={uploading}
           />
 
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => triggerFileUpload("audio")}
             disabled={uploading}
           >
-            <Music className="h-4 w-4 mr-1" />
+            <Music className="mr-1 h-4 w-4" />
             Audio
           </Button>
           <input
@@ -709,13 +707,8 @@ export default function CreatePost({
           />
 
           {/* Poll */}
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowPoll(!showPoll)}
-          >
-            <BarChart3 className="h-4 w-4 mr-1" />
+          <Button type="button" variant="ghost" size="sm" onClick={() => setShowPoll(!showPoll)}>
+            <BarChart3 className="mr-1 h-4 w-4" />
             Poll
           </Button>
 
@@ -723,13 +716,13 @@ export default function CreatePost({
           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <PopoverTrigger asChild>
               <Button type="button" variant="ghost" size="sm">
-                <Smile className="h-4 w-4 mr-1" />
+                <Smile className="mr-1 h-4 w-4" />
                 Emoji
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0">
-              <Picker 
-                data={data} 
+              <Picker
+                data={data}
                 onEmojiSelect={handleEmojiSelect}
                 theme="light"
                 previewPosition="none"
@@ -741,7 +734,7 @@ export default function CreatePost({
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="ghost" size="sm">
-                <MapPin className="h-4 w-4 mr-1" />
+                <MapPin className="mr-1 h-4 w-4" />
                 {location || "Location"}
               </Button>
             </PopoverTrigger>
@@ -751,7 +744,7 @@ export default function CreatePost({
                 placeholder="Enter location..."
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full rounded border p-2 dark:border-gray-600 dark:bg-gray-700"
               />
             </PopoverContent>
           </Popover>
@@ -760,14 +753,14 @@ export default function CreatePost({
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="ghost" size="sm">
-                <Calendar className="h-4 w-4 mr-1" />
+                <Calendar className="mr-1 h-4 w-4" />
                 {scheduleDate ? format(scheduleDate, "MMM d") : "Schedule"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3">
               <input
                 type="datetime-local"
-                className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="rounded border p-2 dark:border-gray-600 dark:bg-gray-700"
                 onChange={(e) => {
                   if (e.target.value) {
                     setScheduleDate(new Date(e.target.value));
@@ -797,9 +790,9 @@ export default function CreatePost({
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="ghost" size="sm">
-                {audience === "everyone" && <Globe className="h-4 w-4 mr-1" />}
-                {audience === "followers" && <Users className="h-4 w-4 mr-1" />}
-                {audience === "mentioned" && <AtSign className="h-4 w-4 mr-1" />}
+                {audience === "everyone" && <Globe className="mr-1 h-4 w-4" />}
+                {audience === "followers" && <Users className="mr-1 h-4 w-4" />}
+                {audience === "mentioned" && <AtSign className="mr-1 h-4 w-4" />}
                 {audience.charAt(0).toUpperCase() + audience.slice(1)}
               </Button>
             </PopoverTrigger>
@@ -814,7 +807,7 @@ export default function CreatePost({
                     key={option.value}
                     type="button"
                     onClick={() => setAudience(option.value as AudienceType)}
-                    className={`w-full text-left px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 ${
+                    className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-muted ${
                       audience === option.value ? "bg-primary/10 text-primary" : ""
                     }`}
                   >
@@ -840,7 +833,7 @@ export default function CreatePost({
                     key={key}
                     type="button"
                     onClick={() => setMood(key as MoodType)}
-                    className={`p-2 text-sm rounded hover:bg-muted ${
+                    className={`rounded p-2 text-sm hover:bg-muted ${
                       mood === key ? "bg-primary/10 text-primary" : ""
                     }`}
                   >
@@ -852,7 +845,7 @@ export default function CreatePost({
           </Popover>
 
           {/* AI Tools */}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="ml-auto flex items-center gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -860,7 +853,7 @@ export default function CreatePost({
               onClick={handleAIWrite}
               disabled={!content.trim() || loading}
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
+              <RefreshCw className="mr-1 h-4 w-4" />
               AI Rewrite
             </Button>
             <Button
@@ -870,7 +863,7 @@ export default function CreatePost({
               onClick={handleAIHashtags}
               disabled={!content.trim() || loading}
             >
-              <Sparkles className="h-4 w-4 mr-1" />
+              <Sparkles className="mr-1 h-4 w-4" />
               AI Hashtags
             </Button>
             <Button
@@ -880,7 +873,7 @@ export default function CreatePost({
               onClick={handleAISummarize}
               disabled={!content.trim() || loading}
             >
-              <Languages className="h-4 w-4 mr-1" />
+              <Languages className="mr-1 h-4 w-4" />
               AI Summarize
             </Button>
           </div>
@@ -897,7 +890,7 @@ export default function CreatePost({
                 onClick={clearDraft}
                 className="text-red-500 hover:text-red-600"
               >
-                <X className="h-4 w-4 mr-1" />
+                <X className="mr-1 h-4 w-4" />
                 Clear draft
               </Button>
             )}
@@ -908,12 +901,12 @@ export default function CreatePost({
               onClick={saveDraft}
               disabled={!content.trim()}
             >
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="mr-1 h-4 w-4" />
               Save draft
             </Button>
           </div>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={loading || uploading || (!content.trim() && media.length === 0)}
             className="gap-2"
           >

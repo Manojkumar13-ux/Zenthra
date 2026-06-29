@@ -98,7 +98,7 @@ export function CreateCommunity() {
       form.reset();
       setImageFile(null);
       setImagePreview("");
-      
+
       queryClient.invalidateQueries({ queryKey: ["communities"] });
       router.push(`/communities/${community._id}`);
     } catch (error) {
@@ -129,7 +129,7 @@ export function CreateCommunity() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Create Community
         </Button>
       </DialogTrigger>
@@ -153,11 +153,7 @@ export function CreateCommunity() {
                 <FormItem>
                   <FormLabel>Community Name</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="e.g., Tech Enthusiasts" 
-                      {...field}
-                      disabled={isLoading}
-                    />
+                    <Input placeholder="e.g., Tech Enthusiasts" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormDescription>
                     Choose a unique and descriptive name (3-50 characters)
@@ -182,9 +178,7 @@ export function CreateCommunity() {
                       rows={3}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Briefly describe the purpose of your community
-                  </FormDescription>
+                  <FormDescription>Briefly describe the purpose of your community</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -208,7 +202,7 @@ export function CreateCommunity() {
                       onClick={() => document.getElementById("image-upload")?.click()}
                       disabled={isLoading}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
+                      <Upload className="mr-2 h-4 w-4" />
                       Upload
                     </Button>
                     {imagePreview && (
@@ -231,21 +225,21 @@ export function CreateCommunity() {
                     onChange={handleImageChange}
                     disabled={isLoading}
                   />
-                  <FormDescription className="text-xs mt-1">
+                  <FormDescription className="mt-1 text-xs">
                     Recommended: Square image, max 2MB
                   </FormDescription>
                 </div>
               </div>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+            <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
               <div className="flex items-start gap-2">
                 <Badge variant="outline" className="mt-0.5 text-xs">
                   Tip
                 </Badge>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Communities with active moderation and clear rules attract more members.
-                  Consider assigning moderators after creation.
+                  Communities with active moderation and clear rules attract more members. Consider
+                  assigning moderators after creation.
                 </p>
               </div>
             </div>
@@ -262,7 +256,7 @@ export function CreateCommunity() {
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
                   </>
                 ) : (

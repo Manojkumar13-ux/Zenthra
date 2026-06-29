@@ -11,20 +11,14 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await req.formData();
     const file = formData.get("image") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
     // Validate file type
@@ -38,10 +32,7 @@ export async function POST(req: NextRequest) {
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 2MB." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File too large. Maximum size is 2MB." }, { status: 400 });
     }
 
     // Convert file to buffer
@@ -74,12 +65,8 @@ export async function POST(req: NextRequest) {
       image: url,
       message: "Profile picture updated successfully",
     });
-
   } catch (error) {
     console.error("Avatar upload error:", error);
-    return NextResponse.json(
-      { error: "Failed to upload profile picture" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to upload profile picture" }, { status: 500 });
   }
 }

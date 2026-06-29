@@ -47,7 +47,7 @@ export function FollowButton({
 
     try {
       console.log(`🔵 FollowButton: Sending ${action} request for user ${userId}`);
-      
+
       // Use query parameter for action
       const response = await fetch(`/api/users/${userId}/follow?action=${action}`, {
         method: "POST",
@@ -59,7 +59,7 @@ export function FollowButton({
 
       let data;
       const responseText = await response.text();
-      
+
       try {
         data = JSON.parse(responseText);
       } catch {
@@ -71,17 +71,17 @@ export function FollowButton({
       }
 
       setIsFollowing(data.isFollowing);
-      
+
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["user", userId] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       queryClient.invalidateQueries({ queryKey: ["find-people"] });
-      
+
       if (onFollowChange) {
         onFollowChange(data.isFollowing);
       }
-      
+
       toast.success(data.isFollowing ? "Followed!" : "Unfollowed!");
     } catch (error: any) {
       console.error("❌ FollowButton error:", error);
@@ -97,7 +97,7 @@ export function FollowButton({
       disabled={isLoading}
       variant={isFollowing ? "outline" : variant}
       size={size}
-      className="gap-1 min-w-[100px]"
+      className="min-w-[100px] gap-1"
     >
       {isLoading ? (
         <>

@@ -8,7 +8,7 @@ const nextConfig = {
     // optimizeCss: true,
     // typedRoutes: true,
   },
-  
+
   // Image optimization settings
   images: {
     remotePatterns: [
@@ -47,7 +47,7 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60,
   },
-  
+
   // Webpack configuration
   webpack: (config, { isServer, nextRuntime }) => {
     // Handle Node.js modules in client
@@ -66,56 +66,57 @@ const nextConfig = {
         url: false,
       };
     }
-    
+
     // Important: Return the modified config
     return config;
   },
-  
+
   // React strict mode for better development
   reactStrictMode: true,
-  
+
   // Enable SWC minification (faster than Terser)
   swcMinify: true,
-  
+
   // Compiler options
   compiler: {
     // Remove console.log in production
-    removeConsole: process.env.NODE_ENV === "production"
-      ? {
-          exclude: ["error", "warn"], // Keep errors and warnings
-        }
-      : false,
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error", "warn"], // Keep errors and warnings
+          }
+        : false,
   },
-  
+
   // Security headers
   poweredByHeader: false,
-  
+
   // Performance
   compress: true,
   generateEtags: true,
-  
+
   // HTTP agent options for better performance
   httpAgentOptions: {
     keepAlive: true,
   },
-  
+
   // TypeScript
   typescript: {
     // Warning: This allows production builds to successfully complete even if
     // your project has type errors.
     ignoreBuildErrors: false,
   },
-  
+
   // ESLint
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: false,
   },
-  
+
   // Output configuration
   output: "standalone", // Better for deployment
-  
+
   // Redirects
   async redirects() {
     return [
@@ -126,7 +127,7 @@ const nextConfig = {
       },
     ];
   },
-  
+
   // Headers for security
   async headers() {
     return [

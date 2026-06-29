@@ -21,9 +21,9 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         hashtags: ["#social", "#community", "#zenthra"],
-        message: "OpenAI API key not configured. Using default hashtags." 
+        message: "OpenAI API key not configured. Using default hashtags.",
       });
     }
 
@@ -31,23 +31,26 @@ export async function POST(req: Request) {
       const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
-          { 
-            role: "system", 
-            content: "You are a hashtag generator. Generate 3-5 relevant hashtags for the given content. Return only the hashtags separated by spaces, without any additional text." 
+          {
+            role: "system",
+            content:
+              "You are a hashtag generator. Generate 3-5 relevant hashtags for the given content. Return only the hashtags separated by spaces, without any additional text.",
           },
-          { 
-            role: "user", 
-            content: `Generate hashtags for: "${content}"` 
-          }
+          {
+            role: "user",
+            content: `Generate hashtags for: "${content}"`,
+          },
         ],
         max_tokens: 50,
         temperature: 0.8,
       });
 
       const hashtagsText = response.choices[0]?.message?.content?.trim() || "";
-      const hashtags = hashtagsText.split(/\s+/).filter(tag => tag.startsWith("#"));
-      
-      return NextResponse.json({ hashtags: hashtags.length > 0 ? hashtags : ["#social", "#community", "#zenthra"] });
+      const hashtags = hashtagsText.split(/\s+/).filter((tag) => tag.startsWith("#"));
+
+      return NextResponse.json({
+        hashtags: hashtags.length > 0 ? hashtags : ["#social", "#community", "#zenthra"],
+      });
     } catch (openaiError) {
       console.error("OpenAI error:", openaiError);
       return NextResponse.json({ hashtags: ["#social", "#community", "#zenthra"] });

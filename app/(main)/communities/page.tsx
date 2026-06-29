@@ -5,20 +5,11 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {
-  Users,
-  UserPlus,
-  UserCheck,
-  Search,
-  Plus,
-  Globe,
-  Lock,
-  Loader2,
-} from "lucide-react";
+import { Users, UserPlus, UserCheck, Search, Plus, Globe, Lock, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -29,7 +20,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 interface Community {
@@ -68,11 +58,7 @@ export default function CommunitiesPage() {
     isPrivate: false,
   });
 
-  const {
-    data: communities,
-    isLoading,
-    refetch,
-  } = useQuery<Community[]>({
+  const { data: communities, isLoading } = useQuery<Community[]>({
     queryKey: ["communities", filter, searchQuery],
     queryFn: async () => {
       const url = new URL("/api/communities", window.location.origin);
@@ -139,9 +125,7 @@ export default function CommunitiesPage() {
       );
     },
     onError: (error: Error, variables) => {
-      toast.error(
-        error.message || `Failed to ${variables.action} community`
-      );
+      toast.error(error.message || `Failed to ${variables.action} community`);
     },
   });
 
@@ -180,7 +164,7 @@ export default function CommunitiesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl p-4 space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -246,11 +230,7 @@ export default function CommunitiesPage() {
                   Private community (members need approval)
                 </label>
               </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={createCommunityMutation.isPending}
-              >
+              <Button type="submit" className="w-full" disabled={createCommunityMutation.isPending}>
                 {createCommunityMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -267,7 +247,7 @@ export default function CommunitiesPage() {
 
       {/* Search and Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search communities..."
@@ -276,10 +256,7 @@ export default function CommunitiesPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Tabs
-          value={filter}
-          onValueChange={(v) => setFilter(v as "all" | "member" | "admin")}
-        >
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "member" | "admin")}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="member">Member</TabsTrigger>
@@ -297,17 +274,13 @@ export default function CommunitiesPage() {
             {searchQuery
               ? `No communities matching "${searchQuery}"`
               : filter === "member"
-              ? "You haven't joined any communities yet"
-              : filter === "admin"
-              ? "You don't admin any communities"
-              : "Create your first community!"}
+                ? "You haven't joined any communities yet"
+                : filter === "admin"
+                  ? "You don't admin any communities"
+                  : "Create your first community!"}
           </p>
           {!searchQuery && filter === "all" && (
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => setIsCreateDialogOpen(true)}
-            >
+            <Button variant="outline" className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create Community
             </Button>
@@ -316,23 +289,16 @@ export default function CommunitiesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {filteredCommunities.map((community) => (
-            <Card
-              key={community._id}
-              className="transition-shadow hover:shadow-md"
-            >
+            <Card key={community._id} className="transition-shadow hover:shadow-md">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={community.image} />
-                    <AvatarFallback>
-                      {community.name?.charAt(0) || "C"}
-                    </AvatarFallback>
+                    <AvatarFallback>{community.name?.charAt(0) || "C"}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="truncate font-semibold">
-                        {community.name}
-                      </h3>
+                      <h3 className="truncate font-semibold">{community.name}</h3>
                       {community.isPrivate ? (
                         <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
                       ) : (

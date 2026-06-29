@@ -1,11 +1,11 @@
-const mongoose = require('mongoose');
-require('dotenv').config({ path: '.env.local' });
+const mongoose = require("mongoose");
+require("dotenv").config({ path: ".env.local" });
 
 async function seedFamousUsers() {
   await mongoose.connect(process.env.MONGODB_URI);
-  
-  const User = mongoose.model('User', require('../lib/db/models/User').schema);
-  
+
+  const User = mongoose.model("User", require("../lib/db/models/User").schema);
+
   const famousUsers = [
     {
       name: "Virat Kohli",
@@ -46,7 +46,7 @@ async function seedFamousUsers() {
     }
   }
 
-  console.log('✅ Seeding complete!');
+  console.log("✅ Seeding complete!");
   process.exit(0);
 }
 

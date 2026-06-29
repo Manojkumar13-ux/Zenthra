@@ -143,8 +143,8 @@ export function Navbar({ children }: NavbarProps) {
         setNotifications(data.notifications || []);
         const unread = data.notifications?.filter((n: any) => !n.read).length || 0;
         setUnreadCount(unread);
-        
-        const notifIndex = navItems.findIndex(item => item.name === "Notifications");
+
+        const notifIndex = navItems.findIndex((item) => item.name === "Notifications");
         if (notifIndex !== -1) {
           navItems[notifIndex].badge = unread;
         }
@@ -164,8 +164,8 @@ export function Navbar({ children }: NavbarProps) {
       if (res.ok) {
         const data = await res.json();
         setUnreadMessages(data.count || 0);
-        
-        const msgIndex = navItems.findIndex(item => item.name === "Messages");
+
+        const msgIndex = navItems.findIndex((item) => item.name === "Messages");
         if (msgIndex !== -1) {
           navItems[msgIndex].badge = data.count || 0;
         }
@@ -184,12 +184,10 @@ export function Navbar({ children }: NavbarProps) {
         body: JSON.stringify({ read: true }),
       });
       if (res.ok) {
-        setNotifications(prev =>
-          prev.map(n =>
-            n._id === notificationId ? { ...n, read: true } : n
-          )
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === notificationId ? { ...n, read: true } : n))
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount((prev) => Math.max(0, prev - 1));
       }
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
@@ -204,9 +202,7 @@ export function Navbar({ children }: NavbarProps) {
         body: JSON.stringify({ read: true }),
       });
       if (res.ok) {
-        setNotifications(prev =>
-          prev.map(n => ({ ...n, read: true }))
-        );
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
         setUnreadCount(0);
         toast.success("All notifications marked as read");
       }
@@ -237,7 +233,7 @@ export function Navbar({ children }: NavbarProps) {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    
+
     if (minutes < 1) return "Just now";
     if (minutes < 60) return `${minutes}m`;
     if (hours < 24) return `${hours}h`;
@@ -268,22 +264,22 @@ export function Navbar({ children }: NavbarProps) {
   if (!mounted) {
     return (
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="w-64 border-r dark:border-gray-700 p-4">
+        <div className="w-64 border-r p-4 dark:border-gray-700">
           <div className="animate-pulse">
-            <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+            <div className="mb-4 h-8 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
             <div className="space-y-2">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div key={i} className="h-10 rounded bg-gray-200 dark:bg-gray-700"></div>
               ))}
             </div>
           </div>
         </div>
         <div className="flex-1 p-4">
           <div className="animate-pulse">
-            <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+            <div className="mb-4 h-12 rounded bg-gray-200 dark:bg-gray-700"></div>
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div key={i} className="h-32 rounded bg-gray-200 dark:bg-gray-700"></div>
               ))}
             </div>
           </div>
@@ -294,19 +290,22 @@ export function Navbar({ children }: NavbarProps) {
 
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (status === "unauthenticated") {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Welcome to Zenthra</h1>
-          <p className="text-gray-500 mb-6">Please sign in to continue</p>
-          <Link href="/login" className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+          <h1 className="mb-4 text-2xl font-bold">Welcome to Zenthra</h1>
+          <p className="mb-6 text-gray-500">Please sign in to continue</p>
+          <Link
+            href="/login"
+            className="rounded-lg bg-blue-500 px-6 py-2 text-white transition-colors hover:bg-blue-600"
+          >
             Sign In
           </Link>
         </div>
@@ -315,26 +314,28 @@ export function Navbar({ children }: NavbarProps) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 shadow-lg transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 lg:hidden"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
       {/* Left Sidebar */}
-      <aside className={cn(
-        "fixed lg:sticky top-0 h-screen w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col transition-transform duration-300 z-40 shadow-lg lg:shadow-none",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
+      <aside
+        className={cn(
+          "fixed top-0 z-40 flex h-screen w-64 flex-col border-r bg-white shadow-lg transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800 lg:sticky lg:shadow-none",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
         {/* Logo */}
-        <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
-          <Link 
-            href="/feed" 
-            className="text-2xl font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-2"
+        <div className="flex-shrink-0 border-b p-4 dark:border-gray-700">
+          <Link
+            href="/feed"
+            className="flex items-center gap-2 text-2xl font-bold text-blue-500 transition-colors hover:text-blue-600"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <Sparkles className="h-6 w-6" />
@@ -343,9 +344,12 @@ export function Navbar({ children }: NavbarProps) {
         </div>
 
         {/* User Profile */}
-        <div className="p-4 border-b dark:border-gray-700 flex-shrink-0 relative">
+        <div className="relative flex-shrink-0 border-b p-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <button onClick={goToProfile} className="cursor-pointer hover:opacity-80 transition-opacity">
+            <button
+              onClick={goToProfile}
+              className="cursor-pointer transition-opacity hover:opacity-80"
+            >
               <AvatarSimple
                 src={session?.user?.image}
                 fallback={session?.user?.name || "User"}
@@ -353,18 +357,18 @@ export function Navbar({ children }: NavbarProps) {
                 size="md"
               />
             </button>
-            <div className="flex-1 min-w-0">
-              <button 
+            <div className="min-w-0 flex-1">
+              <button
                 onClick={goToProfile}
-                className="font-semibold text-sm truncate hover:text-blue-500 transition-colors cursor-pointer text-left"
+                className="cursor-pointer truncate text-left text-sm font-semibold transition-colors hover:text-blue-500"
               >
                 {session?.user?.name}
               </button>
-              <p className="text-xs text-gray-500 truncate">@{session?.user?.username || "user"}</p>
+              <p className="truncate text-xs text-gray-500">@{session?.user?.username || "user"}</p>
             </div>
             <button
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              className="rounded-full p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
@@ -372,41 +376,41 @@ export function Navbar({ children }: NavbarProps) {
 
           {/* Profile Dropdown */}
           {isProfileMenuOpen && (
-            <div 
+            <div
               ref={profileMenuRef}
-              className="absolute left-4 right-4 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 py-1 z-50"
+              className="absolute left-4 right-4 z-50 mt-2 rounded-lg border bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
             >
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false);
                   goToProfile();
                 }}
-                className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full"
+                className="flex w-full items-center gap-3 px-4 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <UserCircle className="h-4 w-4" />
                 <span className="text-sm">Profile</span>
               </button>
-              
-              <Link 
+
+              <Link
                 href="/bookmarks"
-                className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => setIsProfileMenuOpen(false)}
               >
                 <Bookmark className="h-4 w-4" />
                 <span className="text-sm">Bookmarks</span>
               </Link>
-              <Link 
+              <Link
                 href="/settings"
-                className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => setIsProfileMenuOpen(false)}
               >
                 <Settings className="h-4 w-4" />
                 <span className="text-sm">Settings</span>
               </Link>
-              <div className="border-t dark:border-gray-700 my-1"></div>
+              <div className="my-1 border-t dark:border-gray-700"></div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full text-red-500"
+                className="flex w-full items-center gap-3 px-4 py-2 text-red-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="text-sm">Sign Out</span>
@@ -416,7 +420,7 @@ export function Navbar({ children }: NavbarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
             return (
@@ -424,22 +428,24 @@ export function Navbar({ children }: NavbarProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
-                  isActive 
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-500" 
-                    : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  "group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200",
+                  isActive
+                    ? "bg-blue-50 text-blue-500 dark:bg-blue-900/20"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                 )}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <span className={cn(
-                  "transition-transform group-hover:scale-110 flex-shrink-0",
-                  isActive && "text-blue-500"
-                )}>
+                <span
+                  className={cn(
+                    "flex-shrink-0 transition-transform group-hover:scale-110",
+                    isActive && "text-blue-500"
+                  )}
+                >
                   {item.icon}
                 </span>
-                <span className="text-sm font-medium flex-1">{item.name}</span>
+                <span className="flex-1 text-sm font-medium">{item.name}</span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                  <span className="min-w-[20px] animate-pulse rounded-full bg-red-500 px-2 py-0.5 text-center text-xs text-white">
                     {item.badge}
                   </span>
                 )}
@@ -449,10 +455,10 @@ export function Navbar({ children }: NavbarProps) {
         </nav>
 
         {/* Sign Out */}
-        <div className="p-4 border-t dark:border-gray-700 space-y-2 flex-shrink-0">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" 
+        <div className="flex-shrink-0 space-y-2 border-t p-4 dark:border-gray-700">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
             size="sm"
             onClick={handleSignOut}
           >
@@ -463,17 +469,17 @@ export function Navbar({ children }: NavbarProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-screen w-full overflow-hidden">
+      <main className="flex min-h-screen w-full flex-1 flex-col overflow-hidden">
         {/* Top Bar - NO Create Button, Only Icons */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b dark:border-gray-700 px-4 py-2 flex-shrink-0">
-          <div className="flex items-center justify-between max-w-6xl mx-auto">
+        <header className="sticky top-0 z-30 flex-shrink-0 border-b bg-white/80 px-4 py-2 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
+          <div className="mx-auto flex max-w-6xl items-center justify-between">
             {/* Search Bar */}
-            <div className="flex-1 max-w-md">
+            <div className="max-w-md flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   placeholder="Search Zenthra..."
-                  className="w-full pl-9 pr-4 py-1.5 text-sm rounded-full bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-full border-0 bg-gray-100 py-1.5 pl-9 pr-4 text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -487,11 +493,11 @@ export function Navbar({ children }: NavbarProps) {
             </div>
 
             {/* Right Icons - Dark Mode, Notifications, Messages, Profile */}
-            <div className="flex items-center gap-1 ml-4">
+            <div className="ml-4 flex items-center gap-1">
               {/* Dark Mode Toggle */}
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Toggle theme"
               >
                 {theme === "dark" ? (
@@ -505,12 +511,12 @@ export function Navbar({ children }: NavbarProps) {
               <div className="relative" ref={notificationsRef}>
                 <button
                   onClick={redirectToNotifications}
-                  className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="relative rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                   aria-label="Notifications"
                 >
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
@@ -520,12 +526,12 @@ export function Navbar({ children }: NavbarProps) {
               {/* Messages Icon - Redirects to /messages */}
               <button
                 onClick={redirectToMessages}
-                className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="relative rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Messages"
               >
                 <Mail className="h-5 w-5" />
                 {unreadMessages > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                     {unreadMessages > 9 ? "9+" : unreadMessages}
                   </span>
                 )}
@@ -534,7 +540,7 @@ export function Navbar({ children }: NavbarProps) {
               {/* Profile Icon - Redirects to Profile */}
               <button
                 onClick={goToProfile}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="rounded-full p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Profile"
               >
                 <AvatarSimple
@@ -550,16 +556,14 @@ export function Navbar({ children }: NavbarProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-6xl mx-auto">
-            {children}
-          </div>
+          <div className="mx-auto max-w-6xl">{children}</div>
         </div>
       </main>
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

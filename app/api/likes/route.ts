@@ -10,20 +10,14 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const { postId } = body;
 
     if (!postId) {
-      return NextResponse.json(
-        { error: "Post ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -32,10 +26,7 @@ export async function POST(req: NextRequest) {
     const post = await Post.findById(postId);
 
     if (!post) {
-      return NextResponse.json(
-        { error: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
     // Check if already liked
@@ -47,12 +38,12 @@ export async function POST(req: NextRequest) {
     if (isLiked) {
       // Unlike
       await Post.findByIdAndUpdate(postId, {
-        $pull: { likes: userId }
+        $pull: { likes: userId },
       });
     } else {
       // Like
       await Post.findByIdAndUpdate(postId, {
-        $addToSet: { likes: userId }
+        $addToSet: { likes: userId },
       });
       isLikedNow = true;
 
@@ -75,14 +66,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       isLiked: isLikedNow,
-      likesCount: likesCount
+      likesCount: likesCount,
     });
-
   } catch (error) {
     console.error("Like API error:", error);
-    return NextResponse.json(
-      { error: "Failed to process like" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process like" }, { status: 500 });
   }
 }

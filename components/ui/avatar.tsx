@@ -11,10 +11,7 @@ const Avatar = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Root
     ref={ref}
-    className={cn(
-      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
-      className
-    )}
+    className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
     {...props}
   />
 ));
@@ -26,7 +23,7 @@ const AvatarImage = React.forwardRef<
 >(({ className, ...props }, ref) => {
   // ✅ Use useMemo to prevent unnecessary re-renders
   const imageRef = React.useRef<HTMLImageElement>(null);
-  
+
   // ✅ No state updates that could cause loops
   const handleError = React.useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     // Just prevent the error from propagating

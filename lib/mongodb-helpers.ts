@@ -1,4 +1,3 @@
-
 import { ObjectId } from "mongodb";
 
 /**
@@ -38,7 +37,7 @@ export function isValidObjectId(id: string): boolean {
  * Convert ObjectId to string safely
  */
 export function objectIdToString(id: ObjectId | string): string {
-  if (typeof id === 'string') {
+  if (typeof id === "string") {
     if (isValidObjectId(id)) {
       return id;
     }
@@ -51,7 +50,7 @@ export function objectIdToString(id: ObjectId | string): string {
  * Compare two IDs (strings or ObjectIds)
  */
 export function compareIds(id1: string | ObjectId, id2: string | ObjectId): boolean {
-  const str1 = typeof id1 === 'string' ? id1 : id1.toString();
-  const str2 = typeof id2 === 'string' ? id2 : id2.toString();
+  const str1 = typeof id1 === "string" ? id1 : id1.toString();
+  const str2 = typeof id2 === "string" ? id2 : id2.toString();
   return str1 === str2;
 }

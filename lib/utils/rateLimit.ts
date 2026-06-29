@@ -8,11 +8,7 @@ interface RateLimitOptions {
   perUser?: boolean;
 }
 
-export async function checkRateLimit(
-  userId: string,
-  action: string,
-  options: RateLimitOptions
-) {
+export async function checkRateLimit(userId: string, action: string, options: RateLimitOptions) {
   await connectDB();
 
   const user = await User.findById(userId);

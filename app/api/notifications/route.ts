@@ -54,7 +54,16 @@ export async function GET(req: Request) {
       const query: any = { recipient: session.user.id };
 
       if (filter !== "all") {
-        const validTypes = ["like", "comment", "mention", "follow", "message", "repost", "community", "achievement"];
+        const validTypes = [
+          "like",
+          "comment",
+          "mention",
+          "follow",
+          "message",
+          "repost",
+          "community",
+          "achievement",
+        ];
         if (validTypes.includes(filter)) {
           query.type = filter;
         }
@@ -80,12 +89,11 @@ export async function GET(req: Request) {
       });
     } catch (dbError: any) {
       console.error("Database error, using mock data:", dbError.message);
-      
+
       // Fallback to mock data
-      const filteredMock = filter !== "all" 
-        ? mockNotifications.filter(n => n.type === filter)
-        : mockNotifications;
-      
+      const filteredMock =
+        filter !== "all" ? mockNotifications.filter((n) => n.type === filter) : mockNotifications;
+
       const limitedMock = filteredMock.slice(0, limit);
       const unreadCount = limitedMock.filter((n: any) => !n.read).length;
 
@@ -97,7 +105,7 @@ export async function GET(req: Request) {
     }
   } catch (error: any) {
     console.error("Notifications API Error:", error.message);
-    
+
     return NextResponse.json({
       notifications: mockNotifications.slice(0, 5),
       unreadCount: mockNotifications.filter((n: any) => !n.read).length,

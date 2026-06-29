@@ -9,7 +9,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ message: "Invalid input", errors: parsed.error.errors }, { status: 400 });
+      return NextResponse.json(
+        { message: "Invalid input", errors: parsed.error.errors },
+        { status: 400 }
+      );
     }
     const { name, username, email, password } = parsed.data;
     await connectDB();
@@ -25,7 +28,10 @@ export async function POST(req: Request) {
       password: hashed,
       role: "user",
     });
-    return NextResponse.json({ message: "User created", user: { id: user._id, name, email } }, { status: 201 });
+    return NextResponse.json(
+      { message: "User created", user: { id: user._id, name, email } },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }

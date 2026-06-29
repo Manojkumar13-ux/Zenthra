@@ -34,7 +34,7 @@ export function OnlineUsers({ onUserSelect }: OnlineUsersProps) {
           credentials: "include",
           body: JSON.stringify({ userIds: onlineUsers }),
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           setOnlineUsersData(data);
@@ -70,11 +70,11 @@ export function OnlineUsers({ onUserSelect }: OnlineUsersProps) {
   if (loading) {
     return (
       <Card className="p-3">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="mb-3 flex items-center gap-2">
           <Users className="h-4 w-4" />
           <h4 className="text-sm font-semibold">Online Users</h4>
           <Badge variant="secondary" className="ml-auto">
-            <Circle className="h-2 w-2 fill-green-500 text-green-500 mr-1" />
+            <Circle className="mr-1 h-2 w-2 fill-green-500 text-green-500" />
             Connecting...
           </Badge>
         </div>
@@ -92,32 +92,28 @@ export function OnlineUsers({ onUserSelect }: OnlineUsersProps) {
 
   return (
     <Card className="p-3">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="mb-3 flex items-center gap-2">
         <Users className="h-4 w-4" />
         <h4 className="text-sm font-semibold">Online Users</h4>
         <Badge variant="secondary" className="ml-auto">
-          <Circle className="h-2 w-2 fill-green-500 text-green-500 mr-1" />
+          <Circle className="mr-1 h-2 w-2 fill-green-500 text-green-500" />
           {onlineUsers.length} online
         </Badge>
       </div>
 
       {!isConnected && (
-        <p className="text-xs text-muted-foreground text-center py-2">
-          Connecting to server...
-        </p>
+        <p className="py-2 text-center text-xs text-muted-foreground">Connecting to server...</p>
       )}
 
       {onlineUsers.length === 0 && isConnected && (
-        <p className="text-xs text-muted-foreground text-center py-2">
-          No users online
-        </p>
+        <p className="py-2 text-center text-xs text-muted-foreground">No users online</p>
       )}
 
-      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+      <div className="max-h-[300px] space-y-2 overflow-y-auto">
         {onlineUsersData.map((user) => (
           <div
             key={user._id}
-            className="flex items-center gap-2 p-1.5 hover:bg-muted rounded-lg cursor-pointer transition-colors"
+            className="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-muted"
             onClick={() => onUserSelect?.(user._id)}
           >
             <div className="relative">
@@ -129,11 +125,9 @@ export function OnlineUsers({ onUserSelect }: OnlineUsersProps) {
               </Avatar>
               <Circle className="absolute bottom-0 right-0 h-2.5 w-2.5 fill-green-500 text-green-500" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                @{user.username}
-              </p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{user.name}</p>
+              <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
             </div>
             {session?.user?.id !== user._id && (
               <Badge variant="outline" className="text-[10px]">

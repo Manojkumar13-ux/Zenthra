@@ -52,15 +52,15 @@ export interface IAnalytics extends Document {
 
 const AnalyticsSchema = new Schema<IAnalytics>(
   {
-    user: { 
-      type: Schema.Types.ObjectId, 
-      ref: "User", 
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      unique: true 
+      unique: true,
     },
-    date: { 
-      type: Date, 
-      default: Date.now 
+    date: {
+      type: Date,
+      default: Date.now,
     },
     metrics: {
       followers: { type: Number, default: 0 },
@@ -79,35 +79,41 @@ const AnalyticsSchema = new Schema<IAnalytics>(
       likesGrowth: { type: Number, default: 0 },
       commentsGrowth: { type: Number, default: 0 },
     },
-    topPosts: [{
-      postId: { type: Schema.Types.ObjectId, ref: "Post" },
-      content: { type: String },
-      likes: { type: Number, default: 0 },
-      comments: { type: Number, default: 0 },
-      reposts: { type: Number, default: 0 },
-      engagement: { type: Number, default: 0 },
-    }],
-    dailyStats: [{
-      date: { type: Date, required: true },
-      posts: { type: Number, default: 0 },
-      likes: { type: Number, default: 0 },
-      comments: { type: Number, default: 0 },
-      impressions: { type: Number, default: 0 },
-      reach: { type: Number, default: 0 },
-    }],
-    weeklySummary: [{
-      weekStart: { type: Date, required: true },
-      weekEnd: { type: Date, required: true },
-      posts: { type: Number, default: 0 },
-      likes: { type: Number, default: 0 },
-      comments: { type: Number, default: 0 },
-      impressions: { type: Number, default: 0 },
-      reach: { type: Number, default: 0 },
-      averageEngagement: { type: Number, default: 0 },
-    }],
+    topPosts: [
+      {
+        postId: { type: Schema.Types.ObjectId, ref: "Post" },
+        content: { type: String },
+        likes: { type: Number, default: 0 },
+        comments: { type: Number, default: 0 },
+        reposts: { type: Number, default: 0 },
+        engagement: { type: Number, default: 0 },
+      },
+    ],
+    dailyStats: [
+      {
+        date: { type: Date, required: true },
+        posts: { type: Number, default: 0 },
+        likes: { type: Number, default: 0 },
+        comments: { type: Number, default: 0 },
+        impressions: { type: Number, default: 0 },
+        reach: { type: Number, default: 0 },
+      },
+    ],
+    weeklySummary: [
+      {
+        weekStart: { type: Date, required: true },
+        weekEnd: { type: Date, required: true },
+        posts: { type: Number, default: 0 },
+        likes: { type: Number, default: 0 },
+        comments: { type: Number, default: 0 },
+        impressions: { type: Number, default: 0 },
+        reach: { type: Number, default: 0 },
+        averageEngagement: { type: Number, default: 0 },
+      },
+    ],
   },
-  { 
-    timestamps: true 
+  {
+    timestamps: true,
   }
 );
 
@@ -115,5 +121,5 @@ const AnalyticsSchema = new Schema<IAnalytics>(
 AnalyticsSchema.index({ user: 1, date: -1 });
 AnalyticsSchema.index({ "metrics.followers": -1 });
 
-export const Analytics = mongoose.models.Analytics || 
-  mongoose.model<IAnalytics>("Analytics", AnalyticsSchema);
+export const Analytics =
+  mongoose.models.Analytics || mongoose.model<IAnalytics>("Analytics", AnalyticsSchema);

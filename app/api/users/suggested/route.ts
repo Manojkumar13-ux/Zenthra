@@ -10,10 +10,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -26,10 +23,10 @@ export async function GET() {
 
     // Get suggested users (excluding self and already followed)
     const suggestedUsers = await User.find({
-      _id: { 
+      _id: {
         $ne: new mongoose.Types.ObjectId(currentUserId),
-        $nin: followingIds.map(id => new mongoose.Types.ObjectId(id))
-      }
+        $nin: followingIds.map((id) => new mongoose.Types.ObjectId(id)),
+      },
     })
       .select("name username image bio followers following")
       .limit(10)
@@ -45,12 +42,8 @@ export async function GET() {
     return NextResponse.json({
       users: usersWithFollowStatus,
     });
-
   } catch (error) {
     console.error("Suggested users error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch suggested users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch suggested users" }, { status: 500 });
   }
 }

@@ -13,10 +13,10 @@ interface AvatarSimpleProps {
   onClick?: () => void;
 }
 
-export function AvatarSimple({ 
-  src, 
-  alt, 
-  fallback, 
+export function AvatarSimple({
+  src,
+  alt,
+  fallback,
   className,
   size = "md",
   onClick,
@@ -42,18 +42,26 @@ export function AvatarSimple({
   };
 
   const colors = [
-    "bg-red-500", "bg-blue-500", "bg-green-500", 
-    "bg-yellow-500", "bg-purple-500", "bg-pink-500",
-    "bg-indigo-500", "bg-orange-500", "bg-teal-500",
-    "bg-cyan-500", "bg-rose-500", "bg-violet-500",
+    "bg-red-500",
+    "bg-blue-500",
+    "bg-green-500",
+    "bg-yellow-500",
+    "bg-purple-500",
+    "bg-pink-500",
+    "bg-indigo-500",
+    "bg-orange-500",
+    "bg-teal-500",
+    "bg-cyan-500",
+    "bg-rose-500",
+    "bg-violet-500",
   ];
 
   const colorIndex = (fallback || alt || "?").charCodeAt(0) % colors.length;
 
   return (
-    <div 
+    <div
       className={cn(
-        "relative rounded-full overflow-hidden flex-shrink-0 cursor-pointer",
+        "relative flex-shrink-0 cursor-pointer overflow-hidden rounded-full",
         sizeClasses[size],
         className
       )}
@@ -66,17 +74,19 @@ export function AvatarSimple({
           onError={() => setHasError(true)}
           onLoad={() => setIsLoaded(true)}
           className={cn(
-            "w-full h-full object-cover transition-opacity duration-300",
+            "h-full w-full object-cover transition-opacity duration-300",
             isLoaded ? "opacity-100" : "opacity-0"
           )}
         />
       )}
-      
+
       {(!src || hasError) && (
-        <div className={cn(
-          "w-full h-full flex items-center justify-center text-white font-semibold select-none",
-          colors[colorIndex]
-        )}>
+        <div
+          className={cn(
+            "flex h-full w-full select-none items-center justify-center font-semibold text-white",
+            colors[colorIndex]
+          )}
+        >
           {getInitials(fallback || alt || "User")}
         </div>
       )}

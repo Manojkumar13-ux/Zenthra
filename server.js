@@ -37,7 +37,7 @@ app.prepare().then(() => {
       // Store user mapping
       users.set(userId, socket.id);
       userSockets.set(socket.id, userId);
-      
+
       // Broadcast online users to all clients
       io.emit("online-users", Array.from(users.keys()));
       console.log(`✅ User ${userId} is now online`);
@@ -90,7 +90,7 @@ app.prepare().then(() => {
     // Typing indicator
     socket.on("typing", (data) => {
       const { chatId, receiverId, isTyping } = data;
-      
+
       // Emit to the chat room
       socket.to(chatId).emit("typing-indicator", {
         userId: userSockets.get(socket.id),
@@ -112,7 +112,7 @@ app.prepare().then(() => {
     // Mark messages as read
     socket.on("mark-read", (data) => {
       const { chatId, messageId, userId: readerId } = data;
-      
+
       // Emit read receipt to the chat room
       io.to(chatId).emit("read-receipt", {
         messageId,
@@ -124,16 +124,16 @@ app.prepare().then(() => {
     // Disconnect
     socket.on("disconnect", () => {
       const disconnectedUserId = userSockets.get(socket.id);
-      
+
       if (disconnectedUserId) {
         users.delete(disconnectedUserId);
         userSockets.delete(socket.id);
-        
+
         // Broadcast updated online users list
         io.emit("online-users", Array.from(users.keys()));
         console.log(`❌ User ${disconnectedUserId} went offline`);
       }
-      
+
       console.log(`🔌 Client disconnected: ${socket.id}`);
     });
 

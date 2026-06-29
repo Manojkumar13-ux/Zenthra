@@ -22,3 +22,4 @@ Zenthra is a modern social platform with real-time messaging, AI content generat
 2. Install dependencies:
    ```bash
    npm install
+   ```

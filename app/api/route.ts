@@ -9,28 +9,26 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { userIds } = await req.json();
-    
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
       return NextResponse.json([]);
     }
 
     const db = await connectToDatabase();
     const usersCollection = db.collection("users");
-    
+
     const objectIds = userIds.map((id: string) => new ObjectId(id));
-    
-    const users = await usersCollection.find({
-      _id: { $in: objectIds }
-    })
-    .project({ _id: 1, name: 1, username: 1, image: 1 })
-    .toArray();
+
+    const users = await usersCollection
+      .find({
+        _id: { $in: objectIds },
+      })
+      .project({ _id: 1, name: 1, username: 1, image: 1 })
+      .toArray();
 
     const formattedUsers = users.map((user: any) => ({
       ...user,
@@ -40,10 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json(formattedUsers);
   } catch (error) {
     console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }
 
@@ -51,10 +46,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -72,13 +64,11 @@ export async function GET(req: Request) {
       ];
     }
 
-    const users = await usersCollection.find(query)
-      .limit(limit)
-      .toArray();
+    const users = await usersCollection.find(query).limit(limit).toArray();
 
     // Get current user's following list
     const currentUser = await usersCollection.findOne({
-      _id: new ObjectId(session.user.id)
+      _id: new ObjectId(session.user.id),
     });
 
     const followingIds = currentUser?.following?.map((id: string) => id.toString()) || [];
@@ -97,9 +87,6 @@ export async function GET(req: Request) {
     return NextResponse.json(usersWithStatus);
   } catch (error) {
     console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }

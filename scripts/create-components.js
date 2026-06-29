@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 const components = {
-  'skeleton.tsx': `import { cn } from "@/lib/utils";
+  "skeleton.tsx": `import { cn } from "@/lib/utils";
 
 function Skeleton({
   className,
@@ -18,7 +18,7 @@ function Skeleton({
 
 export { Skeleton };
 `,
-  'button.tsx': `import * as React from "react";
+  "button.tsx": `import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
@@ -74,7 +74,7 @@ export { Button, buttonVariants };
 };
 
 // Create components/ui directory if it doesn't exist
-const uiDir = path.join(__dirname, '../components/ui');
+const uiDir = path.join(__dirname, "../components/ui");
 if (!fs.existsSync(uiDir)) {
   fs.mkdirSync(uiDir, { recursive: true });
 }
@@ -90,4 +90,4 @@ Object.entries(components).forEach(([filename, content]) => {
   }
 });
 
-console.log('✅ All components created!');
+console.log("✅ All components created!");

@@ -29,12 +29,12 @@ export default function AdminReports() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Reports</h1>
+      <h1 className="mb-4 text-2xl font-bold">Reports</h1>
       {data?.length === 0 ? (
         <p>No reports.</p>
       ) : (
         data?.map((report: any) => (
-          <Card key={report._id} className="p-4 mb-2 flex justify-between items-center">
+          <Card key={report._id} className="mb-2 flex items-center justify-between p-4">
             <div>
               <p className="font-medium">{report.reason}</p>
               <p className="text-sm text-gray-500">Reported by: {report.reportedBy?.name}</p>

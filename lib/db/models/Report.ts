@@ -23,6 +23,4 @@ const ReportSchema = new Schema<IReport>(
   }
 );
 
-export const Report =
-  mongoose.models.Report ||
-  mongoose.model<IReport>("Report", ReportSchema);
+export const Report = mongoose.models.Report || mongoose.model<IReport>("Report", ReportSchema);

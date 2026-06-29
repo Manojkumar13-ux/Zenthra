@@ -6,17 +6,11 @@ import { connectDB } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
 import { User } from "@/lib/db/models/User";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -33,10 +27,7 @@ export async function GET(
       .lean();
 
     if (!post) {
-      return NextResponse.json(
-        { error: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
     // Check if current user has liked the post
@@ -47,18 +38,23 @@ export async function GET(
     const formattedPost = {
       ...post,
       _id: post._id.toString(),
-      author: post.author ? {
-        ...post.author,
-        _id: post.author._id.toString(),
-      } : null,
-      comments: post.comments?.map((comment: any) => ({
-        ...comment,
-        _id: comment._id.toString(),
-        author: comment.author ? {
-          ...comment.author,
-          _id: comment.author._id.toString(),
-        } : null,
-      })) || [],
+      author: post.author
+        ? {
+            ...post.author,
+            _id: post.author._id.toString(),
+          }
+        : null,
+      comments:
+        post.comments?.map((comment: any) => ({
+          ...comment,
+          _id: comment._id.toString(),
+          author: comment.author
+            ? {
+                ...comment.author,
+                _id: comment.author._id.toString(),
+              }
+            : null,
+        })) || [],
       likesCount: post.likes?.length || 0,
       commentsCount: post.comments?.length || 0,
       repostsCount: post.reposts?.length || 0,
@@ -77,33 +73,21 @@ export async function GET(
     return NextResponse.json({ post: formattedPost });
   } catch (error) {
     console.error("Error fetching post:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch post" }, { status: 500 });
   }
 }
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { content, media, hashtags, category, mood, visibility } = await req.json();
 
     if (!content || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Content is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -111,10 +95,7 @@ export async function PUT(
     const post = await Post.findById(params.id);
 
     if (!post) {
-      return NextResponse.json(
-        { error: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
     // Check if user is the author
@@ -157,10 +138,12 @@ export async function PUT(
       post: {
         ...updatedPost,
         _id: updatedPost._id.toString(),
-        author: updatedPost.author ? {
-          ...updatedPost.author,
-          _id: updatedPost.author._id.toString(),
-        } : null,
+        author: updatedPost.author
+          ? {
+              ...updatedPost.author,
+              _id: updatedPost.author._id.toString(),
+            }
+          : null,
         createdAt: updatedPost.createdAt?.toISOString(),
         updatedAt: updatedPost.updatedAt?.toISOString(),
       },
@@ -168,24 +151,15 @@ export async function PUT(
     });
   } catch (error) {
     console.error("Error updating post:", error);
-    return NextResponse.json(
-      { error: "Failed to update post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -193,10 +167,7 @@ export async function DELETE(
     const post = await Post.findById(params.id);
 
     if (!post) {
-      return NextResponse.json(
-        { error: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
     // Check if user is the author or admin
@@ -224,9 +195,6 @@ export async function DELETE(
     });
   } catch (error) {
     console.error("Error deleting post:", error);
-    return NextResponse.json(
-      { error: "Failed to delete post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
   }
 }

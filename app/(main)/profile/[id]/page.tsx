@@ -5,30 +5,20 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import {
-  User,
-  Mail,
   MapPin,
   Link as LinkIcon,
   Calendar,
   Settings,
   Edit3,
   Share2,
-  Users,
-  MessageCircle,
   Heart,
   Bookmark,
-  MoreHorizontal,
   Loader2,
-  Check,
-  X,
   Camera,
   Sparkles,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -39,10 +29,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import PostCard from "@/components/posts/PostCard";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import toast from "react-hot-toast";
 import Image from "next/image";
-import Link from "next/link";
 
 interface UserProfile {
   _id: string;
@@ -64,6 +53,33 @@ interface UserProfile {
   createdAt: string;
 }
 
+interface Post {
+  _id: string;
+  content: string;
+  author: {
+    _id: string;
+    name: string;
+    username: string;
+    image?: string;
+    isFollowing?: boolean;
+    verified?: boolean;
+  };
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  repostsCount: number;
+  liked: boolean;
+  bookmarked: boolean;
+  reposted: boolean;
+  media: string[];
+  hashtags: string[];
+  mood?: string;
+  category?: string;
+  viewsCount: number;
+  isPinned: boolean;
+  aiSummary?: string;
+}
+
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -71,7 +87,7 @@ export default function ProfilePage() {
   const userId = params?.id as string;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -148,9 +164,7 @@ export default function ProfilePage() {
         return {
           ...prev,
           isFollowing: data.isFollowing,
-          followersCount: data.isFollowing
-            ? prev.followersCount + 1
-            : prev.followersCount - 1,
+          followersCount: data.isFollowing ? prev.followersCount + 1 : prev.followersCount - 1,
         };
       });
       toast.success(data.isFollowing ? "Followed!" : "Unfollowed!");
@@ -226,16 +240,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-4 space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 p-4">
       {/* Cover Image */}
       <div className="relative h-48 w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-purple-500">
         {profile.coverImage ? (
-          <Image
-            src={profile.coverImage}
-            alt="Cover"
-            fill
-            className="object-cover"
-          />
+          <Image src={profile.coverImage} alt="Cover" fill className="object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-white/30">
             <Camera className="h-12 w-12" />
@@ -286,18 +295,14 @@ export default function ProfilePage() {
                       <label className="text-sm font-medium">Name</label>
                       <Input
                         value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, name: e.target.value }))
-                        }
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Bio</label>
                       <Textarea
                         value={editForm.bio}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, bio: e.target.value }))
-                        }
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))}
                         rows={3}
                       />
                     </div>
@@ -405,8 +410,8 @@ export default function ProfilePage() {
             {activeTab === "posts"
               ? "No posts yet"
               : activeTab === "likes"
-              ? "No liked posts"
-              : "No bookmarked posts"}
+                ? "No liked posts"
+                : "No bookmarked posts"}
           </p>
         </div>
       ) : (

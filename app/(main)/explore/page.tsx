@@ -4,24 +4,13 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  Hash,
-  TrendingUp,
-  Users,
-  UserPlus,
-  Loader2,
-  Flame,
-  Sparkles,
-  Clock,
-} from "lucide-react";
+import { Search, Hash, Users, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
@@ -93,9 +82,7 @@ export default function ExplorePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"posts" | "hashtags" | "users">(
-    "posts"
-  );
+  const [activeTab, setActiveTab] = useState<"posts" | "hashtags" | "users">("posts");
   const [category, setCategory] = useState<CategoryType>("all");
   const [posts, setPosts] = useState<Post[]>([]);
   const [hashtags, setHashtags] = useState<Hashtag[]>([]);
@@ -123,7 +110,7 @@ export default function ExplorePage() {
       const promises = [];
       const baseUrl = `/api/explore?q=${encodeURIComponent(searchQuery)}&category=${category}`;
 
-      if (activeTab === "posts" || activeTab === "posts") {
+      if (activeTab === "posts") {
         promises.push(
           fetch(`${baseUrl}&type=posts`).then((res) => {
             if (!res.ok) throw new Error("Failed to fetch posts");
@@ -131,53 +118,44 @@ export default function ExplorePage() {
           })
         );
       }
-      if (activeTab === "hashtags" || activeTab === "hashtags") {
+      if (activeTab === "hashtags") {
         promises.push(
-          fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=hashtags`).then(
-            (res) => {
-              if (!res.ok) throw new Error("Failed to fetch hashtags");
-              return res.json();
-            }
-          )
+          fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=hashtags`).then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch hashtags");
+            return res.json();
+          })
         );
       }
-      if (activeTab === "users" || activeTab === "users") {
+      if (activeTab === "users") {
         promises.push(
-          fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=users`).then(
-            (res) => {
-              if (!res.ok) throw new Error("Failed to fetch users");
-              return res.json();
-            }
-          )
+          fetch(`/api/explore?q=${encodeURIComponent(searchQuery)}&type=users`).then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch users");
+            return res.json();
+          })
         );
       }
 
       const results = await Promise.allSettled(promises);
 
       let postIndex = 0;
-      let hashtagIndex = 0;
-      let userIndex = 0;
+      const hashtagIndex = activeTab === "hashtags" ? 1 : 0;
+      const userIndex = activeTab === "users" ? 2 : 0;
 
-      if (activeTab === "posts" || activeTab === "posts") {
+      if (activeTab === "posts") {
         const result = results[postIndex++];
         if (result.status === "fulfilled") {
           setPosts(result.value.posts || []);
         }
       }
-      if (activeTab === "hashtags" || activeTab === "hashtags") {
-        const result = results[hashtagIndex + (activeTab === "posts" ? 1 : 0)];
-        if (result?.status === "fulfilled") {
+      if (activeTab === "hashtags") {
+        const result = results[hashtagIndex];
+        if (result.status === "fulfilled") {
           setHashtags(result.value.hashtags || []);
         }
       }
-      if (activeTab === "users" || activeTab === "users") {
-        const result =
-          results[
-            userIndex +
-            (activeTab === "posts" ? 1 : 0) +
-            (activeTab === "hashtags" ? 1 : 0)
-          ];
-        if (result?.status === "fulfilled") {
+      if (activeTab === "users") {
+        const result = results[userIndex];
+        if (result.status === "fulfilled") {
           setUsers(result.value.users || []);
         }
       }
@@ -198,9 +176,7 @@ export default function ExplorePage() {
       });
       if (!res.ok) throw new Error("Failed to follow user");
       setUsers((prev) =>
-        prev.map((user) =>
-          user._id === userId ? { ...user, isFollowing: true } : user
-        )
+        prev.map((user) => (user._id === userId ? { ...user, isFollowing: true } : user))
       );
       toast.success("User followed!");
     } catch (error) {
@@ -218,9 +194,7 @@ export default function ExplorePage() {
       });
       if (!res.ok) throw new Error("Failed to unfollow user");
       setUsers((prev) =>
-        prev.map((user) =>
-          user._id === userId ? { ...user, isFollowing: false } : user
-        )
+        prev.map((user) => (user._id === userId ? { ...user, isFollowing: false } : user))
       );
       toast.success("User unfollowed!");
     } catch (error) {
@@ -322,14 +296,12 @@ export default function ExplorePage() {
           <div className="py-12 text-center">
             <Search className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">No posts found</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Try searching for something else
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Try searching for something else</p>
           </div>
         ) : (
           <div className="space-y-4">
             {posts.map((post) => (
-              <Card key={post._id} className="hover:shadow-md transition-shadow">
+              <Card key={post._id} className="transition-shadow hover:shadow-md">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Link href={`/profile/${post.author._id}`}>
@@ -340,11 +312,11 @@ export default function ExplorePage() {
                         </AvatarFallback>
                       </Avatar>
                     </Link>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/profile/${post.author._id}`}
-                          className="font-medium text-sm hover:underline"
+                          className="text-sm font-medium hover:underline"
                         >
                           {post.author.name}
                         </Link>
@@ -360,11 +332,7 @@ export default function ExplorePage() {
                       {post.hashtags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {post.hashtags.map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-xs"
-                            >
+                            <Badge key={tag} variant="secondary" className="text-xs">
                               #{tag}
                             </Badge>
                           ))}
@@ -419,31 +387,28 @@ export default function ExplorePage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {users.map((user) => (
-            <Card key={user._id} className="cursor-pointer p-4 transition-shadow hover:bg-muted/50 hover:shadow-md">
+            <Card
+              key={user._id}
+              className="cursor-pointer p-4 transition-shadow hover:bg-muted/50 hover:shadow-md"
+            >
               <CardContent className="p-0">
                 <div className="flex items-center gap-3">
                   <Link href={`/profile/${user._id}`}>
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={user.image} />
-                      <AvatarFallback>
-                        {user.name?.[0]?.toUpperCase() || "U"}
-                      </AvatarFallback>
+                      <AvatarFallback>{user.name?.[0]?.toUpperCase() || "U"}</AvatarFallback>
                     </Avatar>
                   </Link>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <Link
                       href={`/profile/${user._id}`}
-                      className="font-medium text-sm hover:underline"
+                      className="text-sm font-medium hover:underline"
                     >
                       {user.name}
                     </Link>
-                    <p className="text-sm text-muted-foreground">
-                      @{user.username}
-                    </p>
+                    <p className="text-sm text-muted-foreground">@{user.username}</p>
                     {user.bio && (
-                      <p className="line-clamp-2 text-sm text-muted-foreground">
-                        {user.bio}
-                      </p>
+                      <p className="line-clamp-2 text-sm text-muted-foreground">{user.bio}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
                       {user.followersCount || 0} followers
@@ -454,9 +419,7 @@ export default function ExplorePage() {
                       variant={user.isFollowing ? "outline" : "default"}
                       size="sm"
                       onClick={() =>
-                        user.isFollowing
-                          ? handleUnfollow(user._id)
-                          : handleFollow(user._id)
+                        user.isFollowing ? handleUnfollow(user._id) : handleFollow(user._id)
                       }
                     >
                       {user.isFollowing ? "Unfollow" : "Follow"}

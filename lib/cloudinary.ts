@@ -63,7 +63,7 @@ export function getImageUrl(
   } = {}
 ) {
   const { width, height, crop = "fill", quality = 80, format = "auto" } = options;
-  
+
   let url = cloudinary.url(publicId, {
     width,
     height,

@@ -9,10 +9,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -32,9 +29,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ achievements: formattedAchievements });
   } catch (error) {
     console.error("Error fetching achievements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch achievements" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch achievements" }, { status: 500 });
   }
 }

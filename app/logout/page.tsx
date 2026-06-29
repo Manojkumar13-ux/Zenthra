@@ -14,15 +14,15 @@ export default function LogoutPage() {
         // Clear all storage
         localStorage.clear();
         sessionStorage.clear();
-        
+
         // Clear cookies via API
         await fetch("/api/auth/logout", { method: "POST" });
-        
+
         // Sign out
-        await signOut({ 
+        await signOut({
           redirect: false,
         });
-        
+
         // Redirect to login
         window.location.href = "/login";
       } catch (error) {
@@ -35,9 +35,9 @@ export default function LogoutPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+        <Loader2 className="mx-auto h-12 w-12 animate-spin text-indigo-600" />
         <p className="mt-4 text-gray-600">Logging out...</p>
       </div>
     </div>

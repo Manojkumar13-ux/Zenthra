@@ -15,20 +15,14 @@ export async function POST(req: Request) {
     const { commentId } = body;
 
     if (!commentId) {
-      return NextResponse.json(
-        { message: "Comment ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Comment ID is required" }, { status: 400 });
     }
 
     await connectDB();
 
     const comment = await Comment.findById(commentId);
     if (!comment) {
-      return NextResponse.json(
-        { message: "Comment not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Comment not found" }, { status: 404 });
     }
 
     const userId = session.user.id;
@@ -47,9 +41,6 @@ export async function POST(req: Request) {
     }
   } catch (error) {
     console.error("POST /api/comments/like error:", error);
-    return NextResponse.json(
-      { message: "Failed to like comment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to like comment" }, { status: 500 });
   }
 }

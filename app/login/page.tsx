@@ -31,7 +31,7 @@ export default function LoginPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
@@ -109,7 +109,7 @@ export default function LoginPage() {
       setPassword("");
       setConfirmPassword("");
       setError("");
-      
+
       // Auto sign in after registration
       const result = await signIn("credentials", {
         email,
@@ -137,7 +137,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     try {
-      await signIn("google", { 
+      await signIn("google", {
         callbackUrl: "/feed",
         redirect: true,
       });
@@ -158,12 +158,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob dark:bg-blue-900/30" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000 dark:bg-purple-900/30" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000 dark:bg-pink-900/30" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -right-40 -top-40 h-80 w-80 animate-blob rounded-full bg-blue-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-blue-900/30" />
+        <div className="animation-delay-2000 absolute -bottom-40 -left-40 h-80 w-80 animate-blob rounded-full bg-purple-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-purple-900/30" />
+        <div className="animation-delay-4000 absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 animate-blob rounded-full bg-pink-200 opacity-70 mix-blend-multiply blur-xl filter dark:bg-pink-900/30" />
       </div>
 
       {/* Login/Register Card */}
@@ -171,30 +171,30 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative w-full max-w-md z-10"
+        className="relative z-10 w-full max-w-md"
       >
-        <div className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-white/20 dark:border-gray-700/30 shadow-2xl rounded-2xl p-8">
+        <div className="rounded-2xl border border-white/20 bg-white/80 p-8 shadow-2xl backdrop-blur-xl dark:border-gray-700/30 dark:bg-gray-900/80">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="mb-8 text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="flex justify-center mb-4"
+              className="mb-4 flex justify-center"
             >
               <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <Sparkles className="w-8 h-8 text-white" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30">
+                  <Sparkles className="h-8 w-8 text-white" />
                 </div>
-                <div className="absolute -inset-1 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-30" />
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 opacity-30 blur-xl" />
               </div>
             </motion.div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-3xl font-bold text-transparent">
               {isRegistering ? "Create Account" : "Welcome Back"}
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              {isRegistering 
-                ? "Join Zenthra and connect with friends" 
+            <p className="mt-2 text-gray-500 dark:text-gray-400">
+              {isRegistering
+                ? "Join Zenthra and connect with friends"
                 : "Sign in to your Zenthra account"}
             </p>
           </div>
@@ -204,7 +204,7 @@ export default function LoginPage() {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm border border-red-200 dark:border-red-800 mb-4"
+              className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400"
             >
               {error}
             </motion.div>
@@ -214,18 +214,21 @@ export default function LoginPage() {
           {!isRegistering && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="email"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="border-gray-200 bg-white/50 pl-10 transition-all focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800/50"
                     required
                     disabled={isLoading}
                   />
@@ -233,33 +236,36 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="mb-1 flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Password
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    className="text-sm text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="border-gray-200 bg-white/50 pl-10 pr-10 transition-all focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800/50"
                     required
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -268,7 +274,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all duration-300"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-700 hover:to-purple-700 hover:shadow-xl"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -290,18 +296,21 @@ export default function LoginPage() {
           {isRegistering && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="name"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Full Name
                 </label>
                 <div className="relative">
-                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <UserPlus className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="name"
                     type="text"
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="pl-10 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="border-gray-200 bg-white/50 pl-10 transition-all focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800/50"
                     required
                     disabled={isLoading}
                   />
@@ -309,18 +318,21 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="reg-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="reg-email"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="reg-email"
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="border-gray-200 bg-white/50 pl-10 transition-all focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800/50"
                     required
                     disabled={isLoading}
                   />
@@ -328,25 +340,28 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="reg-password"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="reg-password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Min 6 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="border-gray-200 bg-white/50 pl-10 pr-10 transition-all focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800/50"
                     required
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -354,18 +369,21 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="confirm-password"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="confirm-password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="border-gray-200 bg-white/50 pl-10 transition-all focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800/50"
                     required
                     disabled={isLoading}
                   />
@@ -374,7 +392,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/30 hover:shadow-xl transition-all duration-300"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 transition-all duration-300 hover:from-green-600 hover:to-emerald-700 hover:shadow-xl"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -398,7 +416,7 @@ export default function LoginPage() {
               <span className="w-full border-t border-gray-200 dark:border-gray-700" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white/80 dark:bg-gray-900/80 px-2 text-gray-500 dark:text-gray-400">
+              <span className="bg-white/80 px-2 text-gray-500 dark:bg-gray-900/80 dark:text-gray-400">
                 Or continue with
               </span>
             </div>
@@ -409,7 +427,7 @@ export default function LoginPage() {
             type="button"
             variant="outline"
             onClick={handleGoogleLogin}
-            className="w-full border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 border-gray-200 transition-all hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
             disabled={isLoading}
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -434,13 +452,13 @@ export default function LoginPage() {
           </Button>
 
           {/* Toggle between Login and Register */}
-          <div className="text-center mt-6">
+          <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {isRegistering ? "Already have an account?" : "Don't have an account?"}
               <button
                 type="button"
                 onClick={toggleMode}
-                className="ml-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+                className="ml-2 font-medium text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {isRegistering ? "Sign In" : "Sign Up"}
               </button>

@@ -18,7 +18,7 @@ export async function GET() {
 
     // Get all posts raw
     const allPosts = await Post.find({}).sort({ createdAt: -1 }).lean();
-    
+
     // Get posts with author populated
     const populatedPosts = await Post.find({})
       .sort({ createdAt: -1 })
@@ -31,27 +31,29 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       totalPosts: allPosts.length,
-      posts: allPosts.map(p => ({
+      posts: allPosts.map((p) => ({
         id: p._id,
         content: p.content?.substring(0, 50),
         authorId: p.author,
         isPublished: p.isPublished,
         hashtags: p.hashtags || [],
-        createdAt: p.createdAt
+        createdAt: p.createdAt,
       })),
-      populatedPosts: populatedPosts.map(p => ({
+      populatedPosts: populatedPosts.map((p) => ({
         id: p._id,
         content: p.content?.substring(0, 50),
-        author: p.author?.name || 'Unknown',
-        isPublished: p.isPublished
+        author: p.author?.name || "Unknown",
+        isPublished: p.isPublished,
       })),
-      collectionStats: stats
+      collectionStats: stats,
     });
-
   } catch (error) {
     console.error("Debug error:", error);
     return NextResponse.json(
-      { error: "Failed to get debug info", details: error instanceof Error ? error.message : String(error) },
+      {
+        error: "Failed to get debug info",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

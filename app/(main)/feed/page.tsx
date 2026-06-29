@@ -5,19 +5,11 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Sparkles,
-  RefreshCw,
-  AlertCircle,
-  TrendingUp,
-  Users,
-  Globe,
-} from "lucide-react";
+import { Sparkles, RefreshCw, AlertCircle } from "lucide-react";
 import PostCard from "@/components/posts/PostCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 type CategoryType =
@@ -60,7 +52,7 @@ interface Post {
 }
 
 export default function FeedPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabType>("for-you");
@@ -148,11 +140,7 @@ export default function FeedPage() {
         <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
           Sign in to see personalized content and connect with others.
         </p>
-        <Button
-          onClick={() => (window.location.href = "/login")}
-          className="gap-2"
-          size="lg"
-        >
+        <Button onClick={() => (window.location.href = "/login")} className="gap-2" size="lg">
           Get Started
         </Button>
       </div>
@@ -195,11 +183,7 @@ export default function FeedPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs
-        value={tab}
-        onValueChange={(v) => setTab(v as TabType)}
-        className="mb-4"
-      >
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabType)} className="mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="for-you" className="flex-1">
             For You
@@ -274,7 +258,7 @@ export default function FeedPage() {
         <div className="rounded-xl border bg-card py-16 text-center shadow-sm">
           <div className="mb-4 flex justify-center">
             <div className="rounded-full bg-muted/50 p-4">
-              <Globe className="h-12 w-12 text-muted-foreground" />
+              <AlertCircle className="h-12 w-12 text-muted-foreground" />
             </div>
           </div>
           <h3 className="mb-2 text-xl font-semibold">No posts yet</h3>
@@ -287,19 +271,13 @@ export default function FeedPage() {
             <Button variant="outline" onClick={() => router.push("/explore")}>
               Explore
             </Button>
-            <Button onClick={() => router.push("/create-post")}>
-              Create Post
-            </Button>
+            <Button onClick={() => router.push("/create-post")}>Create Post</Button>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard
-              key={post._id}
-              post={post}
-              onDelete={handlePostDeleted}
-            />
+            <PostCard key={post._id} post={post} onDelete={handlePostDeleted} />
           ))}
           <div className="py-8 text-center text-sm text-muted-foreground">
             You've reached the end of your feed

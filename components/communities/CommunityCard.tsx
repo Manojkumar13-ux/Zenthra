@@ -54,26 +54,26 @@ export function CommunityCard({ community, onJoinChange }: CommunityCardProps) {
   };
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
+    <Card className="p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start gap-4">
         <Link href={`/communities/${community._id}`}>
           <Avatar className="h-14 w-14">
             <AvatarImage src={community.image} />
-            <AvatarFallback className="bg-indigo-100 text-indigo-600 text-lg">
+            <AvatarFallback className="bg-indigo-100 text-lg text-indigo-600">
               {community.name?.[0]?.toUpperCase() || "C"}
             </AvatarFallback>
           </Avatar>
         </Link>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <Link href={`/communities/${community._id}`} className="hover:underline">
-            <h3 className="font-semibold text-lg truncate">{community.name}</h3>
+            <h3 className="truncate text-lg font-semibold">{community.name}</h3>
           </Link>
           {community.description && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+            <p className="mt-0.5 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
               {community.description}
             </p>
           )}
-          <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-500">
+          <div className="mt-1.5 flex items-center gap-3 text-sm text-gray-500">
             <span className="flex items-center gap-1">
               <Users className="h-3.5 w-3.5" />
               {memberCount} members
@@ -88,7 +88,7 @@ export function CommunityCard({ community, onJoinChange }: CommunityCardProps) {
           className="flex-shrink-0"
         >
           {loading ? (
-            <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : isMember ? (
             "Joined"
           ) : (

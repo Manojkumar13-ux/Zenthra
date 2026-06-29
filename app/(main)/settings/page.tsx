@@ -4,487 +4,537 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
+import {
+  User,
+  Bell,
+  Shield,
+  Palette,
+  Globe,
+  Mail,
+  Key,
+  Trash2,
+  Save,
+  Loader2,
+  Check,
+  X,
+  Moon,
+  Sun,
+  Monitor,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Loader2, 
-  User, 
-  Mail, 
-  Shield, 
-  Bell, 
-  Palette, 
-  Key, 
-  Save, 
-  Camera,
-  MapPin,
-  Link as LinkIcon,
-  UserRound,
-  Check,
-  X
-} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { AvatarSimple } from "@/components/ui/avatar-simple";
+import { useTheme } from "next-themes";
 import toast from "react-hot-toast";
 
+interface UserSettings {
+  name: string;
+  username: string;
+  email: string;
+  bio: string;
+  location: string;
+  website: string;
+  image?: string;
+  theme: string;
+  notificationPreferences: {
+    email: boolean;
+    push: boolean;
+    likes: boolean;
+    comments: boolean;
+    mentions: boolean;
+    follows: boolean;
+    messages: boolean;
+  };
+  privacy: {
+    isPrivate: boolean;
+    showOnlineStatus: boolean;
+    allowTagging: boolean;
+  };
+}
+
 export default function SettingsPage() {
-  const { data: session, update } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const [formData, setFormData] = useState({
+  const { theme, setTheme } = useTheme();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
+  const [formData, setFormData] = useState<UserSettings>({
     name: "",
     username: "",
-    bio: "",
     email: "",
+    bio: "",
     location: "",
     website: "",
     image: "",
+    theme: "system",
+    notificationPreferences: {
+      email: true,
+      push: true,
+      likes: true,
+      comments: true,
+      mentions: true,
+      follows: true,
+      messages: true,
+    },
+    privacy: {
+      isPrivate: false,
+      showOnlineStatus: true,
+      allowTagging: true,
+    },
   });
 
   useEffect(() => {
-    setMounted(true);
-    if (session?.user) {
-      setFormData({
-        name: session.user.name || "",
-        username: session.user.username || "",
-        bio: session.user.bio || "",
-        email: session.user.email || "",
-        location: session.user.location || "",
-        website: session.user.website || "",
-        image: session.user.image || "",
-      });
-    }
-  }, [session]);
-
-  // Check if username is available
-  const checkUsernameAvailability = async (username: string) => {
-    if (!username || username.length < 3) {
-      setIsUsernameAvailable(null);
+    if (status === "unauthenticated") {
+      router.push("/login");
       return;
     }
+    if (session?.user) {
+      fetchSettings();
+    }
+  }, [session, status, router]);
 
-    setCheckingUsername(true);
+  const fetchSettings = async () => {
     try {
-      const res = await fetch(`/api/users/check-username?username=${encodeURIComponent(username)}`, {
-        credentials: "include",
-      });
+      setIsLoading(true);
+      const res = await fetch("/api/users/settings");
+      if (!res.ok) throw new Error("Failed to fetch settings");
       const data = await res.json();
-      setIsUsernameAvailable(data.available);
+      setFormData(data.settings);
     } catch (error) {
-      console.error("Error checking username:", error);
+      console.error("Error fetching settings:", error);
+      toast.error("Failed to load settings");
     } finally {
-      setCheckingUsername(false);
+      setIsLoading(false);
     }
   };
 
-  // Debounce username check
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (formData.username && formData.username !== session?.user?.username) {
-        checkUsernameAvailability(formData.username);
-      } else {
-        setIsUsernameAvailable(null);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [formData.username, session?.user?.username]);
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const handleSave = async () => {
+    setIsSaving(true);
     try {
-      // Check if username is taken
-      if (formData.username && formData.username !== session?.user?.username) {
-        const checkRes = await fetch(`/api/users/check-username?username=${encodeURIComponent(formData.username)}`, {
-          credentials: "include",
-        });
-        const checkData = await checkRes.json();
-        if (!checkData.available) {
-          toast.error("Username is already taken");
-          setLoading(false);
-          return;
-        }
-      }
-
-      const res = await fetch("/api/users/profile", {
+      const res = await fetch("/api/users/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          username: formData.username,
-          bio: formData.bio,
-          location: formData.location,
-          website: formData.website,
-          image: formData.image,
-        }),
-        credentials: "include",
+        body: JSON.stringify(formData),
       });
-
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to update profile");
+        const data = await res.json();
+        throw new Error(data.message || "Failed to update settings");
       }
-
-      const data = await res.json();
-      
-      // Update session with new data
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          id: session?.user?.id,
-          name: data.user.name,
-          username: data.user.username,
-          bio: data.user.bio,
-          image: data.user.image,
-          location: data.user.location,
-          website: data.user.website,
-          email: data.user.email,
-        }
-      });
-
-      toast.success("Profile updated successfully!");
-      
-      // Refresh the page to show updated data
-      router.refresh();
+      await update();
+      toast.success("Settings updated successfully!");
     } catch (error) {
-      console.error("Update error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+      console.error("Error saving settings:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save settings");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
-  if (!mounted) {
-    return (
-      <div className="max-w-4xl mx-auto p-4">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-64 bg-muted rounded" />
-        </div>
-      </div>
-    );
-  }
+  const handleUsernameCheck = async (username: string) => {
+    if (!username || username === session?.user?.username) return true;
+    try {
+      const res = await fetch(`/api/users/check-username?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      return data.available;
+    } catch (error) {
+      console.error("Error checking username:", error);
+      return false;
+    }
+  };
 
-  if (!session) {
+  if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-4">
-        <Card className="p-12 text-center">
-          <h3 className="text-lg font-semibold mb-2">Please Sign In</h3>
-          <p className="text-muted-foreground mb-4">Sign in to access settings</p>
-          <Button onClick={() => router.push("/login")}>Sign In</Button>
-        </Card>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <div>
+    <div className="mx-auto max-w-4xl p-4">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your account settings</p>
+        <p className="text-sm text-muted-foreground">Manage your account preferences</p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="profile">
+            <User className="mr-2 h-4 w-4" />
             Profile
           </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Account
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
+          <TabsTrigger value="notifications">
+            <Bell className="mr-2 h-4 w-4" />
             Notifications
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Appearance
+          <TabsTrigger value="privacy">
+            <Shield className="mr-2 h-4 w-4" />
+            Privacy
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
-            Security
+          <TabsTrigger value="appearance">
+            <Palette className="mr-2 h-4 w-4" />
+            Appearance
           </TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
-        <TabsContent value="profile" className="mt-6">
-          <Card className="p-6">
-            <form onSubmit={handleUpdateProfile} className="space-y-6">
-              {/* Profile Picture */}
+        <TabsContent value="profile" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>Update your public profile information</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={formData.image || session.user?.image || undefined} />
-                    <AvatarFallback className="text-2xl">
-                      {formData.name?.[0]?.toUpperCase() || session.user?.name?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-background"
-                    onClick={() => document.getElementById("image-upload")?.click()}
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      
-                      const formData = new FormData();
-                      formData.append("image", file);
-                      
-                      try {
-                        const res = await fetch("/api/users/me/image", {
-                          method: "POST",
-                          body: formData,
-                          credentials: "include",
-                        });
-                        const data = await res.json();
-                        if (data.image) {
-                          setFormData(prev => ({ ...prev, image: data.image }));
-                          // Update session immediately
-                          await update({
-                            ...session,
-                            user: {
-                              ...session?.user,
-                              image: data.image,
-                            }
-                          });
-                          toast.success("Profile picture updated!");
-                          router.refresh();
-                        }
-                      } catch (error) {
-                        toast.error("Failed to upload image");
-                      }
-                    }}
-                  />
-                </div>
+                <AvatarSimple
+                  src={formData.image}
+                  fallback={formData.name || "U"}
+                  alt={formData.name || "User"}
+                  size="lg"
+                />
                 <div>
-                  <h3 className="font-semibold">Profile Picture</h3>
-                  <p className="text-sm text-muted-foreground">Click the camera icon to change</p>
+                  <Button variant="outline" size="sm">
+                    Change Avatar
+                  </Button>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Recommended: Square image, at least 200x200px
+                  </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Display Name */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Display Name</Label>
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Your display name"
-                    disabled={loading}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
-
-                {/* Username */}
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
-                  <div className="relative">
-                    <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="username"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      placeholder="username"
-                      className="pl-9"
-                      disabled={loading}
-                    />
-                    {checkingUsername && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                    {!checkingUsername && isUsernameAvailable !== null && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {isUsernameAvailable ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <X className="h-4 w-4 text-red-500" />
-                        )}
-                      </span>
-                    )}
-                  </div>
-                  {isUsernameAvailable === false && (
-                    <p className="text-xs text-red-500">Username is already taken</p>
-                  )}
-                  {isUsernameAvailable === true && (
-                    <p className="text-xs text-green-500">Username is available</p>
-                  )}
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
+                  />
                 </div>
+              </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      value={formData.email}
-                      disabled
-                      className="pl-9 opacity-60"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Input
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
+                  placeholder="Tell us about yourself"
+                />
+              </div>
 
-                {/* Location */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="City, Country"
-                      className="pl-9"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                {/* Website */}
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="website">Website</Label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="website"
-                      value={formData.website}
-                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                      placeholder="https://example.com"
-                      className="pl-9"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                {/* Bio */}
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    placeholder="Tell us about yourself..."
-                    rows={4}
-                    disabled={loading}
-                    maxLength={160}
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
+                    placeholder="City, Country"
                   />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {formData.bio?.length || 0}/160
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={formData.website}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
+                    placeholder="https://example.com"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>Choose what notifications you receive</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Email Notifications</p>
+                  <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                </div>
+                <Switch
+                  checked={formData.notificationPreferences.email}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        email: checked,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Push Notifications</p>
+                  <p className="text-sm text-muted-foreground">Receive push notifications in-app</p>
+                </div>
+                <Switch
+                  checked={formData.notificationPreferences.push}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        push: checked,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Likes</p>
+                  <p className="text-sm text-muted-foreground">When someone likes your post</p>
+                </div>
+                <Switch
+                  checked={formData.notificationPreferences.likes}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        likes: checked,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Comments</p>
+                  <p className="text-sm text-muted-foreground">
+                    When someone comments on your post
                   </p>
                 </div>
+                <Switch
+                  checked={formData.notificationPreferences.comments}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        comments: checked,
+                      },
+                    }))
+                  }
+                />
               </div>
 
-              <div className="flex gap-2 justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFormData({
-                      name: session.user?.name || "",
-                      username: session.user?.username || "",
-                      bio: session.user?.bio || "",
-                      email: session.user?.email || "",
-                      location: session.user?.location || "",
-                      website: session.user?.website || "",
-                      image: session.user?.image || "",
-                    });
-                  }}
-                  disabled={loading}
-                >
-                  Reset
-                </Button>
-                <Button type="submit" disabled={loading} className="gap-2">
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </TabsContent>
-
-        {/* Other tabs remain the same */}
-        <TabsContent value="account" className="mt-6">
-          <Card className="p-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold">Account Management</h3>
-                <p className="text-sm text-muted-foreground">Manage your account settings</p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Sign Out</p>
-                    <p className="text-sm text-muted-foreground">Sign out of your account on this device</p>
-                  </div>
-                  <Button variant="outline" onClick={() => signOut({ callbackUrl: "/login" })}>
-                    Sign Out
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Mentions</p>
+                  <p className="text-sm text-muted-foreground">When someone mentions you</p>
                 </div>
+                <Switch
+                  checked={formData.notificationPreferences.mentions}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        mentions: checked,
+                      },
+                    }))
+                  }
+                />
               </div>
-            </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Follows</p>
+                  <p className="text-sm text-muted-foreground">When someone follows you</p>
+                </div>
+                <Switch
+                  checked={formData.notificationPreferences.follows}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        follows: checked,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Messages</p>
+                  <p className="text-sm text-muted-foreground">When you receive a new message</p>
+                </div>
+                <Switch
+                  checked={formData.notificationPreferences.messages}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notificationPreferences: {
+                        ...prev.notificationPreferences,
+                        messages: checked,
+                      },
+                    }))
+                  }
+                />
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications" className="mt-6">
-          <Card className="p-6">
-            <div className="text-center py-8">
-              <Bell className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Notification Settings</h3>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </div>
+        {/* Privacy Tab */}
+        <TabsContent value="privacy" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Privacy Settings</CardTitle>
+              <CardDescription>Control your privacy preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Private Account</p>
+                  <p className="text-sm text-muted-foreground">
+                    Only approved followers can see your posts
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.privacy.isPrivate}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      privacy: { ...prev.privacy, isPrivate: checked },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Show Online Status</p>
+                  <p className="text-sm text-muted-foreground">Let others see when you're online</p>
+                </div>
+                <Switch
+                  checked={formData.privacy.showOnlineStatus}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      privacy: { ...prev.privacy, showOnlineStatus: checked },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Allow Tagging</p>
+                  <p className="text-sm text-muted-foreground">Allow others to tag you in posts</p>
+                </div>
+                <Switch
+                  checked={formData.privacy.allowTagging}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      privacy: { ...prev.privacy, allowTagging: checked },
+                    }))
+                  }
+                />
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="appearance" className="mt-6">
-          <Card className="p-6">
-            <div className="text-center py-8">
-              <Palette className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Appearance Settings</h3>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="security" className="mt-6">
-          <Card className="p-6">
-            <div className="text-center py-8">
-              <Key className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Security Settings</h3>
-              <p className="text-muted-foreground">Coming soon...</p>
-            </div>
+        {/* Appearance Tab */}
+        <TabsContent value="appearance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Theme Preferences</CardTitle>
+              <CardDescription>Customize how the app looks</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Theme</Label>
+                <Select value={theme} onValueChange={setTheme}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">
+                      <div className="flex items-center gap-2">
+                        <Sun className="h-4 w-4" />
+                        Light
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="dark">
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-4 w-4" />
+                        Dark
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="system">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="h-4 w-4" />
+                        System
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Save Button */}
+      <div className="mt-6 flex justify-end gap-4">
+        <Button variant="outline" onClick={() => router.back()}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

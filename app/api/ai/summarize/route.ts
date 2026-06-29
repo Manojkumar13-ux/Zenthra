@@ -13,9 +13,20 @@ const openai = new OpenAI({
 
 // Validation schemas
 const summarizeSchema = z.object({
-  text: z.string().min(10, "Text must be at least 10 characters").max(10000, "Text too long (max 10,000 characters)"),
-  maxLength: z.number().min(50, "Minimum 50 words").max(500, "Maximum 500 words").optional().default(150),
-  style: z.enum(["concise", "detailed", "bullet", "key_points", "executive"]).optional().default("concise"),
+  text: z
+    .string()
+    .min(10, "Text must be at least 10 characters")
+    .max(10000, "Text too long (max 10,000 characters)"),
+  maxLength: z
+    .number()
+    .min(50, "Minimum 50 words")
+    .max(500, "Maximum 500 words")
+    .optional()
+    .default(150),
+  style: z
+    .enum(["concise", "detailed", "bullet", "key_points", "executive"])
+    .optional()
+    .default("concise"),
   language: z.string().optional().default("english"),
   tone: z.enum(["neutral", "professional", "casual", "persuasive"]).optional().default("neutral"),
 });
@@ -23,7 +34,10 @@ const summarizeSchema = z.object({
 const batchSummarizeSchema = z.object({
   texts: z.array(z.string().min(10)).max(10, "Maximum 10 texts per batch"),
   maxLength: z.number().min(50).max(500).optional().default(150),
-  style: z.enum(["concise", "detailed", "bullet", "key_points", "executive"]).optional().default("concise"),
+  style: z
+    .enum(["concise", "detailed", "bullet", "key_points", "executive"])
+    .optional()
+    .default("concise"),
 });
 
 // GET /api/ai/summarize - Get usage statistics and supported options
@@ -43,9 +57,10 @@ export async function GET(req: Request) {
 
     const usage = {
       totalSummaries: user?.aiUsage?.summaries || 0,
-      todaySummaries: user?.aiUsage?.dailySummaries?.filter(
-        (d: any) => new Date(d.date).setHours(0, 0, 0, 0) === today.getTime()
-      ).reduce((acc: number, curr: any) => acc + curr.count, 0) || 0,
+      todaySummaries:
+        user?.aiUsage?.dailySummaries
+          ?.filter((d: any) => new Date(d.date).setHours(0, 0, 0, 0) === today.getTime())
+          .reduce((acc: number, curr: any) => acc + curr.count, 0) || 0,
       dailyLimit: 50, // Free tier limit
     };
 
@@ -63,10 +78,7 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("GET /api/ai/summarize error:", error);
-    return NextResponse.json(
-      { message: "Failed to get usage statistics" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to get usage statistics" }, { status: 500 });
   }
 }
 
@@ -91,10 +103,10 @@ export async function POST(req: Request) {
     const parsed = summarizeSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { 
-          message: "Invalid input", 
+        {
+          message: "Invalid input",
           errors: parsed.error.errors,
-          received: body 
+          received: body,
         },
         { status: 400 }
       );
@@ -107,17 +119,18 @@ export async function POST(req: Request) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const todayUsage = user?.aiUsage?.dailySummaries?.find(
-      (d: any) => new Date(d.date).setHours(0, 0, 0, 0) === today.getTime()
-    )?.count || 0;
+    const todayUsage =
+      user?.aiUsage?.dailySummaries?.find(
+        (d: any) => new Date(d.date).setHours(0, 0, 0, 0) === today.getTime()
+      )?.count || 0;
 
     const dailyLimit = user?.isPro ? 200 : 50;
 
     if (todayUsage >= dailyLimit) {
       return NextResponse.json(
-        { 
+        {
           message: `Daily summarization limit reached (${dailyLimit}). Upgrade to Pro for more.`,
-          usage: { today: todayUsage, limit: dailyLimit }
+          usage: { today: todayUsage, limit: dailyLimit },
         },
         { status: 429 }
       );
@@ -191,7 +204,8 @@ SUMMARY:`;
       originalWords: text.split(/\s+/).length,
       summaryLength: summary.length,
       summaryWords: summary.split(/\s+/).length,
-      compressionRatio: ((summary.split(/\s+/).length / text.split(/\s+/).length) * 100).toFixed(1) + "%",
+      compressionRatio:
+        ((summary.split(/\s+/).length / text.split(/\s+/).length) * 100).toFixed(1) + "%",
       style,
       tone,
       language,
@@ -217,12 +231,12 @@ SUMMARY:`;
     });
   } catch (error) {
     console.error("POST /api/ai/summarize error:", error);
-    
+
     // Handle specific OpenAI errors
     if (error instanceof OpenAI.APIError) {
       return NextResponse.json(
-        { 
-          message: "OpenAI API error", 
+        {
+          message: "OpenAI API error",
           error: error.message,
           type: error.type,
           code: error.code,
@@ -232,8 +246,8 @@ SUMMARY:`;
     }
 
     return NextResponse.json(
-      { 
-        message: "Failed to generate summary", 
+      {
+        message: "Failed to generate summary",
         error: error instanceof Error ? error.message : "Unknown error",
         details: error instanceof Error ? error.stack : undefined,
       },
@@ -259,17 +273,18 @@ async function handleBatchSummarize(body: any, userId: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todayUsage = user?.aiUsage?.dailySummaries?.find(
-    (d: any) => new Date(d.date).setHours(0, 0, 0, 0) === today.getTime()
-  )?.count || 0;
+  const todayUsage =
+    user?.aiUsage?.dailySummaries?.find(
+      (d: any) => new Date(d.date).setHours(0, 0, 0, 0) === today.getTime()
+    )?.count || 0;
 
   const dailyLimit = user?.isPro ? 200 : 50;
 
   if (todayUsage + texts.length > dailyLimit) {
     return NextResponse.json(
-      { 
+      {
         message: `Batch size exceeds daily limit (${dailyLimit - todayUsage} remaining)`,
-        usage: { today: todayUsage, limit: dailyLimit, remaining: dailyLimit - todayUsage }
+        usage: { today: todayUsage, limit: dailyLimit, remaining: dailyLimit - todayUsage },
       },
       { status: 429 }
     );
@@ -315,8 +330,8 @@ async function handleBatchSummarize(body: any, userId: string) {
     });
 
     const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults.filter(r => r.success));
-    errors.push(...batchResults.filter(r => !r.success));
+    results.push(...batchResults.filter((r) => r.success));
+    errors.push(...batchResults.filter((r) => !r.success));
   }
 
   // Update usage

@@ -4,17 +4,11 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db/connect";
 import { Community } from "@/lib/db/models/Community";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -29,21 +23,18 @@ export async function GET(
           path: "author",
           select: "name username image",
         },
-        options: { sort: { createdAt: -1 } }
+        options: { sort: { createdAt: -1 } },
       })
       .lean();
 
     if (!community) {
-      return NextResponse.json(
-        { error: "Community not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
 
     // Check if user is a member
     const memberIds = community.members?.map((m: any) => m._id.toString()) || [];
     const moderatorIds = community.moderators?.map((m: any) => m._id.toString()) || [];
-    
+
     const isMember = memberIds.includes(session.user.id);
     const isModerator = moderatorIds.includes(session.user.id);
     const isOwner = community.owner?._id.toString() === session.user.id || false;
@@ -64,24 +55,15 @@ export async function GET(
     return NextResponse.json(communityData);
   } catch (error) {
     console.error("Error fetching community:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch community" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch community" }, { status: 500 });
   }
 }
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -91,10 +73,7 @@ export async function PUT(
 
     const community = await Community.findById(params.id);
     if (!community) {
-      return NextResponse.json(
-        { error: "Community not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
 
     // Only owner can update
@@ -121,34 +100,22 @@ export async function PUT(
     return NextResponse.json(populated);
   } catch (error) {
     console.error("Error updating community:", error);
-    return NextResponse.json(
-      { error: "Failed to update community" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update community" }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
 
     const community = await Community.findById(params.id);
     if (!community) {
-      return NextResponse.json(
-        { error: "Community not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
 
     // Only owner can delete
@@ -164,9 +131,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting community:", error);
-    return NextResponse.json(
-      { error: "Failed to delete community" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete community" }, { status: 500 });
   }
 }

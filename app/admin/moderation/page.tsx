@@ -33,19 +33,26 @@ export default function ModerationPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Content Moderation</h1>
+      <h1 className="mb-4 text-2xl font-bold">Content Moderation</h1>
       {data?.length === 0 ? (
         <p>No flagged posts.</p>
       ) : (
         data?.map((post: any) => (
-          <Card key={post._id} className="p-4 mb-2">
+          <Card key={post._id} className="mb-2 p-4">
             <p>{post.content}</p>
             <p className="text-sm text-gray-500">By: {post.author.name}</p>
-            <div className="flex gap-2 mt-2">
-              <Button size="sm" onClick={() => moderateMutation.mutate({ postId: post._id, action: "approve" })}>
+            <div className="mt-2 flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => moderateMutation.mutate({ postId: post._id, action: "approve" })}
+              >
                 Approve
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => moderateMutation.mutate({ postId: post._id, action: "remove" })}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => moderateMutation.mutate({ postId: post._id, action: "remove" })}
+              >
                 Remove
               </Button>
             </div>

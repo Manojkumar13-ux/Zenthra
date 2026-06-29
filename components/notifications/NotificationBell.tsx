@@ -71,17 +71,15 @@ export function NotificationBell() {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <Badge 
-            className="absolute -top-1 -right-1 px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] bg-red-500 hover:bg-red-600"
-          >
+          <Badge className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center bg-red-500 px-1.5 py-0.5 text-[10px] hover:bg-red-600">
             {unreadCount > 99 ? "99+" : unreadCount}
           </Badge>
         )}
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-h-[500px] overflow-hidden bg-white dark:bg-gray-900 rounded-lg shadow-xl border dark:border-gray-700 z-50">
-          <div className="flex items-center justify-between p-3 border-b dark:border-gray-700">
+        <div className="absolute right-0 z-50 mt-2 max-h-[500px] w-80 overflow-hidden rounded-lg border bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900 sm:w-96">
+          <div className="flex items-center justify-between border-b p-3 dark:border-gray-700">
             <h3 className="font-semibold">Notifications</h3>
             {unreadCount > 0 && (
               <Button

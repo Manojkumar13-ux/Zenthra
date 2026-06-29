@@ -40,7 +40,7 @@ export async function connectDB() {
       .connect(MONGODB_URI, opts)
       .then(async (mongoose) => {
         console.log("✅ MongoDB connected successfully");
-        
+
         if (process.env.NODE_ENV === "development") {
           try {
             await mongoose.syncIndexes();
@@ -49,7 +49,7 @@ export async function connectDB() {
             console.warn("⚠️ Could not sync indexes:", error);
           }
         }
-        
+
         return mongoose;
       })
       .catch((error) => {

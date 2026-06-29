@@ -9,10 +9,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -26,10 +23,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ count });
   } catch (error) {
     console.error("Error fetching unread messages count:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch unread messages" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch unread messages" }, { status: 500 });
   }
 }
 
@@ -37,19 +31,13 @@ export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { messageId } = await req.json();
 
     if (!messageId) {
-      return NextResponse.json(
-        { error: "Message ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message ID is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -61,10 +49,7 @@ export async function PUT(req: Request) {
     );
 
     if (!message) {
-      return NextResponse.json(
-        { error: "Message not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -73,9 +58,6 @@ export async function PUT(req: Request) {
     });
   } catch (error) {
     console.error("Error marking message as read:", error);
-    return NextResponse.json(
-      { error: "Failed to mark message as read" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to mark message as read" }, { status: 500 });
   }
 }

@@ -1,286 +1,300 @@
+// app/(main)/achievements/page.tsx
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
 import {
   Trophy,
   Star,
   Award,
-  Flame,
-  Zap,
   Crown,
-  Medal,
-  Target,
+  Zap,
+  Flame,
   Rocket,
-  Users,
+  Medal,
+  Sparkles,
+  Loader2,
+  Lock,
+  CheckCircle,
+  TrendingUp,
   Heart,
   MessageCircle,
-  Repeat,
-  TrendingUp,
-  Sparkles,
-  Coins,
-  Gem,
-  Crown as CrownIcon,
-  Shield,
-  Coffee,
-  Gift,
+  Users,
+  Calendar,
+  Clock,
 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
-const achievementIcons: Record<string, any> = {
-  first_post: Rocket,
-  viral_post: Zap,
-  "100_followers": Users,
-  top_creator: Crown,
-  community_leader: Trophy,
-  engagement_master: Heart,
-  comment_champion: MessageCircle,
-  repost_king: Repeat,
-  content_creator: Sparkles,
-  trendsetter: TrendingUp,
-  milestone: Medal,
-  expert: Star,
-  daily_streak: Flame,
-  weekly_streak: Flame,
-  verified: Shield,
-};
+interface Achievement {
+  _id: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: string;
+  tier: "bronze" | "silver" | "gold" | "platinum" | "diamond";
+  xp: number;
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress?: number;
+  maxProgress?: number;
+}
 
-const achievementColors: Record<string, string> = {
-  first_post: "bg-blue-500",
-  viral_post: "bg-yellow-500",
-  "100_followers": "bg-purple-500",
-  top_creator: "bg-indigo-500",
-  community_leader: "bg-red-500",
-  engagement_master: "bg-pink-500",
-  comment_champion: "bg-green-500",
-  repost_king: "bg-orange-500",
-  content_creator: "bg-teal-500",
-  trendsetter: "bg-cyan-500",
-  milestone: "bg-amber-500",
-  expert: "bg-violet-500",
-  daily_streak: "bg-rose-500",
-  weekly_streak: "bg-orange-600",
-  verified: "bg-blue-600",
-};
+interface Level {
+  level: number;
+  title: string;
+  xp: number;
+}
 
-const achievementLabels: Record<string, string> = {
-  first_post: "First Post",
-  viral_post: "Viral Post",
-  "100_followers": "100 Followers",
-  top_creator: "Top Creator",
-  community_leader: "Community Leader",
-  engagement_master: "Engagement Master",
-  comment_champion: "Comment Champion",
-  repost_king: "Repost King",
-  content_creator: "Content Creator",
-  trendsetter: "Trendsetter",
-  milestone: "Milestone",
-  expert: "Expert",
-  daily_streak: "Daily Streak",
-  weekly_streak: "Weekly Streak",
-  verified: "Verified Creator",
-};
-
-const levelRequirements = [
-  { level: 1, xp: 0, title: "Newbie" },
-  { level: 2, xp: 100, title: "Explorer" },
-  { level: 3, xp: 250, title: "Creator" },
-  { level: 4, xp: 500, title: "Influencer" },
-  { level: 5, xp: 1000, title: "Star" },
-  { level: 6, xp: 2000, title: "Legend" },
-  { level: 7, xp: 4000, title: "Icon" },
-  { level: 8, xp: 8000, title: "Superstar" },
-  { level: 9, xp: 15000, title: "Mega Creator" },
-  { level: 10, xp: 30000, title: "Zenthra Legend" },
+const levelData: Level[] = [
+  { level: 1, title: "Newbie", xp: 0 },
+  { level: 2, title: "Rookie", xp: 100 },
+  { level: 3, title: "Explorer", xp: 250 },
+  { level: 4, title: "Enthusiast", xp: 500 },
+  { level: 5, title: "Contributor", xp: 1000 },
+  { level: 6, title: "Leader", xp: 2000 },
+  { level: 7, title: "Champion", xp: 3500 },
+  { level: 8, title: "Master", xp: 5000 },
+  { level: 9, title: "Legend", xp: 7500 },
+  { level: 10, title: "Icon", xp: 10000 },
 ];
 
-export default function AchievementsPage() {
-  const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<"all" | "earned" | "locked">("all");
+const tierColors: Record<string, string> = {
+  bronze: "bg-amber-600 text-amber-600",
+  silver: "bg-gray-400 text-gray-400",
+  gold: "bg-yellow-500 text-yellow-500",
+  platinum: "bg-cyan-400 text-cyan-400",
+  diamond: "bg-blue-400 text-blue-400",
+};
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["achievements"],
-    queryFn: async () => {
+const tierBadgeColors: Record<string, string> = {
+  bronze: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  silver: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  gold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  platinum: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+  diamond: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+};
+
+const iconMap: Record<string, React.ReactNode> = {
+  trophy: <Trophy className="h-6 w-6" />,
+  star: <Star className="h-6 w-6" />,
+  award: <Award className="h-6 w-6" />,
+  crown: <Crown className="h-6 w-6" />,
+  zap: <Zap className="h-6 w-6" />,
+  flame: <Flame className="h-6 w-6" />,
+  rocket: <Rocket className="h-6 w-6" />,
+  medal: <Medal className="h-6 w-6" />,
+  sparkles: <Sparkles className="h-6 w-6" />,
+  trending: <TrendingUp className="h-6 w-6" />,
+  heart: <Heart className="h-6 w-6" />,
+  message: <MessageCircle className="h-6 w-6" />,
+  users: <Users className="h-6 w-6" />,
+  calendar: <Calendar className="h-6 w-6" />,
+  clock: <Clock className="h-6 w-6" />,
+};
+
+export default function AchievementsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "earned" | "locked">("all");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (session?.user) {
+      fetchAchievements();
+    }
+  }, [session, status, router]);
+
+  const fetchAchievements = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
       const res = await fetch("/api/achievements");
-      if (!res.ok) throw new Error("Failed to fetch achievements");
-      return res.json();
-    },
-    enabled: !!session?.user?.id,
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to fetch achievements");
+      }
+      const data = await res.json();
+      setAchievements(data.achievements || []);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      setError(error instanceof Error ? error.message : "Failed to load achievements");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getLevel = (xp: number): { current: Level; next: Level; progress: number } => {
+    let current = levelData[0];
+    let next = levelData[1];
+
+    for (let i = levelData.length - 1; i >= 0; i--) {
+      if (xp >= levelData[i].xp) {
+        current = levelData[i];
+        next = levelData[i + 1] || levelData[i];
+        break;
+      }
+    }
+
+    const progress =
+      next.xp > current.xp ? ((xp - current.xp) / (next.xp - current.xp)) * 100 : 100;
+
+    return { current, next, progress: Math.min(progress, 100) };
+  };
+
+  const totalXP = achievements.reduce((sum, a) => sum + (a.unlocked ? a.xp : 0), 0);
+  const { current: currentLevel, next: nextLevel, progress: levelProgress } = getLevel(totalXP);
+
+  const filteredAchievements = achievements.filter((a) => {
+    if (filter === "earned") return a.unlocked;
+    if (filter === "locked") return !a.unlocked;
+    return true;
   });
 
-  if (isLoading) {
+  const earnedCount = achievements.filter((a) => a.unlocked).length;
+
+  if (status === "loading" || isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full" />
-          ))}
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
-  const userAchievements = data?.userAchievements || [];
-  const allAchievements = data?.allAchievements || [];
-  const xp = data?.xp || 0;
-  const level = data?.level || 1;
-  const coins = data?.coins || 0;
-  const streak = data?.streak || 0;
-
-  const currentLevel = levelRequirements.find(l => l.xp <= xp) || levelRequirements[0];
-  const nextLevel = levelRequirements.find(l => l.xp > xp) || levelRequirements[levelRequirements.length - 1];
-  const xpToNextLevel = nextLevel.xp - xp;
-  const xpProgress = ((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100;
-
-  const filteredAchievements = allAchievements.filter((ach: any) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "earned") return ach.unlocked;
-    return !ach.unlocked;
-  });
+  if (!session) {
+    return (
+      <div className="mx-auto max-w-3xl p-4 text-center">
+        <Trophy className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+        <h2 className="mb-2 text-lg font-semibold">No achievements</h2>
+        <p className="mb-4 text-muted-foreground">Sign in to view your achievements</p>
+        <Button onClick={() => router.push("/login")}>Sign In</Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 p-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Trophy className="h-8 w-8 text-yellow-500" />
         <h1 className="text-2xl font-bold">Achievements</h1>
-        <Badge variant="outline" className="text-xs">
-          {userAchievements.length} unlocked
+        <Badge variant="outline" className="ml-2">
+          {earnedCount} / {achievements.length} earned
         </Badge>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                <Trophy className="h-5 w-5 text-indigo-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Level</p>
-                <p className="text-xl font-bold">{level}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <Coins className="h-5 w-5 text-yellow-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Coins</p>
-                <p className="text-xl font-bold">{coins}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <Flame className="h-5 w-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Streak</p>
-                <p className="text-xl font-bold">{streak} days</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <Zap className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">XP</p>
-                <p className="text-xl font-bold">{xp}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Level Progress */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between text-sm">
-            <span>Level {level}: {currentLevel.title}</span>
-            <span>{xp} / {nextLevel.xp} XP</span>
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">
+                Level {currentLevel.level}: {currentLevel.title}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {totalXP} / {nextLevel.xp} XP
+              </p>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {Math.round(levelProgress)}% to level {nextLevel.level}
+            </Badge>
           </div>
-          <Progress value={xpProgress} className="h-2 mt-2" />
-          <p className="text-xs text-gray-400 mt-1">
-            {xpToNextLevel} XP to Level {nextLevel.level}
+          <Progress value={levelProgress} className="mt-2 h-2" />
+          <p className="mt-1 text-xs text-gray-400">
+            {earnedCount} achievements earned • {totalXP} total XP
           </p>
         </CardContent>
       </Card>
 
-      {/* Achievements Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Badges</h2>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-              <TabsTrigger value="earned" className="text-xs">Earned</TabsTrigger>
-              <TabsTrigger value="locked" className="text-xs">Locked</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      {/* Filter Tabs */}
+      <div className="mb-3 flex items-center justify-between">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "earned" | "locked")}>
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="earned">Earned</TabsTrigger>
+            <TabsTrigger value="locked">Locked</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {filteredAchievements.map((badge: any) => {
-            const Icon = achievementIcons[badge.type] || Award;
-            const color = achievementColors[badge.type] || "bg-gray-500";
-            const label = achievementLabels[badge.type] || badge.name;
-            const isUnlocked = badge.unlocked || false;
+      {/* Achievements Grid */}
+      {error ? (
+        <div className="py-12 text-center">
+          <p className="text-red-500">{error}</p>
+          <Button variant="outline" className="mt-4" onClick={fetchAchievements}>
+            Try Again
+          </Button>
+        </div>
+      ) : filteredAchievements.length === 0 ? (
+        <div className="py-12 text-center">
+          <Trophy className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+          <p className="text-gray-500">
+            {filter === "all"
+              ? "No achievements found"
+              : filter === "earned"
+                ? "You haven't earned any achievements yet"
+                : "All achievements earned! 🎉"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredAchievements.map((achievement) => {
+            const isUnlocked = achievement.unlocked;
+            const color = tierColors[achievement.tier] || "text-gray-500";
+            const badgeColor = tierBadgeColors[achievement.tier] || "bg-gray-100 text-gray-700";
+            const Icon = iconMap[achievement.icon] || <Trophy className="h-6 w-6" />;
 
             return (
               <Card
-                key={badge._id}
-                className={`transition-all ${isUnlocked ? "hover:shadow-md" : "opacity-60"}`}
+                key={achievement._id}
+                className={cn(
+                  "transition-all duration-200",
+                  isUnlocked ? "hover:shadow-md" : "opacity-60 grayscale hover:opacity-70"
+                )}
               >
                 <CardContent className="p-4 text-center">
-                  <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center ${color} ${isUnlocked ? "bg-opacity-20" : "bg-opacity-10"} mb-2`}>
-                    <Icon className={`h-6 w-6 ${isUnlocked ? "text-white" : "text-gray-400"}`} />
+                  <div
+                    className={cn(
+                      "mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full",
+                      color,
+                      isUnlocked ? "bg-opacity-20" : "bg-opacity-10"
+                    )}
+                  >
+                    {isUnlocked ? Icon : <Lock className="h-6 w-6" />}
                   </div>
-                  <p className="text-sm font-medium">{label}</p>
-                  <p className="text-xs text-gray-500 line-clamp-2">{badge.description}</p>
-                  {isUnlocked ? (
-                    <Badge variant="default" className="mt-2 text-xs bg-green-500">
-                      ✓ Unlocked
+                  <h3 className="text-sm font-semibold">{achievement.title}</h3>
+                  <p className="line-clamp-2 text-xs text-gray-500">{achievement.description}</p>
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    <Badge variant="outline" className={cn("px-1.5 text-[10px]", badgeColor)}>
+                      {achievement.tier}
                     </Badge>
-                  ) : (
-                    <Badge variant="outline" className="mt-2 text-xs">
-                      Locked
+                    <Badge variant="outline" className="px-1.5 text-[10px]">
+                      +{achievement.xp} XP
                     </Badge>
-                  )}
+                    {isUnlocked && (
+                      <Badge className="bg-green-500 text-xs">
+                        <CheckCircle className="mr-0.5 h-3 w-3" />
+                        Earned
+                      </Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

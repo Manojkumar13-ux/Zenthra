@@ -13,7 +13,7 @@ interface ZenthraLogoProps {
 export function ZenthraLogo({ size = "md", showText = true, className = "" }: ZenthraLogoProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [styleIndex, setStyleIndex] = useState(0);
-  
+
   const sizes = {
     sm: { icon: 28, text: "text-lg" },
     md: { icon: 32, text: "text-2xl" },
@@ -22,45 +22,45 @@ export function ZenthraLogo({ size = "md", showText = true, className = "" }: Ze
 
   // Different gradient styles
   const gradients = [
-    { 
-      id: 0, 
+    {
+      id: 0,
       colors: ["#6366F1", "#8B5CF6"],
-      name: "Indigo Purple"
+      name: "Indigo Purple",
     },
-    { 
-      id: 1, 
+    {
+      id: 1,
       colors: ["#EC4899", "#F59E0B"],
-      name: "Pink Orange"
+      name: "Pink Orange",
     },
-    { 
-      id: 2, 
+    {
+      id: 2,
       colors: ["#06B6D4", "#10B981"],
-      name: "Cyan Green"
+      name: "Cyan Green",
     },
-    { 
-      id: 3, 
+    {
+      id: 3,
       colors: ["#F472B6", "#8B5CF6"],
-      name: "Pink Purple"
+      name: "Pink Purple",
     },
-    { 
-      id: 4, 
+    {
+      id: 4,
       colors: ["#F59E0B", "#EF4444"],
-      name: "Orange Red"
+      name: "Orange Red",
     },
-    { 
-      id: 5, 
+    {
+      id: 5,
       colors: ["#3B82F6", "#06B6D4"],
-      name: "Blue Cyan"
+      name: "Blue Cyan",
     },
-    { 
-      id: 6, 
+    {
+      id: 6,
       colors: ["#EC4899", "#06B6D4"],
-      name: "Pink Cyan"
+      name: "Pink Cyan",
     },
-    { 
-      id: 7, 
+    {
+      id: 7,
       colors: ["#8B5CF6", "#F472B6"],
-      name: "Purple Pink"
+      name: "Purple Pink",
     },
   ];
 
@@ -106,16 +106,16 @@ export function ZenthraLogo({ size = "md", showText = true, className = "" }: Ze
   // Sparkle animation variants
   const sparkleVariants = {
     hidden: { opacity: 0, scale: 0.5 },
-    visible: { 
+    visible: {
       opacity: [0, 1, 0],
       scale: [0.5, 1.2, 0.5],
-      transition: { duration: 0.8, repeat: Infinity }
-    }
+      transition: { duration: 0.8, repeat: Infinity },
+    },
   };
 
   return (
-    <Link 
-      href="/feed" 
+    <Link
+      href="/feed"
       className={`flex items-center gap-2 ${className}`}
       onMouseEnter={handleHoverStart}
       onMouseLeave={handleHoverEnd}
@@ -129,107 +129,94 @@ export function ZenthraLogo({ size = "md", showText = true, className = "" }: Ze
         transition={{
           duration: 0.5,
           scale: { type: "spring", stiffness: 300, damping: 20 },
-          rotate: { duration: 0.5, repeat: isHovered ? 1 : 0 }
+          rotate: { duration: 0.5, repeat: isHovered ? 1 : 0 },
         }}
       >
         {/* Main Logo SVG */}
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 100 100" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 100 100"
           className="flex-shrink-0"
-          style={{ 
-            width: sizes[size].icon, 
+          style={{
+            width: sizes[size].icon,
             height: sizes[size].icon,
           }}
         >
           <defs>
-            <linearGradient 
-              id={`grad-${styleIndex}`} 
-              x1="0%" 
-              y1="0%" 
-              x2="100%" 
-              y2="100%"
-            >
+            <linearGradient id={`grad-${styleIndex}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" style={{ stopColor: currentGradient.colors[0] }} />
               <stop offset="100%" style={{ stopColor: currentGradient.colors[1] }} />
             </linearGradient>
-            
+
             {/* Glow filter */}
             <filter id={`glow-${styleIndex}`}>
-              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feGaussianBlur stdDeviation="3" result="blur" />
               <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
           </defs>
-          
+
           {/* Background shape with avatar style */}
           {currentAvatar.shape === "circle" && (
-            <circle 
-              cx="50" 
-              cy="50" 
-              r="45" 
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
               fill={`url(#grad-${styleIndex})`}
               stroke={isHovered ? currentGradient.colors[1] : "none"}
               strokeWidth={currentAvatar.border ? "2" : "0"}
               strokeDasharray={currentAvatar.border.includes("dash") ? "5,5" : "none"}
             />
           )}
-          
+
           {currentAvatar.shape === "square" && (
-            <rect 
-              x="5" 
-              y="5" 
-              width="90" 
-              height="90" 
-              rx="8" 
+            <rect
+              x="5"
+              y="5"
+              width="90"
+              height="90"
+              rx="8"
               fill={`url(#grad-${styleIndex})`}
               stroke={isHovered ? currentGradient.colors[1] : "none"}
               strokeWidth={currentAvatar.border ? "2" : "0"}
               strokeDasharray={currentAvatar.border.includes("dash") ? "5,5" : "none"}
             />
           )}
-          
+
           {currentAvatar.shape === "rounded" && (
-            <rect 
-              x="5" 
-              y="5" 
-              width="90" 
-              height="90" 
-              rx="20" 
-              fill={`url(#grad-${styleIndex})`}
-            />
+            <rect x="5" y="5" width="90" height="90" rx="20" fill={`url(#grad-${styleIndex})`} />
           )}
-          
+
           {currentAvatar.shape === "hexagon" && (
-            <polygon 
-              points="50 5, 90 27, 90 73, 50 95, 10 73, 10 27" 
+            <polygon
+              points="50 5, 90 27, 90 73, 50 95, 10 73, 10 27"
               fill={`url(#grad-${styleIndex})`}
             />
           )}
-          
+
           {/* Glow effect on hover */}
           {isHovered && (
-            <circle 
-              cx="50" 
-              cy="50" 
-              r="50" 
-              fill="none" 
+            <circle
+              cx="50"
+              cy="50"
+              r="50"
+              fill="none"
               stroke={`url(#grad-${styleIndex})`}
               strokeWidth="2"
               opacity="0.5"
               filter={`url(#glow-${styleIndex})`}
             />
           )}
-          
+
           {/* Z letter with dynamic font */}
-          <text 
-            x="50" 
-            y="68" 
-            fontSize="48" 
-            textAnchor="middle" 
-            fill="white" 
+          <text
+            x="50"
+            y="68"
+            fontSize="48"
+            textAnchor="middle"
+            fill="white"
             fontFamily={currentFont.family}
             fontWeight={currentFont.weight}
             style={{
@@ -238,39 +225,36 @@ export function ZenthraLogo({ size = "md", showText = true, className = "" }: Ze
           >
             Z
           </text>
-          
+
           {/* Sparkle/Star with animation */}
-          <motion.g
-            animate={isHovered ? "visible" : "hidden"}
-            variants={sparkleVariants}
-          >
-            <path 
-              d="M72 22 L78 16 M75 14 L75 24 M68 19 L82 19" 
-              stroke="white" 
-              strokeWidth="2.5" 
+          <motion.g animate={isHovered ? "visible" : "hidden"} variants={sparkleVariants}>
+            <path
+              d="M72 22 L78 16 M75 14 L75 24 M68 19 L82 19"
+              stroke="white"
+              strokeWidth="2.5"
               strokeLinecap="round"
             />
           </motion.g>
-          
+
           {/* Additional sparkle dots */}
           <circle cx="28" cy="22" r="2.5" fill="white" opacity={isHovered ? 1 : 0.6}>
-            <animate 
-              attributeName="opacity" 
-              values={isHovered ? "0.3;1;0.3" : "0.5"} 
-              dur="1.5s" 
+            <animate
+              attributeName="opacity"
+              values={isHovered ? "0.3;1;0.3" : "0.5"}
+              dur="1.5s"
               repeatCount="indefinite"
             />
           </circle>
           <circle cx="82" cy="35" r="2" fill="white" opacity={isHovered ? 1 : 0.4}>
-            <animate 
-              attributeName="opacity" 
-              values={isHovered ? "0.3;1;0.3" : "0.4"} 
-              dur="2s" 
+            <animate
+              attributeName="opacity"
+              values={isHovered ? "0.3;1;0.3" : "0.4"}
+              dur="2s"
               repeatCount="indefinite"
             />
           </circle>
         </svg>
-        
+
         {/* Hover indicator - small pulse ring */}
         {isHovered && (
           <motion.div
@@ -290,9 +274,9 @@ export function ZenthraLogo({ size = "md", showText = true, className = "" }: Ze
           />
         )}
       </motion.div>
-      
+
       {showText && (
-        <motion.span 
+        <motion.span
           className={`font-bold text-indigo-600 dark:text-indigo-400 ${sizes[size].text}`}
           animate={{
             color: isHovered ? currentGradient.colors[0] : undefined,

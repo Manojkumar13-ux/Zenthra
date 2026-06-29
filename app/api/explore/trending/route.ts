@@ -28,7 +28,7 @@ export async function GET() {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
           // Clean the tag (remove # if present)
-          const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
+          const cleanTag = tag.startsWith("#") ? tag.slice(1).toLowerCase() : tag.toLowerCase();
           if (cleanTag && cleanTag.length > 0) {
             hashtagCountMap[cleanTag] = (hashtagCountMap[cleanTag] || 0) + 1;
           }
@@ -47,9 +47,6 @@ export async function GET() {
     return NextResponse.json({ trending });
   } catch (error) {
     console.error("Trending error:", error);
-    return NextResponse.json(
-      { trending: [] },
-      { status: 500 }
-    );
+    return NextResponse.json({ trending: [] }, { status: 500 });
   }
 }

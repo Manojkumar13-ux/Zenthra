@@ -13,7 +13,7 @@ export async function GET() {
     }
 
     await connectDB();
-    
+
     // Get all posts without any filters
     const posts = await Post.find({})
       .sort({ createdAt: -1 })
@@ -24,17 +24,16 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       count: posts.length,
-      posts: posts.map(p => ({
+      posts: posts.map((p) => ({
         id: p._id,
         content: p.content?.substring(0, 50),
-        author: p.author?.name || 'Unknown',
+        author: p.author?.name || "Unknown",
         hashtags: p.hashtags || [],
         likes: p.likes?.length || 0,
         comments: p.comments?.length || 0,
-        isDeleted: p.isDeleted
-      }))
+        isDeleted: p.isDeleted,
+      })),
     });
-
   } catch (error) {
     console.error("Debug error:", error);
     return NextResponse.json(

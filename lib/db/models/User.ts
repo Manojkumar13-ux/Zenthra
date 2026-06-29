@@ -3,14 +3,14 @@ import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
   {
-    name: { 
-      type: String, 
+    name: {
+      type: String,
       required: [true, "Name is required"],
       trim: true,
       maxlength: [50, "Name cannot exceed 50 characters"],
     },
-    username: { 
-      type: String, 
+    username: {
+      type: String,
       required: [true, "Username is required"],
       trim: true,
       lowercase: true,
@@ -18,123 +18,133 @@ const UserSchema = new mongoose.Schema(
       maxlength: [30, "Username cannot exceed 30 characters"],
       match: [/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"],
     },
-    email: { 
-      type: String, 
+    email: {
+      type: String,
       required: [true, "Email is required"],
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"],
     },
-    password: { 
+    password: {
       type: String,
-      required: function(this: any) {
+      required: function (this: any) {
         return !this.googleId && !this.githubId;
       },
       minlength: [6, "Password must be at least 6 characters"],
     },
-    image: { 
+    image: {
       type: String,
       default: null,
     },
-    bio: { 
-      type: String, 
+    bio: {
+      type: String,
       maxlength: [160, "Bio cannot exceed 160 characters"],
       default: "",
     },
-    location: { 
+    location: {
       type: String,
       default: "",
       maxlength: [100, "Location cannot exceed 100 characters"],
     },
-    website: { 
+    website: {
       type: String,
       default: "",
       maxlength: [200, "Website URL cannot exceed 200 characters"],
     },
-    birthday: { 
+    birthday: {
       type: Date,
       default: null,
     },
-    following: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User",
-      default: [],
-    }],
-    followers: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User",
-      default: [],
-    }],
-    blocked: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User",
-      default: [],
-    }],
-    blockedBy: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User",
-      default: [],
-    }],
-    muted: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User",
-      default: [],
-    }],
-    isVerified: { 
-      type: Boolean, 
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    blocked: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    blockedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    muted: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    isVerified: {
+      type: Boolean,
       default: false,
     },
-    isPrivate: { 
-      type: Boolean, 
+    isPrivate: {
+      type: Boolean,
       default: false,
     },
-    isActive: { 
-      type: Boolean, 
+    isActive: {
+      type: Boolean,
       default: true,
     },
-    isSuspended: { 
-      type: Boolean, 
+    isSuspended: {
+      type: Boolean,
       default: false,
     },
-    role: { 
-      type: String, 
+    role: {
+      type: String,
       enum: ["user", "admin", "moderator"],
       default: "user",
     },
-    googleId: { 
+    googleId: {
       type: String,
       default: null,
     },
-    githubId: { 
+    githubId: {
       type: String,
       default: null,
     },
-    twitterId: { 
+    twitterId: {
       type: String,
       default: null,
     },
-    facebookId: { 
+    facebookId: {
       type: String,
       default: null,
     },
-    emailVerified: { 
-      type: Boolean, 
+    emailVerified: {
+      type: Boolean,
       default: false,
     },
-    emailVerificationToken: { 
+    emailVerificationToken: {
       type: String,
       default: null,
     },
-    resetPasswordToken: { 
+    resetPasswordToken: {
       type: String,
       default: null,
     },
-    resetPasswordExpires: { 
+    resetPasswordExpires: {
       type: Date,
       default: null,
     },
-    themePreference: { 
-      type: String, 
+    themePreference: {
+      type: String,
       enum: ["light", "dark", "system"],
       default: "system",
     },
@@ -155,28 +165,28 @@ const UserSchema = new mongoose.Schema(
       followersCount: { type: Number, default: 0 },
       followingCount: { type: Number, default: 0 },
     },
-    online: { 
-      type: Boolean, 
+    online: {
+      type: Boolean,
       default: false,
     },
-    lastActive: { 
-      type: Date, 
+    lastActive: {
+      type: Date,
       default: Date.now,
     },
-    lastSeen: { 
-      type: Date, 
+    lastSeen: {
+      type: Date,
       default: Date.now,
     },
-    lastLoginIP: { 
+    lastLoginIP: {
       type: String,
       default: null,
     },
-    lastLoginDevice: { 
+    lastLoginDevice: {
       type: String,
       default: null,
     },
-    loginCount: { 
-      type: Number, 
+    loginCount: {
+      type: Number,
       default: 0,
     },
     socialLinks: {
@@ -217,56 +227,53 @@ UserSchema.index({ name: "text", username: "text" });
 // VIRTUALS & METHODS (keep as is)
 // ============================================
 
-UserSchema.virtual('followerCount').get(function() {
+UserSchema.virtual("followerCount").get(function () {
   return this.followers?.length || 0;
 });
 
-UserSchema.virtual('followingCount').get(function() {
+UserSchema.virtual("followingCount").get(function () {
   return this.following?.length || 0;
 });
 
-UserSchema.methods.isFollowingUser = function(userId: string) {
+UserSchema.methods.isFollowingUser = function (userId: string) {
   return this.following?.some((id: any) => id.toString() === userId) || false;
 };
 
-UserSchema.methods.isFollowedByUser = function(userId: string) {
+UserSchema.methods.isFollowedByUser = function (userId: string) {
   return this.followers?.some((id: any) => id.toString() === userId) || false;
 };
 
-UserSchema.methods.incrementPostCount = async function() {
+UserSchema.methods.incrementPostCount = async function () {
   this.stats.postsCount = (this.stats.postsCount || 0) + 1;
   await this.save();
 };
 
-UserSchema.methods.decrementPostCount = async function() {
+UserSchema.methods.decrementPostCount = async function () {
   if (this.stats.postsCount > 0) {
     this.stats.postsCount = (this.stats.postsCount || 0) - 1;
     await this.save();
   }
 };
 
-UserSchema.methods.updateLastActive = function() {
+UserSchema.methods.updateLastActive = function () {
   this.lastActive = new Date();
   this.online = true;
   return this.save();
 };
 
-UserSchema.methods.setOffline = function() {
+UserSchema.methods.setOffline = function () {
   this.online = false;
   this.lastSeen = new Date();
   return this.save();
 };
 
-UserSchema.statics.findByEmailOrUsername = function(identifier: string) {
+UserSchema.statics.findByEmailOrUsername = function (identifier: string) {
   return this.findOne({
-    $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier.toLowerCase() },
-    ],
+    $or: [{ email: identifier.toLowerCase() }, { username: identifier.toLowerCase() }],
   });
 };
 
-UserSchema.statics.findSuggested = function(userId: string, limit = 5) {
+UserSchema.statics.findSuggested = function (userId: string, limit = 5) {
   return this.find({
     _id: { $ne: userId },
     isActive: true,
@@ -277,7 +284,7 @@ UserSchema.statics.findSuggested = function(userId: string, limit = 5) {
     .limit(limit);
 };
 
-UserSchema.statics.searchUsers = function(query: string, limit = 10) {
+UserSchema.statics.searchUsers = function (query: string, limit = 10) {
   return this.find({
     $or: [
       { name: { $regex: query, $options: "i" } },
@@ -294,7 +301,7 @@ UserSchema.statics.searchUsers = function(query: string, limit = 10) {
 // MIDDLEWARE
 // ============================================
 
-UserSchema.pre('save', function(next) {
+UserSchema.pre("save", function (next) {
   if (this.followers) {
     this.stats.followersCount = this.followers.length;
   }
@@ -304,20 +311,20 @@ UserSchema.pre('save', function(next) {
   next();
 });
 
-UserSchema.pre('remove', async function(next) {
-  await this.model('User').updateMany(
+UserSchema.pre("remove", async function (next) {
+  await this.model("User").updateMany(
     { $or: [{ following: this._id }, { followers: this._id }] },
     { $pull: { following: this._id, followers: this._id } }
   );
-  await this.model('Post').deleteMany({ author: this._id });
-  await this.model('Comment').deleteMany({ author: this._id });
-  await this.model('Notification').deleteMany({ recipient: this._id });
+  await this.model("Post").deleteMany({ author: this._id });
+  await this.model("Comment").deleteMany({ author: this._id });
+  await this.model("Notification").deleteMany({ recipient: this._id });
   next();
 });
 
-UserSchema.set('toJSON', {
+UserSchema.set("toJSON", {
   virtuals: true,
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     delete ret.password;
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;
@@ -327,9 +334,9 @@ UserSchema.set('toJSON', {
   },
 });
 
-UserSchema.set('toObject', {
+UserSchema.set("toObject", {
   virtuals: true,
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     delete ret.password;
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;

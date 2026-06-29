@@ -121,11 +121,11 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
       setLocation("");
       setScheduleDate(undefined);
       setIsScheduled(false);
-      
+
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       queryClient.invalidateQueries({ queryKey: ["profile-feed"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      
+
       if (onPostCreated) onPostCreated();
     } catch (error) {
       console.error("CreatePost error:", error);
@@ -136,27 +136,27 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border dark:border-gray-700">
+    <div className="rounded-xl border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <Textarea
           placeholder="What's on your mind?"
           {...register("content")}
-          className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-lg"
+          className="resize-none border-0 p-0 text-lg focus-visible:ring-0 focus-visible:ring-offset-0"
           rows={2}
           disabled={loading}
         />
-        {errors.content && <p className="text-red-500 text-sm">{errors.content.message}</p>}
-        
+        {errors.content && <p className="text-sm text-red-500">{errors.content.message}</p>}
+
         {/* Media preview */}
         {media.length > 0 && (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             {media.map((url, index) => (
               <div key={index} className="relative">
-                <img src={url} alt="media" className="h-20 w-20 object-cover rounded" />
+                <img src={url} alt="media" className="h-20 w-20 rounded object-cover" />
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
+                  className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -164,8 +164,8 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
             ))}
           </div>
         )}
-        
-        <div className="flex items-center gap-2 flex-wrap">
+
+        <div className="flex flex-wrap items-center gap-2">
           {/* Media Upload */}
           <label className="cursor-pointer">
             <input
@@ -177,7 +177,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
               disabled={uploading}
             />
             <Button type="button" variant="outline" size="sm" disabled={uploading}>
-              <Image className="h-4 w-4 mr-1" />
+              <Image className="mr-1 h-4 w-4" />
               {uploading ? "Uploading..." : "Media"}
             </Button>
           </label>
@@ -186,7 +186,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="outline" size="sm">
-                <MapPin className="h-4 w-4 mr-1" />
+                <MapPin className="mr-1 h-4 w-4" />
                 {location || "Location"}
               </Button>
             </PopoverTrigger>
@@ -196,7 +196,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
                 placeholder="Enter location..."
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
               />
             </PopoverContent>
           </Popover>
@@ -205,7 +205,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="outline" size="sm">
-                <Calendar className="h-4 w-4 mr-1" />
+                <Calendar className="mr-1 h-4 w-4" />
                 {scheduleDate ? format(scheduleDate, "MMM d, h:mm a") : "Schedule"}
               </Button>
             </PopoverTrigger>
@@ -219,7 +219,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
                     initialFocus
                   />
                   {scheduleDate && (
-                    <div className="p-2 border-t">
+                    <div className="border-t p-2">
                       <Button
                         type="button"
                         size="sm"
@@ -237,7 +237,9 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
               ) : (
                 <div className="p-4 text-center text-sm text-gray-500">
                   <p>Calendar component not available.</p>
-                  <p className="text-xs mt-1">Please install with: npx shadcn@latest add calendar</p>
+                  <p className="mt-1 text-xs">
+                    Please install with: npx shadcn@latest add calendar
+                  </p>
                 </div>
               )}
             </PopoverContent>
@@ -247,9 +249,9 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="outline" size="sm">
-                {audience === "everyone" && <Globe className="h-4 w-4 mr-1" />}
-                {audience === "followers" && <Users className="h-4 w-4 mr-1" />}
-                {audience === "mentioned" && <AtSign className="h-4 w-4 mr-1" />}
+                {audience === "everyone" && <Globe className="mr-1 h-4 w-4" />}
+                {audience === "followers" && <Users className="mr-1 h-4 w-4" />}
+                {audience === "mentioned" && <AtSign className="mr-1 h-4 w-4" />}
                 {audience.charAt(0).toUpperCase() + audience.slice(1)}
               </Button>
             </PopoverTrigger>
@@ -258,25 +260,25 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
                 <button
                   type="button"
                   onClick={() => setAudience("everyone")}
-                  className={`w-full text-left px-2 py-1 rounded hover:bg-gray-100 ${audience === "everyone" ? "bg-indigo-50 text-indigo-600" : ""}`}
+                  className={`w-full rounded px-2 py-1 text-left hover:bg-gray-100 ${audience === "everyone" ? "bg-indigo-50 text-indigo-600" : ""}`}
                 >
-                  <Globe className="h-4 w-4 inline mr-2" />
+                  <Globe className="mr-2 inline h-4 w-4" />
                   Everyone
                 </button>
                 <button
                   type="button"
                   onClick={() => setAudience("followers")}
-                  className={`w-full text-left px-2 py-1 rounded hover:bg-gray-100 ${audience === "followers" ? "bg-indigo-50 text-indigo-600" : ""}`}
+                  className={`w-full rounded px-2 py-1 text-left hover:bg-gray-100 ${audience === "followers" ? "bg-indigo-50 text-indigo-600" : ""}`}
                 >
-                  <Users className="h-4 w-4 inline mr-2" />
+                  <Users className="mr-2 inline h-4 w-4" />
                   Followers Only
                 </button>
                 <button
                   type="button"
                   onClick={() => setAudience("mentioned")}
-                  className={`w-full text-left px-2 py-1 rounded hover:bg-gray-100 ${audience === "mentioned" ? "bg-indigo-50 text-indigo-600" : ""}`}
+                  className={`w-full rounded px-2 py-1 text-left hover:bg-gray-100 ${audience === "mentioned" ? "bg-indigo-50 text-indigo-600" : ""}`}
                 >
-                  <AtSign className="h-4 w-4 inline mr-2" />
+                  <AtSign className="mr-2 inline h-4 w-4" />
                   Mentioned Users
                 </button>
               </div>
@@ -286,7 +288,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
           <AIPostGenerator setContent={(text: string) => setValue("content", text)} />
           <AIRewrite content={content} setContent={(text: string) => setValue("content", text)} />
           <AIHashtags content={content} setContent={(text: string) => setValue("content", text)} />
-          
+
           <Button type="submit" disabled={loading || !content.trim()} className="ml-auto">
             {loading ? "Posting..." : isScheduled ? "Schedule" : "Post"}
           </Button>

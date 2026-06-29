@@ -1,7 +1,14 @@
 import { connectDB } from "@/lib/db/connect";
 import { Notification } from "@/lib/db/models/Notification";
 
-type NotificationType = "like" | "comment" | "mention" | "follow" | "message" | "repost" | "community";
+type NotificationType =
+  | "like"
+  | "comment"
+  | "mention"
+  | "follow"
+  | "message"
+  | "repost"
+  | "community";
 
 interface CreateNotificationParams {
   userId: string;

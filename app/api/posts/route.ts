@@ -9,24 +9,18 @@ import { Hashtag } from "@/lib/db/models/Hashtag";
 export async function POST(req: Request) {
   try {
     console.log("🔵 Create Post API: Starting");
-    
+
     const session = await getServerSession(authOptions);
     if (!session) {
       console.log("🔴 Create Post API: Unauthorized");
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let body;
     try {
       body = await req.json();
     } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
     console.log("📝 Create Post API: Body received:", body);
@@ -34,10 +28,7 @@ export async function POST(req: Request) {
     const { content, media, hashtags, isPublic, mood } = body;
 
     if (!content || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Content is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -73,24 +64,21 @@ export async function POST(req: Request) {
       for (const tag of allHashtags) {
         try {
           const cleanTag = tag.toLowerCase().trim();
-          
+
           // Find or create hashtag and increment count
           const hashtag = await Hashtag.findOneAndUpdate(
             { tag: cleanTag },
-            { 
+            {
               $inc: { count: 1 },
               $addToSet: { posts: post._id },
-              $set: { lastUsed: new Date() }
+              $set: { lastUsed: new Date() },
             },
             { upsert: true, new: true }
           );
 
           // Check if it should be trending (count > 3)
           if (hashtag.count >= 3) {
-            await Hashtag.updateOne(
-              { _id: hashtag._id },
-              { $set: { isTrending: true } }
-            );
+            await Hashtag.updateOne({ _id: hashtag._id }, { $set: { isTrending: true } });
           }
 
           console.log(`📊 Hashtag #${cleanTag} updated: ${hashtag.count} posts`);
@@ -108,21 +96,26 @@ export async function POST(req: Request) {
     const formattedPost = {
       ...post.toObject(),
       _id: post._id.toString(),
-      author: post.author ? {
-        ...post.author.toObject(),
-        _id: post.author._id.toString(),
-      } : null,
+      author: post.author
+        ? {
+            ...post.author.toObject(),
+            _id: post.author._id.toString(),
+          }
+        : null,
       likes: [],
       comments: [],
       reposts: [],
       createdAt: post.createdAt?.toISOString(),
     };
 
-    return NextResponse.json({
-      success: true,
-      post: formattedPost,
-      message: "Post created successfully",
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        post: formattedPost,
+        message: "Post created successfully",
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("❌ Create Post API Error:", error);
     return NextResponse.json(
@@ -165,10 +158,12 @@ export async function GET(req: Request) {
     const formattedPosts = posts.map((post: any) => ({
       ...post,
       _id: post._id.toString(),
-      author: post.author ? {
-        ...post.author,
-        _id: post.author._id.toString(),
-      } : null,
+      author: post.author
+        ? {
+            ...post.author,
+            _id: post.author._id.toString(),
+          }
+        : null,
       createdAt: post.createdAt?.toISOString(),
     }));
 
@@ -183,9 +178,6 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("❌ Get Posts API Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch posts", posts: [] },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch posts", posts: [] }, { status: 500 });
   }
 }

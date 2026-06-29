@@ -9,10 +9,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -56,10 +53,7 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error fetching scheduled posts:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch scheduled posts" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch scheduled posts" }, { status: 500 });
   }
 }
 
@@ -67,34 +61,22 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { content, media, hashtags, scheduledAt, category, mood, visibility } = await req.json();
 
     if (!content || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Content is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
     if (!scheduledAt) {
-      return NextResponse.json(
-        { error: "Scheduled date is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Scheduled date is required" }, { status: 400 });
     }
 
     const scheduledDate = new Date(scheduledAt);
     if (scheduledDate < new Date()) {
-      return NextResponse.json(
-        { error: "Scheduled date must be in the future" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Scheduled date must be in the future" }, { status: 400 });
     }
 
     await connectDB();
@@ -124,26 +106,28 @@ export async function POST(req: Request) {
       .populate("author", "name username image")
       .lean();
 
-    return NextResponse.json({
-      success: true,
-      post: {
-        ...populatedPost,
-        _id: populatedPost._id.toString(),
-        author: populatedPost.author ? {
-          ...populatedPost.author,
-          _id: populatedPost.author._id.toString(),
-        } : null,
-        scheduledAt: populatedPost.scheduledAt?.toISOString(),
-        createdAt: populatedPost.createdAt?.toISOString(),
+    return NextResponse.json(
+      {
+        success: true,
+        post: {
+          ...populatedPost,
+          _id: populatedPost._id.toString(),
+          author: populatedPost.author
+            ? {
+                ...populatedPost.author,
+                _id: populatedPost.author._id.toString(),
+              }
+            : null,
+          scheduledAt: populatedPost.scheduledAt?.toISOString(),
+          createdAt: populatedPost.createdAt?.toISOString(),
+        },
+        message: "Post scheduled successfully",
       },
-      message: "Post scheduled successfully",
-    }, { status: 201 });
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error scheduling post:", error);
-    return NextResponse.json(
-      { error: "Failed to schedule post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to schedule post" }, { status: 500 });
   }
 }
 
@@ -151,20 +135,14 @@ export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const postId = searchParams.get("id");
 
     if (!postId) {
-      return NextResponse.json(
-        { error: "Post ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -176,10 +154,7 @@ export async function DELETE(req: Request) {
     });
 
     if (!post) {
-      return NextResponse.json(
-        { error: "Scheduled post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Scheduled post not found" }, { status: 404 });
     }
 
     await Post.findByIdAndDelete(postId);
@@ -190,9 +165,6 @@ export async function DELETE(req: Request) {
     });
   } catch (error) {
     console.error("Error deleting scheduled post:", error);
-    return NextResponse.json(
-      { error: "Failed to delete scheduled post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete scheduled post" }, { status: 500 });
   }
 }

@@ -23,17 +23,11 @@ export async function GET(req: Request) {
     const postId = searchParams.get("postId");
 
     if (!postId) {
-      return NextResponse.json(
-        { message: "Post ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Post ID is required" }, { status: 400 });
     }
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { message: "Invalid post ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid post ID format" }, { status: 400 });
     }
 
     await connectDB();
@@ -71,17 +65,11 @@ export async function POST(req: Request) {
     const { postId } = body;
 
     if (!postId) {
-      return NextResponse.json(
-        { message: "Post ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Post ID is required" }, { status: 400 });
     }
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { message: "Invalid post ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid post ID format" }, { status: 400 });
     }
 
     await connectDB();
@@ -89,10 +77,7 @@ export async function POST(req: Request) {
     // Check if post exists
     const post = await Post.findById(postId);
     if (!post) {
-      return NextResponse.json(
-        { message: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Post not found" }, { status: 404 });
     }
 
     // Check if user already reposted this post
@@ -106,7 +91,7 @@ export async function POST(req: Request) {
     if (existingRepost) {
       // Remove repost (un-repost)
       await Repost.deleteOne({ _id: existingRepost._id });
-      
+
       // Decrement repost count on post
       await Post.findByIdAndUpdate(postId, {
         $inc: { repostsCount: -1 },
@@ -133,10 +118,7 @@ export async function POST(req: Request) {
     } else {
       // Check if user is trying to repost their own post
       if (post.author.toString() === userId) {
-        return NextResponse.json(
-          { message: "You cannot repost your own post" },
-          { status: 400 }
-        );
+        return NextResponse.json({ message: "You cannot repost your own post" }, { status: 400 });
       }
 
       // Create new repost
@@ -161,21 +143,27 @@ export async function POST(req: Request) {
         recipient: post.author,
         sender: userId,
         type: "repost",
-        content: `${sender?.name || 'Someone'} reposted your post`,
+        content: `${sender?.name || "Someone"} reposted your post`,
         post: postId,
         read: false,
       });
 
-      return NextResponse.json({
-        message: "Post reposted successfully",
-        reposted: true,
-        repostsCount: (post.repostsCount || 0) + 1,
-      }, { status: 201 });
+      return NextResponse.json(
+        {
+          message: "Post reposted successfully",
+          reposted: true,
+          repostsCount: (post.repostsCount || 0) + 1,
+        },
+        { status: 201 }
+      );
     }
   } catch (error) {
     console.error("POST /api/reposts error:", error);
     return NextResponse.json(
-      { message: "Failed to process repost", error: error instanceof Error ? error.message : "Unknown error" },
+      {
+        message: "Failed to process repost",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
@@ -195,17 +183,11 @@ export async function DELETE(req: Request) {
     const postId = searchParams.get("postId");
 
     if (!postId) {
-      return NextResponse.json(
-        { message: "Post ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Post ID is required" }, { status: 400 });
     }
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { message: "Invalid post ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid post ID format" }, { status: 400 });
     }
 
     await connectDB();
@@ -217,19 +199,13 @@ export async function DELETE(req: Request) {
     });
 
     if (!repost) {
-      return NextResponse.json(
-        { message: "Repost not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Repost not found" }, { status: 404 });
     }
 
     // Get post to update counts
     const post = await Post.findById(postId);
     if (!post) {
-      return NextResponse.json(
-        { message: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Post not found" }, { status: 404 });
     }
 
     // Delete the repost
@@ -260,9 +236,6 @@ export async function DELETE(req: Request) {
     });
   } catch (error) {
     console.error("DELETE /api/reposts error:", error);
-    return NextResponse.json(
-      { message: "Failed to remove repost" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to remove repost" }, { status: 500 });
   }
 }

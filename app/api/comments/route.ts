@@ -13,27 +13,18 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const { postId, content, parentId } = body;
 
     if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { error: "Invalid post ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid post ID" }, { status: 400 });
     }
 
     if (!content?.trim()) {
-      return NextResponse.json(
-        { error: "Content is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -41,10 +32,7 @@ export async function POST(req: NextRequest) {
     // Check if post exists
     const post = await Post.findById(postId);
     if (!post) {
-      return NextResponse.json(
-        { error: "Post not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
     const commentData: any = {
@@ -58,19 +46,16 @@ export async function POST(req: NextRequest) {
     if (parentId && mongoose.Types.ObjectId.isValid(parentId)) {
       const parentComment = await Comment.findById(parentId);
       if (!parentComment) {
-        return NextResponse.json(
-          { error: "Parent comment not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
       }
       commentData.parent = parentId;
     }
 
     const comment = await Comment.create(commentData);
-    
+
     // Update post comment count
     await Post.findByIdAndUpdate(postId, {
-      $inc: { commentsCount: 1 }
+      $inc: { commentsCount: 1 },
     });
 
     await comment.populate("author", "name username image");
@@ -108,12 +93,8 @@ export async function POST(req: NextRequest) {
       success: true,
       comment,
     });
-
   } catch (error) {
     console.error("POST /api/comments error:", error);
-    return NextResponse.json(
-      { error: "Failed to create comment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
   }
 }

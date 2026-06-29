@@ -1,7 +1,7 @@
 // app/(main)/notifications/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -15,8 +15,6 @@ import {
   Trophy,
   CheckCheck,
   Clock,
-  Filter,
-  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,7 +26,15 @@ import toast from "react-hot-toast";
 
 interface Notification {
   _id: string;
-  type: "like" | "comment" | "mention" | "follow" | "message" | "repost" | "community" | "achievement";
+  type:
+    | "like"
+    | "comment"
+    | "mention"
+    | "follow"
+    | "message"
+    | "repost"
+    | "community"
+    | "achievement";
   content: string;
   read: boolean;
   createdAt: string;
@@ -78,18 +84,7 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread" | "likes" | "comments" | "follows">("all");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-
-    if (session?.user) {
-      fetchNotifications();
-    }
-  }, [session, status, router, filter]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -110,7 +105,18 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (session?.user) {
+      fetchNotifications();
+    }
+  }, [session, status, router, filter, fetchNotifications]);
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -121,9 +127,7 @@ export default function NotificationsPage() {
       });
       if (!res.ok) throw new Error("Failed to mark as read");
       setNotifications((prev) =>
-        prev.map((notif) =>
-          notif._id === notificationId ? { ...notif, read: true } : notif
-        )
+        prev.map((notif) => (notif._id === notificationId ? { ...notif, read: true } : notif))
       );
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -261,9 +265,7 @@ export default function NotificationsPage() {
           <Bell className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
           <h3 className="mb-2 text-lg font-semibold">No notifications</h3>
           <p className="text-sm text-muted-foreground">
-            {filter === "all"
-              ? "You're all caught up!"
-              : `No ${filter} notifications found`}
+            {filter === "all" ? "You're all caught up!" : `No ${filter} notifications found`}
           </p>
         </div>
       ) : (
@@ -312,30 +314,29 @@ export default function NotificationsPage() {
                     </span>
                   )}
                   <span className="text-sm text-muted-foreground">
-                    {notificationMessages[notification.type] ||
-                      notification.content}
+                    {notificationMessages[notification.type] || notification.content}
                   </span>
                 </div>
 
                 {notification.post && (
                   <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
-                    "{notification.post.content}"
+                    &ldquo;{notification.post.content}&rdquo;
                   </p>
                 )}
 
                 {notification.comment && (
                   <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
-                    "{notification.comment.content}"
+                    &ldquo;{notification.comment.content}&rdquo;
                   </p>
                 )}
 
                 <div className="mt-1 flex items-center gap-3">
-                  <span className="whitespace-nowrap text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     {getTimeAgo(notification.createdAt)}
                   </span>
                   {!notification.read && (
-                    <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                    <Badge variant="default" className="px-1.5 py-0 text-[10px]">
                       New
                     </Badge>
                   )}

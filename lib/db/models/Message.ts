@@ -68,4 +68,5 @@ MessageSchema.index({ chatId: 1, createdAt: -1 });
 MessageSchema.index({ sender: 1, createdAt: -1 });
 MessageSchema.index({ readBy: 1 });
 
-export const Message = mongoose.models.Message || mongoose.model<IMessage>("Message", MessageSchema);
+export const Message =
+  mongoose.models.Message || mongoose.model<IMessage>("Message", MessageSchema);

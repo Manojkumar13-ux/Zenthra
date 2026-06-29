@@ -152,11 +152,11 @@ export default function CommentSection({ postId }: CommentSectionProps) {
     return (
       <div className="mt-3 space-y-3">
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="flex items-start gap-3 animate-pulse">
+          <div key={i} className="flex animate-pulse items-start gap-3">
             <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-              <div className="h-8 w-full bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="h-8 w-full rounded bg-gray-200 dark:bg-gray-700" />
             </div>
           </div>
         ))}
@@ -178,11 +178,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
           className="flex-1"
         />
         <Button type="submit" disabled={commentMutation.isPending || !content.trim()}>
-          {commentMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            "Post"
-          )}
+          {commentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post"}
         </Button>
       </form>
 
@@ -196,12 +192,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
             disabled={replyMutation.isPending}
             className="flex-1 text-sm"
           />
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setReplyTo(null)}
-            variant="ghost"
-          >
+          <Button type="button" size="sm" onClick={() => setReplyTo(null)} variant="ghost">
             Cancel
           </Button>
           <Button
@@ -210,11 +201,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
             onClick={handleReplySubmit}
             disabled={replyMutation.isPending || !replyContent.trim()}
           >
-            {replyMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              "Reply"
-            )}
+            {replyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reply"}
           </Button>
         </div>
       )}
@@ -232,24 +219,26 @@ export default function CommentSection({ postId }: CommentSectionProps) {
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">{comment.author?.name}</span>
+                  <span className="text-sm font-semibold">{comment.author?.name}</span>
                   <span className="text-xs text-gray-400">
                     {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                   </span>
                 </div>
                 <p className="text-sm">{comment.content}</p>
-                <div className="flex items-center gap-3 mt-1">
+                <div className="mt-1 flex items-center gap-3">
                   <button
                     onClick={() => handleLikeToggle(comment._id, comment.isLiked || false)}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    className="flex items-center gap-1 text-xs text-gray-400 transition-colors hover:text-red-500"
                     disabled={likeMutation.isPending || unlikeMutation.isPending}
                   >
-                    <Heart className={`h-3 w-3 ${comment.isLiked ? "fill-red-500 text-red-500" : ""}`} />
+                    <Heart
+                      className={`h-3 w-3 ${comment.isLiked ? "fill-red-500 text-red-500" : ""}`}
+                    />
                     {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
                   </button>
                   <button
                     onClick={() => setReplyTo(comment._id)}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-500 transition-colors"
+                    className="flex items-center gap-1 text-xs text-gray-400 transition-colors hover:text-indigo-500"
                   >
                     <Reply className="h-3 w-3" />
                     Reply
@@ -258,7 +247,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
 
                 {/* Nested replies */}
                 {comment.replies && comment.replies.length > 0 && (
-                  <div className="mt-2 space-y-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                  <div className="mt-2 space-y-2 border-l-2 border-gray-200 pl-4 dark:border-gray-700">
                     {comment.replies.map((reply: any) => (
                       <div key={reply._id} className="flex items-start gap-3">
                         <Avatar className="h-6 w-6">
@@ -267,7 +256,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs">{reply.author?.name}</span>
+                            <span className="text-xs font-semibold">{reply.author?.name}</span>
                             <span className="text-xs text-gray-400">
                               {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
                             </span>

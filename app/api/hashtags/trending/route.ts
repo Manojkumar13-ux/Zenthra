@@ -41,10 +41,7 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -53,10 +50,7 @@ export async function POST(req: Request) {
     const { tag, postId } = body;
 
     if (!tag) {
-      return NextResponse.json(
-        { error: "Tag is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Tag is required" }, { status: 400 });
     }
 
     const cleanTag = tag.toLowerCase().trim().replace(/\s/g, "");
@@ -64,36 +58,30 @@ export async function POST(req: Request) {
     // Find and update or create hashtag
     const hashtag = await Hashtag.findOneAndUpdate(
       { tag: cleanTag },
-      { 
+      {
         $inc: { count: 1 },
         $addToSet: { posts: postId },
-        $set: { lastUsed: new Date() }
+        $set: { lastUsed: new Date() },
       },
       { upsert: true, new: true }
     );
 
     // Check if it should be trending (count > 3)
     if (hashtag.count > 3) {
-      await Hashtag.updateOne(
-        { _id: hashtag._id },
-        { $set: { isTrending: true } }
-      );
+      await Hashtag.updateOne({ _id: hashtag._id }, { $set: { isTrending: true } });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       hashtag: {
         id: hashtag._id.toString(),
         tag: hashtag.tag,
         count: hashtag.count,
         isActive: hashtag.isTrending || hashtag.count > 3,
       },
-      message: "Hashtag updated successfully" 
+      message: "Hashtag updated successfully",
     });
   } catch (error) {
     console.error("Error updating hashtag:", error);
-    return NextResponse.json(
-      { error: "Failed to update hashtag" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update hashtag" }, { status: 500 });
   }
 }

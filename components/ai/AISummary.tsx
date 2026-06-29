@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Copy, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -75,7 +81,7 @@ export function AISummary() {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-indigo-500" />
-          <h3 className="font-semibold text-lg">AI Text Summarizer</h3>
+          <h3 className="text-lg font-semibold">AI Text Summarizer</h3>
         </div>
 
         <div className="space-y-2">
@@ -94,7 +100,7 @@ export function AISummary() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="summary-style">Style</Label>
             <Select
@@ -197,12 +203,7 @@ export function AISummary() {
                   {summary.split(/\s+/).filter(Boolean).length} words
                 </Badge>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="h-8"
-              >
+              <Button variant="ghost" size="sm" onClick={handleCopy} className="h-8">
                 {copied ? (
                   <Check className="h-4 w-4 text-green-500" />
                 ) : (
@@ -211,14 +212,14 @@ export function AISummary() {
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{summary}</p>
+            <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{summary}</p>
             </div>
           </div>
         )}
 
         {summarizeMutation.isError && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/10">
             <p className="text-sm text-red-600 dark:text-red-400">
               {summarizeMutation.error instanceof Error
                 ? summarizeMutation.error.message

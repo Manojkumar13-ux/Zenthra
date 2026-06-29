@@ -5,10 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -24,17 +21,13 @@ export async function GET(
       .lean();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if current user is following this user
     const currentUser = await User.findById(session.user.id).select("following");
-    const isFollowing = currentUser?.following?.some(
-      (id: any) => id.toString() === userId
-    ) || false;
+    const isFollowing =
+      currentUser?.following?.some((id: any) => id.toString() === userId) || false;
 
     const formattedUser = {
       ...user,
@@ -53,18 +46,12 @@ export async function GET(
     return NextResponse.json({ user: formattedUser });
   } catch (error) {
     console.error("❌ Get User API Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
   }
 }
 
 // PUT - Update User Profile
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -75,10 +62,7 @@ export async function PUT(
 
     // Only allow users to update their own profile
     if (session.user.id !== userId) {
-      return NextResponse.json(
-        { error: "You can only update your own profile" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "You can only update your own profile" }, { status: 403 });
     }
 
     await connectDB();
@@ -88,10 +72,7 @@ export async function PUT(
 
     const user = await User.findById(userId);
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Update fields
@@ -120,9 +101,6 @@ export async function PUT(
     return NextResponse.json({ user: formattedUser });
   } catch (error) {
     console.error("❌ Update User API Error:", error);
-    return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
   }
 }

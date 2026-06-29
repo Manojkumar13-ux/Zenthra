@@ -15,10 +15,7 @@ const updateChatSchema = z.object({
 });
 
 // GET /api/messages/chats/[chatId] - Get chat details
-export async function GET(
-  req: Request,
-  { params }: { params: { chatId: string } }
-) {
+export async function GET(req: Request, { params }: { params: { chatId: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -53,18 +50,12 @@ export async function GET(
     return NextResponse.json({ chat });
   } catch (error) {
     console.error("GET /api/messages/chats/[chatId] error:", error);
-    return NextResponse.json(
-      { message: "Failed to fetch chat details" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to fetch chat details" }, { status: 500 });
   }
 }
 
 // PUT /api/messages/chats/[chatId] - Update chat (group settings)
-export async function PUT(
-  req: Request,
-  { params }: { params: { chatId: string } }
-) {
+export async function PUT(req: Request, { params }: { params: { chatId: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -117,7 +108,9 @@ export async function PUT(
       });
 
       const validUserIds = validUsers.map((u) => u._id.toString());
-      chat.participants = [...new Set([...chat.participants.map((p: any) => p.toString()), ...validUserIds])];
+      chat.participants = [
+        ...new Set([...chat.participants.map((p: any) => p.toString()), ...validUserIds]),
+      ];
     }
 
     // Remove participants
@@ -134,18 +127,12 @@ export async function PUT(
     return NextResponse.json({ chat });
   } catch (error) {
     console.error("PUT /api/messages/chats/[chatId] error:", error);
-    return NextResponse.json(
-      { message: "Failed to update chat" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to update chat" }, { status: 500 });
   }
 }
 
 // DELETE /api/messages/chats/[chatId] - Delete/leave chat
-export async function DELETE(
-  req: Request,
-  { params }: { params: { chatId: string } }
-) {
+export async function DELETE(req: Request, { params }: { params: { chatId: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -169,15 +156,11 @@ export async function DELETE(
 
     // If group chat, remove user from participants
     if (chat.isGroup) {
-      chat.participants = chat.participants.filter(
-        (p: any) => p.toString() !== session.user.id
-      );
+      chat.participants = chat.participants.filter((p: any) => p.toString() !== session.user.id);
 
       // If user was admin, remove from admins
       if (chat.admins) {
-        chat.admins = chat.admins.filter(
-          (a: any) => a.toString() !== session.user.id
-        );
+        chat.admins = chat.admins.filter((a: any) => a.toString() !== session.user.id);
       }
 
       // If no participants left, delete the chat
@@ -188,9 +171,9 @@ export async function DELETE(
       }
 
       await chat.save();
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "You left the group",
-        chat 
+        chat,
       });
     }
 
@@ -201,15 +184,9 @@ export async function DELETE(
       return NextResponse.json({ message: "Chat deleted" });
     }
 
-    return NextResponse.json(
-      { message: "You can only leave group chats" },
-      { status: 403 }
-    );
+    return NextResponse.json({ message: "You can only leave group chats" }, { status: 403 });
   } catch (error) {
     console.error("DELETE /api/messages/chats/[chatId] error:", error);
-    return NextResponse.json(
-      { message: "Failed to delete chat" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to delete chat" }, { status: 500 });
   }
 }

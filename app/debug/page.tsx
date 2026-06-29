@@ -37,24 +37,24 @@ export default function DebugPage() {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Debug User Info</h1>
-      
-      <div className="bg-gray-100 p-4 rounded-lg mb-6">
-        <h2 className="font-semibold mb-2">Your Session:</h2>
-        <pre className="bg-white p-4 rounded text-sm overflow-auto">
+    <div className="mx-auto max-w-4xl p-8">
+      <h1 className="mb-6 text-2xl font-bold">Debug User Info</h1>
+
+      <div className="mb-6 rounded-lg bg-gray-100 p-4">
+        <h2 className="mb-2 font-semibold">Your Session:</h2>
+        <pre className="overflow-auto rounded bg-white p-4 text-sm">
           {JSON.stringify(session, null, 2)}
         </pre>
       </div>
 
-      <h2 className="font-semibold mb-2">Users in Database:</h2>
-      <div className="bg-gray-100 p-4 rounded-lg">
+      <h2 className="mb-2 font-semibold">Users in Database:</h2>
+      <div className="rounded-lg bg-gray-100 p-4">
         {users.length === 0 ? (
           <p>No users found in database</p>
         ) : (
           <div className="space-y-2">
             {users.map((user: any) => (
-              <div key={user._id} className="bg-white p-3 rounded shadow-sm">
+              <div key={user._id} className="rounded bg-white p-3 shadow-sm">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <span className="font-medium">ID:</span>
                   <span className="font-mono">{user._id}</span>
@@ -63,7 +63,11 @@ export default function DebugPage() {
                   <span className="font-medium">Email:</span>
                   <span>{user.email}</span>
                   <span className="font-medium">Valid ObjectId:</span>
-                  <span className={/^[0-9a-fA-F]{24}$/.test(user._id) ? "text-green-600" : "text-red-600"}>
+                  <span
+                    className={
+                      /^[0-9a-fA-F]{24}$/.test(user._id) ? "text-green-600" : "text-red-600"
+                    }
+                  >
                     {/^[0-9a-fA-F]{24}$/.test(user._id) ? "✅ Yes" : "❌ No"}
                   </span>
                 </div>

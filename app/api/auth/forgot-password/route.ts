@@ -9,10 +9,7 @@ export async function POST(req: Request) {
     const { email } = await req.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -34,16 +31,15 @@ export async function POST(req: Request) {
     await user.save();
 
     // Send email (mock for now - implement with actual email service)
-    console.log(`Password reset link: https://zenthra.vercel.app/reset-password?token=${resetToken}`);
+    console.log(
+      `Password reset link: https://zenthra.vercel.app/reset-password?token=${resetToken}`
+    );
 
     return NextResponse.json({
       message: "If an account exists, you will receive a password reset email.",
     });
   } catch (error) {
     console.error("Forgot password error:", error);
-    return NextResponse.json(
-      { error: "Failed to process request" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }

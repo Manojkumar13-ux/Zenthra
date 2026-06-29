@@ -82,7 +82,7 @@ export function RightSidebar() {
   useEffect(() => {
     setMounted(true);
     fetchTrendingHashtags();
-    
+
     // Set up event listener for new posts with hashtags
     const handleNewPost = (event: CustomEvent) => {
       const { hashtags } = event.detail;
@@ -91,9 +91,9 @@ export function RightSidebar() {
       }
     };
 
-    window.addEventListener('newPost' as any, handleNewPost);
+    window.addEventListener("newPost" as any, handleNewPost);
     return () => {
-      window.removeEventListener('newPost' as any, handleNewPost);
+      window.removeEventListener("newPost" as any, handleNewPost);
     };
   }, []);
 
@@ -125,13 +125,13 @@ export function RightSidebar() {
   };
 
   const updateTrendingHashtags = (hashtags: string[]) => {
-    setTrendingHashtags(prev => {
+    setTrendingHashtags((prev) => {
       const updated = [...prev];
-      
-      hashtags.forEach(tag => {
-        const cleanTag = tag.startsWith('#') ? tag.slice(1) : tag;
-        const existing = updated.find(h => h.tag.toLowerCase() === cleanTag.toLowerCase());
-        
+
+      hashtags.forEach((tag) => {
+        const cleanTag = tag.startsWith("#") ? tag.slice(1) : tag;
+        const existing = updated.find((h) => h.tag.toLowerCase() === cleanTag.toLowerCase());
+
         if (existing) {
           existing.count += 1;
         } else {
@@ -142,7 +142,7 @@ export function RightSidebar() {
           });
         }
       });
-      
+
       return updated.sort((a, b) => b.count - a.count);
     });
   };
@@ -152,20 +152,22 @@ export function RightSidebar() {
       toast.error("Please enter a hashtag");
       return;
     }
-    
-    const cleanTag = newHashtag.trim().startsWith('#') ? newHashtag.trim().slice(1) : newHashtag.trim();
-    
+
+    const cleanTag = newHashtag.trim().startsWith("#")
+      ? newHashtag.trim().slice(1)
+      : newHashtag.trim();
+
     try {
       const res = await fetch("/api/hashtags/trending", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tag: cleanTag }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
-        setTrendingHashtags(prev => {
-          const existing = prev.find(h => h.tag.toLowerCase() === cleanTag.toLowerCase());
+        setTrendingHashtags((prev) => {
+          const existing = prev.find((h) => h.tag.toLowerCase() === cleanTag.toLowerCase());
           if (existing) {
             existing.count += 1;
             return [...prev].sort((a, b) => b.count - a.count);
@@ -195,22 +197,22 @@ export function RightSidebar() {
 
   if (!mounted) {
     return (
-      <div className="hidden lg:block w-80 flex-shrink-0 p-4">
+      <div className="hidden w-80 flex-shrink-0 p-4 lg:block">
         <div className="animate-pulse space-y-4">
-          <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
-          <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+          <div className="h-40 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+          <div className="h-40 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="hidden lg:block w-80 flex-shrink-0 p-4 space-y-4">
+    <div className="hidden w-80 flex-shrink-0 space-y-4 p-4 lg:block">
       {/* Trending Hashtags Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="rounded-xl border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-3 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-blue-500" />
-          <h2 className="font-semibold text-lg">Trending Hashtags</h2>
+          <h2 className="text-lg font-semibold">Trending Hashtags</h2>
         </div>
 
         {isLoading ? (
@@ -220,10 +222,10 @@ export function RightSidebar() {
         ) : (
           <div className="space-y-2">
             {trendingHashtags.length === 0 ? (
-              <div className="text-center py-4">
-                <Hash className="h-8 w-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+              <div className="py-4 text-center">
+                <Hash className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500">No trending hashtags yet</p>
-                <p className="text-xs text-gray-400 mt-1">Start using #hashtags in your posts!</p>
+                <p className="mt-1 text-xs text-gray-400">Start using #hashtags in your posts!</p>
               </div>
             ) : (
               trendingHashtags.slice(0, 10).map((hashtag, index) => (
@@ -231,22 +233,26 @@ export function RightSidebar() {
                   key={hashtag.id}
                   href={`/explore?q=${hashtag.tag}`}
                   className={cn(
-                    "flex items-center justify-between px-3 py-2 rounded-lg transition-all group",
-                    index < 3 ? "hover:bg-blue-50 dark:hover:bg-blue-900/20" : "hover:bg-gray-100 dark:hover:bg-gray-700",
+                    "group flex items-center justify-between rounded-lg px-3 py-2 transition-all",
+                    index < 3
+                      ? "hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700",
                     hashtag.isActive && "bg-blue-50 dark:bg-blue-900/20"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-sm font-medium",
-                      index === 0 && "text-yellow-500",
-                      index === 1 && "text-gray-400",
-                      index === 2 && "text-orange-400"
-                    )}>
+                    <span
+                      className={cn(
+                        "text-sm font-medium",
+                        index === 0 && "text-yellow-500",
+                        index === 1 && "text-gray-400",
+                        index === 2 && "text-orange-400"
+                      )}
+                    >
                       #{hashtag.tag}
                     </span>
                     {index < 3 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5">
+                      <Badge variant="secondary" className="px-1.5 text-[10px]">
                         {index === 0 ? "🔥" : index === 1 ? "⭐" : "💫"}
                       </Badge>
                     )}
@@ -262,19 +268,19 @@ export function RightSidebar() {
         <div className="mt-3 flex gap-2">
           <Input
             placeholder="Add #hashtag"
-            className="flex-1 h-8 text-sm rounded-full bg-gray-100 dark:bg-gray-700 border-0"
+            className="h-8 flex-1 rounded-full border-0 bg-gray-100 text-sm dark:bg-gray-700"
             value={newHashtag}
             onChange={(e) => setNewHashtag(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddHashtag()}
           />
-          <Button size="sm" className="rounded-full h-8 px-3" onClick={handleAddHashtag}>
+          <Button size="sm" className="h-8 rounded-full px-3" onClick={handleAddHashtag}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Emoji Picker Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
+      <div className="rounded-xl border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{selectedEmoji}</span>
@@ -283,7 +289,7 @@ export function RightSidebar() {
           <div className="relative" ref={emojiPickerRef}>
             <Button
               variant="outline"
-              className="rounded-full gap-2 text-sm h-9"
+              className="h-9 gap-2 rounded-full text-sm"
               onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
             >
               <Smile className="h-4 w-4" />
@@ -292,15 +298,16 @@ export function RightSidebar() {
             </Button>
 
             {isEmojiPickerOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border dark:border-gray-700 z-50 p-3">
+              <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border bg-white p-3 shadow-2xl dark:border-gray-700 dark:bg-gray-800">
                 <div className="grid grid-cols-5 gap-1">
                   {emojis.map((emoji) => (
                     <button
                       key={emoji.label}
                       onClick={() => handleEmojiSelect(emoji.icon)}
                       className={cn(
-                        "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl",
-                        selectedEmoji === emoji.icon && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500"
+                        "rounded-lg p-2 text-2xl transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+                        selectedEmoji === emoji.icon &&
+                          "bg-blue-50 ring-2 ring-blue-500 dark:bg-blue-900/20"
                       )}
                       title={emoji.label}
                     >
@@ -318,25 +325,25 @@ export function RightSidebar() {
       </div>
 
       {/* Categories Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
-        <h2 className="font-semibold text-lg mb-3">Categories</h2>
+      <div className="rounded-xl border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h2 className="mb-3 text-lg font-semibold">Categories</h2>
         <div className="space-y-1">
           {categories.map((category) => (
             <Link
               key={category.name}
               href={category.href}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
+              className="group flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <category.icon className="h-5 w-5 text-gray-500 group-hover:text-blue-500 transition-colors" />
+              <category.icon className="h-5 w-5 text-gray-500 transition-colors group-hover:text-blue-500" />
               <span className="text-sm font-medium">{category.name}</span>
-              <ChevronDown className="h-4 w-4 ml-auto text-gray-400 group-hover:text-blue-500 transition-colors rotate-[-90deg]" />
+              <ChevronDown className="ml-auto h-4 w-4 rotate-[-90deg] text-gray-400 transition-colors group-hover:text-blue-500" />
             </Link>
           ))}
         </div>
       </div>
 
       {/* Weather Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
+      <div className="rounded-xl border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-3xl">🌤️</span>

@@ -11,20 +11,14 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await req.formData();
     const file = formData.get("cover") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
     // Validate file type
@@ -38,10 +32,7 @@ export async function POST(req: NextRequest) {
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 400 });
     }
 
     // Convert file to buffer
@@ -74,12 +65,8 @@ export async function POST(req: NextRequest) {
       url,
       message: "Cover photo updated successfully",
     });
-
   } catch (error) {
     console.error("Cover upload error:", error);
-    return NextResponse.json(
-      { error: "Failed to upload cover photo" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to upload cover photo" }, { status: 500 });
   }
 }

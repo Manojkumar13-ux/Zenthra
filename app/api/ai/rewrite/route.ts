@@ -17,17 +17,14 @@ export async function POST(req: Request) {
     const { content } = await req.json();
 
     if (!content || content.trim().length === 0) {
-      return NextResponse.json(
-        { text: "", message: "Content is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ text: "", message: "Content is required" }, { status: 400 });
     }
 
     // If no API key, return original content
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         text: content,
-        message: "OpenAI API key not configured" 
+        message: "OpenAI API key not configured",
       });
     }
 
@@ -35,14 +32,15 @@ export async function POST(req: Request) {
       const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
-          { 
-            role: "system", 
-            content: "You are a helpful assistant that rewrites text to be more engaging and clear. Keep the same meaning but improve the wording. Keep it under 280 characters." 
+          {
+            role: "system",
+            content:
+              "You are a helpful assistant that rewrites text to be more engaging and clear. Keep the same meaning but improve the wording. Keep it under 280 characters.",
           },
-          { 
-            role: "user", 
-            content: `Rewrite this text: "${content}"` 
-          }
+          {
+            role: "user",
+            content: `Rewrite this text: "${content}"`,
+          },
         ],
         max_tokens: 150,
         temperature: 0.7,
@@ -52,16 +50,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ text: rewritten });
     } catch (openaiError) {
       console.error("OpenAI error:", openaiError);
-      return NextResponse.json({ 
+      return NextResponse.json({
         text: content,
-        message: "AI service unavailable" 
+        message: "AI service unavailable",
       });
     }
   } catch (error) {
     console.error("POST /api/ai/rewrite error:", error);
-    return NextResponse.json(
-      { text: "", message: "Failed to rewrite content" },
-      { status: 500 }
-    );
+    return NextResponse.json({ text: "", message: "Failed to rewrite content" }, { status: 500 });
   }
 }

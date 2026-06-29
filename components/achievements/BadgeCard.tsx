@@ -2,11 +2,11 @@
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { 
-  Award, 
-  Star, 
-  Users, 
-  Crown, 
+import {
+  Award,
+  Star,
+  Users,
+  Crown,
   Sparkles,
   Zap,
   Trophy,
@@ -83,12 +83,7 @@ const badgeLabels: Record<string, string> = {
   expert: "Expert",
 };
 
-export function BadgeCard({ 
-  badge, 
-  size = "md", 
-  showProgress = false,
-  onClick 
-}: BadgeCardProps) {
+export function BadgeCard({ badge, size = "md", showProgress = false, onClick }: BadgeCardProps) {
   const Icon = badgeIcons[badge.type] || Award;
   const color = badgeColors[badge.type] || "bg-gray-500";
   const label = badgeLabels[badge.type] || badge.name;
@@ -124,61 +119,55 @@ export function BadgeCard({
   const currentSize = sizes[size];
 
   return (
-    <Card 
+    <Card
       className={cn(
-        "flex items-center gap-4 transition-all duration-200 cursor-pointer",
+        "flex cursor-pointer items-center gap-4 transition-all duration-200",
         currentSize.container,
         isUnlocked ? "hover:shadow-lg" : "opacity-50 grayscale",
         onClick && "hover:scale-105"
       )}
       onClick={onClick}
     >
-      <div className={cn(
-        "rounded-full flex items-center justify-center flex-shrink-0",
-        color,
-        currentSize.badge,
-        isUnlocked ? "bg-opacity-20" : "bg-opacity-10"
-      )}>
-        <Icon className={cn(
-          currentSize.icon,
-          isUnlocked ? "text-white" : "text-gray-400"
-        )} />
+      <div
+        className={cn(
+          "flex flex-shrink-0 items-center justify-center rounded-full",
+          color,
+          currentSize.badge,
+          isUnlocked ? "bg-opacity-20" : "bg-opacity-10"
+        )}
+      >
+        <Icon className={cn(currentSize.icon, isUnlocked ? "text-white" : "text-gray-400")} />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <h4 className={cn(
-            "font-semibold truncate",
-            currentSize.title,
-            isUnlocked ? "text-gray-900 dark:text-gray-100" : "text-gray-400"
-          )}>
+          <h4
+            className={cn(
+              "truncate font-semibold",
+              currentSize.title,
+              isUnlocked ? "text-gray-900 dark:text-gray-100" : "text-gray-400"
+            )}
+          >
             {label}
           </h4>
-          {!isUnlocked && (
-            <span className="text-xs text-gray-400">Locked</span>
-          )}
+          {!isUnlocked && <span className="text-xs text-gray-400">Locked</span>}
           {isUnlocked && badge.unlockedAt && (
             <span className="text-xs text-gray-400">
               {new Date(badge.unlockedAt).toLocaleDateString()}
             </span>
           )}
         </div>
-        <p className={cn(
-          "text-gray-500 truncate",
-          currentSize.description
-        )}>
-          {badge.description}
-        </p>
+        <p className={cn("truncate text-gray-500", currentSize.description)}>{badge.description}</p>
 
         {showProgress && !isUnlocked && (
           <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+            <div className="mb-1 flex items-center justify-between text-xs text-gray-400">
               <span>Progress</span>
               <span>{Math.round(percentage)}%</span>
             </div>
-            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                className="h-full rounded-full bg-indigo-500 transition-all duration-500"
                 style={{ width: `${percentage}%` }}
               />
             </div>

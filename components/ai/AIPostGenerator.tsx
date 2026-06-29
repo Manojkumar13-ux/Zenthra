@@ -145,11 +145,11 @@ export function AIPostGenerator({ setContent }: AIPostGeneratorProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="outline" size="sm">
-          <Sparkles className="h-4 w-4 mr-1" />
+          <Sparkles className="mr-1 h-4 w-4" />
           AI Generate
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
@@ -177,7 +177,7 @@ export function AIPostGenerator({ setContent }: AIPostGeneratorProps) {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground self-center">or</span>
+              <span className="self-center text-sm text-muted-foreground">or</span>
             </div>
             <Textarea
               placeholder="Or write your own custom prompt..."
@@ -234,12 +234,12 @@ export function AIPostGenerator({ setContent }: AIPostGeneratorProps) {
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="mr-2 h-4 w-4" />
                 Generate Posts
               </>
             )}
@@ -252,40 +252,29 @@ export function AIPostGenerator({ setContent }: AIPostGeneratorProps) {
                 <Label className="text-sm font-semibold">
                   Generated Posts ({generatedPosts.length})
                 </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearGenerated}
-                >
-                  <X className="h-4 w-4 mr-1" />
+                <Button type="button" variant="ghost" size="sm" onClick={clearGenerated}>
+                  <X className="mr-1 h-4 w-4" />
                   Clear all
                 </Button>
               </div>
               {generatedPosts.map((post, index) => (
                 <div
                   key={index}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedPost === post
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/50"
+                  className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+                    selectedPost === post ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                   }`}
                   onClick={() => setSelectedPost(post)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm whitespace-pre-wrap flex-1">{post}</p>
+                    <p className="flex-1 whitespace-pre-wrap text-sm">{post}</p>
                     <Badge variant="outline" className="shrink-0">
                       Option {index + 1}
                     </Badge>
                   </div>
                   {selectedPost === post && (
                     <div className="mt-2 flex justify-end">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => applyPost(post)}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
+                      <Button type="button" size="sm" onClick={() => applyPost(post)}>
+                        <Check className="mr-1 h-4 w-4" />
                         Use This
                       </Button>
                     </div>

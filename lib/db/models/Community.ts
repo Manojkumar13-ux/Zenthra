@@ -75,7 +75,7 @@ CommunitySchema.index({ members: 1 });
 CommunitySchema.index({ owner: 1 });
 
 // Virtual for member count
-CommunitySchema.virtual("memberCount").get(function(this: ICommunity) {
+CommunitySchema.virtual("memberCount").get(function (this: ICommunity) {
   return this.members?.length || 0;
 });
 
@@ -84,5 +84,4 @@ CommunitySchema.set("toJSON", { virtuals: true });
 CommunitySchema.set("toObject", { virtuals: true });
 
 export const Community =
-  mongoose.models.Community ||
-  mongoose.model<ICommunity>("Community", CommunitySchema);
+  mongoose.models.Community || mongoose.model<ICommunity>("Community", CommunitySchema);

@@ -85,9 +85,9 @@ interface AnalyticsData {
 export default function AnalyticsPage() {
   const { data: session } = useSession();
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("week");
-  const [chartType, setChartType] = useState<
-    "overview" | "engagement" | "demographics"
-  >("overview");
+  const [chartType, setChartType] = useState<"overview" | "engagement" | "demographics">(
+    "overview"
+  );
 
   const { data, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["analytics", timeRange],
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-10 w-32" />
         </div>
@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">Analytics</h1>
           <Badge variant="outline" className="text-xs">
@@ -158,7 +158,7 @@ export default function AnalyticsPage() {
             </TabsList>
           </Tabs>
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            <Download className="h-4 w-4 mr-1" />
+            <Download className="mr-1 h-4 w-4" />
             Export
           </Button>
         </div>
@@ -172,12 +172,12 @@ export default function AnalyticsPage() {
               <div>
                 <p className="text-xs text-gray-500">Profile Views</p>
                 <p className="text-2xl font-bold">{stats.profileViews || 0}</p>
-                <p className="text-xs text-green-500 flex items-center gap-0.5">
+                <p className="flex items-center gap-0.5 text-xs text-green-500">
                   <TrendingUp className="h-3 w-3" />
                   +12%
                 </p>
               </div>
-              <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+              <div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/30">
                 <Eye className="h-5 w-5 text-indigo-500" />
               </div>
             </div>
@@ -190,12 +190,12 @@ export default function AnalyticsPage() {
               <div>
                 <p className="text-xs text-gray-500">Engagement</p>
                 <p className="text-2xl font-bold">{stats.engagementRate || 0}%</p>
-                <p className="text-xs text-green-500 flex items-center gap-0.5">
+                <p className="flex items-center gap-0.5 text-xs text-green-500">
                   <TrendingUp className="h-3 w-3" />
                   +8%
                 </p>
               </div>
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/30">
                 <Heart className="h-5 w-5 text-blue-500" />
               </div>
             </div>
@@ -208,12 +208,12 @@ export default function AnalyticsPage() {
               <div>
                 <p className="text-xs text-gray-500">Reach</p>
                 <p className="text-2xl font-bold">{stats.reach || 0}</p>
-                <p className="text-xs text-green-500 flex items-center gap-0.5">
+                <p className="flex items-center gap-0.5 text-xs text-green-500">
                   <TrendingUp className="h-3 w-3" />
                   +15%
                 </p>
               </div>
-              <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+              <div className="rounded-lg bg-purple-50 p-2 dark:bg-purple-900/30">
                 <Users className="h-5 w-5 text-purple-500" />
               </div>
             </div>
@@ -226,12 +226,12 @@ export default function AnalyticsPage() {
               <div>
                 <p className="text-xs text-gray-500">Followers Growth</p>
                 <p className="text-2xl font-bold">{stats.followersGrowth || 0}</p>
-                <p className="text-xs text-green-500 flex items-center gap-0.5">
+                <p className="flex items-center gap-0.5 text-xs text-green-500">
                   <TrendingUp className="h-3 w-3" />
                   +24%
                 </p>
               </div>
-              <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
+              <div className="rounded-lg bg-green-50 p-2 dark:bg-green-900/30">
                 <TrendingUp className="h-5 w-5 text-green-500" />
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function AnalyticsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64">
+          <div className="h-full grid-cols-1 gap-4 md:grid-cols-2">
             {chartType === "overview" && (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={growthData}>
@@ -300,10 +300,10 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
             )}
             {chartType === "demographics" && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 h-full">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <p className="text-sm font-medium mb-2">Age Distribution</p>
-                  <ResponsiveContainer width="100%" height="90%">
+                  <p className="mb-2 text-sm font-medium">Age Distribution</p>
+                  <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
                         data={demographics.ageGroups || []}
@@ -316,10 +316,7 @@ export default function AnalyticsPage() {
                       >
                         {(demographics.ageGroups || []).map(
                           (entry: AgeGroupData, index: number) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
-                            />
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           )
                         )}
                       </Pie>
@@ -328,16 +325,14 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
                 </div>
                 <div>
-                  <p className="text-sm font-medium mb-2">Top Locations</p>
+                  <p className="mb-2 text-sm font-medium">Top Locations</p>
                   <div className="space-y-2">
-                    {(demographics.locations || []).map(
-                      (loc: LocationData, i: number) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <span className="text-sm">{loc.city}</span>
-                          <span className="text-sm font-medium">{loc.value}%</span>
-                        </div>
-                      )
-                    )}
+                    {(demographics.locations || []).map((loc: LocationData, i: number) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-sm">{loc.city}</span>
+                        <span className="text-sm font-medium">{loc.value}%</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -347,9 +342,9 @@ export default function AnalyticsPage() {
       </Card>
 
       {/* AI Recommendations */}
-      <Card className="border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/10">
+      <Card className="border-indigo-200 bg-indigo-50/50 dark:border-indigo-900/50 dark:bg-indigo-900/10">
         <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4 text-indigo-500" />
             AI Recommendations
           </CardTitle>

@@ -13,11 +13,10 @@ export async function GET() {
 
     await connectDB();
 
-    const user = await User.findById(session.user.id)
-      .populate({
-        path: "bookmarks",
-        populate: { path: "author", select: "name username image" },
-      });
+    const user = await User.findById(session.user.id).populate({
+      path: "bookmarks",
+      populate: { path: "author", select: "name username image" },
+    });
 
     return NextResponse.json({ posts: user?.bookmarks || [] });
   } catch (error) {
@@ -44,9 +43,7 @@ export async function POST(req: Request) {
     const isBookmarked = user.bookmarks.includes(postId);
 
     if (isBookmarked) {
-      user.bookmarks = user.bookmarks.filter(
-        (id: any) => id.toString() !== postId
-      );
+      user.bookmarks = user.bookmarks.filter((id: any) => id.toString() !== postId);
     } else {
       user.bookmarks.push(postId);
     }
@@ -56,9 +53,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ bookmarked: !isBookmarked });
   } catch (error) {
     console.error("POST /api/bookmarks error:", error);
-    return NextResponse.json(
-      { message: "Failed to toggle bookmark" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to toggle bookmark" }, { status: 500 });
   }
 }

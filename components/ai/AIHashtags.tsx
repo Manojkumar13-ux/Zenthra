@@ -39,7 +39,7 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
   useEffect(() => {
     // Extract existing hashtags from content
     const existingTags = content.match(/#[\w]+/g) || [];
-    setSelectedTags(existingTags.map(tag => tag.substring(1)));
+    setSelectedTags(existingTags.map((tag) => tag.substring(1)));
   }, [content]);
 
   const generateHashtags = async () => {
@@ -79,10 +79,8 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
   };
 
   const toggleHashtag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
@@ -100,13 +98,13 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
   const applyHashtags = () => {
     // Remove existing hashtags from content
     let newContent = content.replace(/#[\w]+/g, "").trim();
-    
+
     // Add selected hashtags
-    const hashtagString = selectedTags.map(tag => `#${tag}`).join(" ");
+    const hashtagString = selectedTags.map((tag) => `#${tag}`).join(" ");
     if (hashtagString) {
       newContent = newContent + " " + hashtagString;
     }
-    
+
     setContent(newContent);
     setIsOpen(false);
     setHashtags([]);
@@ -119,34 +117,32 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
   };
 
   const removeTag = (tag: string) => {
-    setSelectedTags(prev => prev.filter(t => t !== tag));
+    setSelectedTags((prev) => prev.filter((t) => t !== tag));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="outline" size="sm">
-          <Hash className="h-4 w-4 mr-1" />
+          <Hash className="mr-1 h-4 w-4" />
           AI Hashtags
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Hash className="h-5 w-5 text-orange-500" />
             AI Hashtag Generator
           </DialogTitle>
-          <DialogDescription>
-            Generate relevant hashtags for your content.
-          </DialogDescription>
+          <DialogDescription>Generate relevant hashtags for your content.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Content Preview */}
           <div className="space-y-2">
             <Label>Content Preview</Label>
-            <div className="p-3 bg-muted rounded-lg max-h-[80px] overflow-y-auto">
-              <p className="text-sm whitespace-pre-wrap">{content || "Write something first..."}</p>
+            <div className="max-h-[80px] overflow-y-auto rounded-lg bg-muted p-3">
+              <p className="whitespace-pre-wrap text-sm">{content || "Write something first..."}</p>
             </div>
           </div>
 
@@ -159,12 +155,12 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                <Hash className="h-4 w-4 mr-2" />
+                <Hash className="mr-2 h-4 w-4" />
                 Generate Hashtags
               </>
             )}
@@ -174,16 +170,9 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
           {hashtags.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">
-                  Suggested Hashtags
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearHashtags}
-                >
-                  <X className="h-4 w-4 mr-1" />
+                <Label className="text-sm font-semibold">Suggested Hashtags</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={clearHashtags}>
+                  <X className="mr-1 h-4 w-4" />
                   Clear
                 </Button>
               </div>
@@ -192,16 +181,12 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
                   <Badge
                     key={h.tag}
                     variant={selectedTags.includes(h.tag) ? "default" : "outline"}
-                    className="cursor-pointer hover:opacity-80 transition-opacity text-sm py-1 px-3"
+                    className="cursor-pointer px-3 py-1 text-sm transition-opacity hover:opacity-80"
                     onClick={() => toggleHashtag(h.tag)}
                   >
                     #{h.tag}
-                    <span className="ml-1 text-xs opacity-60">
-                      {h.relevance}%
-                    </span>
-                    {selectedTags.includes(h.tag) && (
-                      <Check className="h-3 w-3 ml-1" />
-                    )}
+                    <span className="ml-1 text-xs opacity-60">{h.relevance}%</span>
+                    {selectedTags.includes(h.tag) && <Check className="ml-1 h-3 w-3" />}
                   </Badge>
                 ))}
               </div>
@@ -212,7 +197,7 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
           <div className="space-y-2">
             <Label>Add Custom Hashtag</Label>
             <div className="flex gap-2">
-              <div className="flex-1 relative">
+              <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   #
                 </span>
@@ -243,7 +228,7 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
               </Label>
               <div className="flex flex-wrap gap-2">
                 {selectedTags.map((tag) => (
-                  <Badge key={tag} variant="default" className="text-sm py-1 px-3">
+                  <Badge key={tag} variant="default" className="px-3 py-1 text-sm">
                     #{tag}
                     <button
                       type="button"
@@ -263,12 +248,8 @@ export function AIHashtags({ content, setContent }: AIHashtagsProps) {
           <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={applyHashtags}
-            disabled={selectedTags.length === 0}
-          >
-            <Check className="h-4 w-4 mr-1" />
+          <Button type="button" onClick={applyHashtags} disabled={selectedTags.length === 0}>
+            <Check className="mr-1 h-4 w-4" />
             Apply Hashtags
           </Button>
         </DialogFooter>

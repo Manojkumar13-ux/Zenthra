@@ -15,7 +15,16 @@ const NotificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["like", "comment", "mention", "follow", "message", "repost", "community", "achievement"],
+      enum: [
+        "like",
+        "comment",
+        "mention",
+        "follow",
+        "message",
+        "repost",
+        "community",
+        "achievement",
+      ],
       required: true,
     },
     content: {
@@ -53,4 +62,5 @@ NotificationSchema.index({ sender: 1 });
 NotificationSchema.index({ type: 1 });
 
 // Register the model - using function to prevent overwrite
-export const Notification = mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);
+export const Notification =
+  mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);

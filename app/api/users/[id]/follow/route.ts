@@ -5,10 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -21,10 +18,7 @@ export async function POST(
     const targetUserId = params.id;
 
     if (userId === targetUserId) {
-      return NextResponse.json(
-        { error: "You cannot follow yourself" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "You cannot follow yourself" }, { status: 400 });
     }
 
     const url = new URL(req.url);
@@ -34,10 +28,7 @@ export async function POST(
     const targetUser = await User.findById(targetUserId);
 
     if (!currentUser || !targetUser) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (action === "follow") {
@@ -52,7 +43,7 @@ export async function POST(
       // Add to following/followers
       if (!currentUser.following) currentUser.following = [];
       if (!targetUser.followers) targetUser.followers = [];
-      
+
       currentUser.following.push(targetUserId);
       targetUser.followers.push(userId);
 
@@ -69,9 +60,7 @@ export async function POST(
       currentUser.following = currentUser.following.filter(
         (id: any) => id.toString() !== targetUserId
       );
-      targetUser.followers = targetUser.followers.filter(
-        (id: any) => id.toString() !== userId
-      );
+      targetUser.followers = targetUser.followers.filter((id: any) => id.toString() !== userId);
 
       await currentUser.save();
       await targetUser.save();
@@ -83,15 +72,9 @@ export async function POST(
       });
     }
 
-    return NextResponse.json(
-      { error: "Invalid action" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("❌ Follow API Error:", error);
-    return NextResponse.json(
-      { error: "Failed to update follow status" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update follow status" }, { status: 500 });
   }
 }

@@ -9,12 +9,8 @@ const SocketContext = createContext<ReturnType<typeof useSocket> | null>(null);
 // Provider component
 export function SocketProvider({ children }: { children: ReactNode }) {
   const socket = useSocket();
-  
-  return (
-    <SocketContext.Provider value={socket}>
-      {children}
-    </SocketContext.Provider>
-  );
+
+  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 }
 
 // Custom hook to use the socket context

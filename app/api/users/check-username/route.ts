@@ -9,10 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -30,19 +27,15 @@ export async function GET(req: NextRequest) {
     // Check if username exists (excluding current user)
     const existingUser = await User.findOne({
       username: username.toLowerCase(),
-      _id: { $ne: session.user.id }
+      _id: { $ne: session.user.id },
     });
 
     return NextResponse.json({
       available: !existingUser,
       username: username,
     });
-
   } catch (error) {
     console.error("Check username error:", error);
-    return NextResponse.json(
-      { error: "Failed to check username" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to check username" }, { status: 500 });
   }
 }

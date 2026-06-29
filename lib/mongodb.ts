@@ -1,15 +1,15 @@
 // lib/mongodb.ts
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient, Db } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI || '';
-const MONGODB_DB = process.env.MONGODB_DB || '';
+const MONGODB_URI = process.env.MONGODB_URI || "";
+const MONGODB_DB = process.env.MONGODB_DB || "";
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
 if (!MONGODB_DB) {
-  throw new Error('Please define the MONGODB_DB environment variable inside .env.local');
+  throw new Error("Please define the MONGODB_DB environment variable inside .env.local");
 }
 
 let cachedClient: MongoClient | null = null;
@@ -17,12 +17,12 @@ let cachedDb: Db | null = null;
 
 export async function connectToDatabase(): Promise<Db> {
   if (cachedClient && cachedDb) {
-    console.log('📚 Database: Using existing connection');
+    console.log("📚 Database: Using existing connection");
     return cachedDb;
   }
 
   try {
-    console.log('📚 Database: Connecting to MongoDB...');
+    console.log("📚 Database: Connecting to MongoDB...");
     const client = new MongoClient(MONGODB_URI, {
       connectTimeoutMS: 10000,
       socketTimeoutMS: 45000,
@@ -30,7 +30,7 @@ export async function connectToDatabase(): Promise<Db> {
     });
 
     await client.connect();
-    console.log('✅ Connected to MongoDB successfully');
+    console.log("✅ Connected to MongoDB successfully");
 
     const db = client.db(MONGODB_DB);
 
@@ -39,8 +39,8 @@ export async function connectToDatabase(): Promise<Db> {
 
     return db;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    throw new Error('Failed to connect to MongoDB');
+    console.error("❌ MongoDB connection error:", error);
+    throw new Error("Failed to connect to MongoDB");
   }
 }
 

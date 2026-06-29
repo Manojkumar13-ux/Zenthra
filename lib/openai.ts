@@ -136,11 +136,7 @@ export async function chatCompletion(
     temperature?: number;
   } = {}
 ) {
-  const {
-    model = OPENAI_MODELS.GPT_4_TURBO,
-    maxTokens = 1000,
-    temperature = 0.7,
-  } = options;
+  const { model = OPENAI_MODELS.GPT_4_TURBO, maxTokens = 1000, temperature = 0.7 } = options;
 
   try {
     const completion = await openai.chat.completions.create({

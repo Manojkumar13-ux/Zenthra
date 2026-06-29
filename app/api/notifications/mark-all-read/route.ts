@@ -51,8 +51,7 @@ const NotificationSchema = new mongoose.Schema(
 );
 
 const Notification =
-  mongoose.models.Notification ||
-  mongoose.model("Notification", NotificationSchema);
+  mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);
 
 // PUT - Mark all notifications as read
 export async function PUT(req: Request) {
@@ -91,7 +90,8 @@ export async function PUT(req: Request) {
     return NextResponse.json(
       {
         error: "Server error",
-        message: process.env.NODE_ENV === "development" ? error.message : "Failed to mark all as read",
+        message:
+          process.env.NODE_ENV === "development" ? error.message : "Failed to mark all as read",
       },
       { status: 500 }
     );

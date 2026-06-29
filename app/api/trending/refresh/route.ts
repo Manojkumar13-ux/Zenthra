@@ -22,7 +22,7 @@ export async function GET() {
     allPosts.forEach((post: any) => {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
-          const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
+          const cleanTag = tag.startsWith("#") ? tag.slice(1).toLowerCase() : tag.toLowerCase();
           if (cleanTag && cleanTag.length > 0) {
             hashtagCount[cleanTag] = (hashtagCount[cleanTag] || 0) + 1;
           }
@@ -40,9 +40,6 @@ export async function GET() {
       trending: sorted.map(([tag, count]) => ({ tag, count })),
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to refresh trending" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to refresh trending" }, { status: 500 });
   }
 }

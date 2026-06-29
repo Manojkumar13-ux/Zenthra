@@ -10,32 +10,21 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
 
-    const user = await User.findById(session.user.id)
-      .select("-password")
-      .lean();
+    const user = await User.findById(session.user.id).select("-password").lean();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({ user });
   } catch (error) {
     console.error("Profile GET error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch profile" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
   }
 }
 
@@ -44,10 +33,7 @@ export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -59,13 +45,10 @@ export async function PUT(req: NextRequest) {
     if (username) {
       const existingUser = await User.findOne({
         username: username.toLowerCase(),
-        _id: { $ne: session.user.id }
+        _id: { $ne: session.user.id },
       });
       if (existingUser) {
-        return NextResponse.json(
-          { error: "Username is already taken" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Username is already taken" }, { status: 400 });
       }
     }
 
@@ -84,21 +67,15 @@ export async function PUT(req: NextRequest) {
     ).select("-password");
 
     if (!updatedUser) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       user: updatedUser,
-      message: "Profile updated successfully"
+      message: "Profile updated successfully",
     });
   } catch (error) {
     console.error("Profile PUT error:", error);
-    return NextResponse.json(
-      { error: "Failed to update profile" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
   }
 }

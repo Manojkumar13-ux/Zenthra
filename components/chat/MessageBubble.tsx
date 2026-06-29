@@ -8,12 +8,12 @@ export function MessageBubble({ message, isOwn }: { message: any; isOwn: boolean
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-xs px-4 py-2 rounded-xl",
+          "max-w-xs rounded-xl px-4 py-2",
           isOwn ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700"
         )}
       >
         <p>{message.content}</p>
-        <p className="text-xs opacity-70 mt-1">{format(new Date(message.createdAt), "p")}</p>
+        <p className="mt-1 text-xs opacity-70">{format(new Date(message.createdAt), "p")}</p>
       </div>
     </div>
   );

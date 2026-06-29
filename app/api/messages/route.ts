@@ -10,10 +10,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -23,10 +20,7 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     if (!chatId) {
-      return NextResponse.json(
-        { error: "Chat ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Chat ID is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -38,10 +32,7 @@ export async function GET(req: Request) {
     });
 
     if (!chat) {
-      return NextResponse.json(
-        { error: "Chat not found or unauthorized" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
     }
 
     const messages = await Message.find({ chat: chatId })
@@ -66,10 +57,7 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error fetching messages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch messages" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
   }
 }
 
@@ -77,19 +65,13 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { chatId, content } = await req.json();
 
     if (!chatId || !content) {
-      return NextResponse.json(
-        { error: "Chat ID and content are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Chat ID and content are required" }, { status: 400 });
     }
 
     await connectDB();
@@ -101,10 +83,7 @@ export async function POST(req: Request) {
     });
 
     if (!chat) {
-      return NextResponse.json(
-        { error: "Chat not found or unauthorized" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
     }
 
     const message = await Message.create({
@@ -123,15 +102,15 @@ export async function POST(req: Request) {
       .populate("sender", "name username image")
       .lean();
 
-    return NextResponse.json({
-      message: populatedMessage,
-      success: true,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: populatedMessage,
+        success: true,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error sending message:", error);
-    return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

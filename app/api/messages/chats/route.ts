@@ -44,9 +44,7 @@ export async function GET(req: Request) {
 
         let otherUser = null;
         if (!chat.isGroup) {
-          otherUser = chat.participants.find(
-            (p: any) => p._id.toString() !== userId
-          );
+          otherUser = chat.participants.find((p: any) => p._id.toString() !== userId);
         }
 
         return {
@@ -60,10 +58,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ chats: chatsWithUnread });
   } catch (error) {
     console.error("GET /api/messages/chats error:", error);
-    return NextResponse.json(
-      { chats: [], message: "Failed to fetch chats" },
-      { status: 200 }
-    );
+    return NextResponse.json({ chats: [], message: "Failed to fetch chats" }, { status: 200 });
   }
 }
 
@@ -80,10 +75,7 @@ export async function POST(req: Request) {
     try {
       body = await req.json();
     } catch (error) {
-      return NextResponse.json(
-        { message: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
     }
 
     const { participantIds, name, isGroup, avatar } = body;
@@ -107,11 +99,9 @@ export async function POST(req: Request) {
     const validUsers = await User.find({
       _id: { $in: participants },
     }).select("_id");
-    
+
     const validUserIds = validUsers.map((u) => u._id.toString());
-    const invalidUsers = participants.filter(
-      (id: string) => !validUserIds.includes(id)
-    );
+    const invalidUsers = participants.filter((id: string) => !validUserIds.includes(id));
 
     if (invalidUsers.length > 0) {
       return NextResponse.json(
@@ -176,22 +166,23 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(
-      { chat, message: "Chat created successfully" },
-      { status: 201 }
-    );
+    return NextResponse.json({ chat, message: "Chat created successfully" }, { status: 201 });
   } catch (error) {
     console.error("POST /api/messages/chats error:", error);
-    
-    if (error instanceof Error && error.name === "MongoServerError" && (error as any).code === 11000) {
-      return NextResponse.json(
-        { message: "Chat already exists" },
-        { status: 400 }
-      );
+
+    if (
+      error instanceof Error &&
+      error.name === "MongoServerError" &&
+      (error as any).code === 11000
+    ) {
+      return NextResponse.json({ message: "Chat already exists" }, { status: 400 });
     }
 
     return NextResponse.json(
-      { message: "Failed to create chat", error: error instanceof Error ? error.message : "Unknown error" },
+      {
+        message: "Failed to create chat",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
@@ -210,26 +201,17 @@ export async function PUT(req: Request) {
     try {
       body = await req.json();
     } catch (error) {
-      return NextResponse.json(
-        { message: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
     }
 
     const { chatId, name, avatar, addParticipants, removeParticipants } = body;
 
     if (!chatId) {
-      return NextResponse.json(
-        { message: "Chat ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Chat ID is required" }, { status: 400 });
     }
 
     if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return NextResponse.json(
-        { message: "Invalid chat ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid chat ID" }, { status: 400 });
     }
 
     await connectDB();
@@ -238,10 +220,7 @@ export async function PUT(req: Request) {
     const chat = await Chat.findById(chatId);
 
     if (!chat) {
-      return NextResponse.json(
-        { message: "Chat not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Chat not found" }, { status: 404 });
     }
 
     if (!chat.participants.includes(userId)) {
@@ -267,22 +246,16 @@ export async function PUT(req: Request) {
       const validUsers = await User.find({
         _id: { $in: addParticipants },
       }).select("_id");
-      
+
       const validUserIds = validUsers.map((u) => u._id.toString());
       chat.participants = [
-        ...new Set([
-          ...chat.participants.map((p: any) => p.toString()),
-          ...validUserIds,
-        ]),
+        ...new Set([...chat.participants.map((p: any) => p.toString()), ...validUserIds]),
       ];
     }
 
     if (removeParticipants && removeParticipants.length > 0) {
       if (chat.participants.length - removeParticipants.length < 1) {
-        return NextResponse.json(
-          { message: "Cannot remove all participants" },
-          { status: 400 }
-        );
+        return NextResponse.json({ message: "Cannot remove all participants" }, { status: 400 });
       }
 
       chat.participants = chat.participants.filter(
@@ -290,9 +263,7 @@ export async function PUT(req: Request) {
       );
 
       if (chat.admins) {
-        chat.admins = chat.admins.filter(
-          (a: any) => !removeParticipants.includes(a.toString())
-        );
+        chat.admins = chat.admins.filter((a: any) => !removeParticipants.includes(a.toString()));
       }
     }
 
@@ -305,10 +276,7 @@ export async function PUT(req: Request) {
     });
   } catch (error) {
     console.error("PUT /api/messages/chats error:", error);
-    return NextResponse.json(
-      { message: "Failed to update chat" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to update chat" }, { status: 500 });
   }
 }
 
@@ -324,17 +292,11 @@ export async function DELETE(req: Request) {
     const chatId = searchParams.get("chatId");
 
     if (!chatId) {
-      return NextResponse.json(
-        { message: "Chat ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Chat ID is required" }, { status: 400 });
     }
 
     if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return NextResponse.json(
-        { message: "Invalid chat ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid chat ID" }, { status: 400 });
     }
 
     await connectDB();
@@ -343,10 +305,7 @@ export async function DELETE(req: Request) {
     const chat = await Chat.findById(chatId);
 
     if (!chat) {
-      return NextResponse.json(
-        { message: "Chat not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Chat not found" }, { status: 404 });
     }
 
     if (!chat.participants.includes(userId)) {
@@ -357,14 +316,10 @@ export async function DELETE(req: Request) {
     }
 
     if (chat.isGroup) {
-      chat.participants = chat.participants.filter(
-        (p: any) => p.toString() !== userId
-      );
+      chat.participants = chat.participants.filter((p: any) => p.toString() !== userId);
 
       if (chat.admins) {
-        chat.admins = chat.admins.filter(
-          (a: any) => a.toString() !== userId
-        );
+        chat.admins = chat.admins.filter((a: any) => a.toString() !== userId);
       }
 
       if (chat.participants.length === 0) {
@@ -393,9 +348,7 @@ export async function DELETE(req: Request) {
       });
     }
 
-    chat.participants = chat.participants.filter(
-      (p: any) => p.toString() !== userId
-    );
+    chat.participants = chat.participants.filter((p: any) => p.toString() !== userId);
 
     if (chat.participants.length === 0) {
       await Chat.deleteOne({ _id: chatId });
@@ -414,9 +367,6 @@ export async function DELETE(req: Request) {
     });
   } catch (error) {
     console.error("DELETE /api/messages/chats error:", error);
-    return NextResponse.json(
-      { message: "Failed to delete chat" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to delete chat" }, { status: 500 });
   }
 }

@@ -4,30 +4,36 @@ import dotenv from "dotenv";
 import path from "path";
 
 // Load environment variables
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI is not defined in .env.local');
+  console.error("❌ MONGODB_URI is not defined in .env.local");
   process.exit(1);
 }
 
 // Define schemas
-const PostSchema = new mongoose.Schema({
-  content: String,
-  author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  hashtags: [String],
-  createdAt: Date,
-}, { timestamps: true });
+const PostSchema = new mongoose.Schema(
+  {
+    content: String,
+    author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    hashtags: [String],
+    createdAt: Date,
+  },
+  { timestamps: true }
+);
 
-const HashtagSchema = new mongoose.Schema({
-  tag: { type: String, required: true, trim: true, lowercase: true },
-  count: { type: Number, default: 0 },
-  posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
-  isTrending: { type: Boolean, default: false },
-  lastUsed: { type: Date, default: Date.now },
-}, { timestamps: true });
+const HashtagSchema = new mongoose.Schema(
+  {
+    tag: { type: String, required: true, trim: true, lowercase: true },
+    count: { type: Number, default: 0 },
+    posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
+    isTrending: { type: Boolean, default: false },
+    lastUsed: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
 
 HashtagSchema.index({ tag: 1 }, { unique: true });
 HashtagSchema.index({ count: -1 });
@@ -53,22 +59,25 @@ async function syncHashtags() {
     }
 
     let totalHashtagsAdded = 0;
-    const hashtagMap: Record<string, { tag: string; count: number; posts: mongoose.Types.ObjectId[]; lastUsed: Date }> = {};
+    const hashtagMap: Record<
+      string,
+      { tag: string; count: number; posts: mongoose.Types.ObjectId[]; lastUsed: Date }
+    > = {};
 
     for (const post of posts) {
       if (post.hashtags && post.hashtags.length > 0) {
         for (const tag of post.hashtags) {
           const cleanTag = tag.toLowerCase().trim();
-          
+
           if (!hashtagMap[cleanTag]) {
             hashtagMap[cleanTag] = {
               tag: cleanTag,
               count: 0,
               posts: [],
-              lastUsed: post.createdAt || new Date()
+              lastUsed: post.createdAt || new Date(),
             };
           }
-          
+
           hashtagMap[cleanTag].count += 1;
           hashtagMap[cleanTag].posts.push(post._id);
           totalHashtagsAdded++;
@@ -87,32 +96,26 @@ async function syncHashtags() {
             count: data.count,
             posts: data.posts,
             lastUsed: data.lastUsed,
-            isTrending: data.count >= 3
-          }
+            isTrending: data.count >= 3,
+          },
         },
         { upsert: true }
       );
       console.log(`✅ Synced #${tag} (${data.count} posts)`);
     }
 
-    await Hashtag.updateMany(
-      { count: { $gte: 3 } },
-      { $set: { isTrending: true } }
-    );
+    await Hashtag.updateMany({ count: { $gte: 3 } }, { $set: { isTrending: true } });
 
     console.log(`📊 Total hashtags synced: ${totalHashtagsAdded}`);
-    
+
     const totalHashtags = await Hashtag.countDocuments();
     console.log(`📊 Total hashtags in database: ${totalHashtags}`);
 
-    const topHashtags = await Hashtag.find({})
-      .sort({ count: -1 })
-      .limit(10)
-      .lean();
+    const topHashtags = await Hashtag.find({}).sort({ count: -1 }).limit(10).lean();
 
     console.log("\n🏆 Top 10 Trending Hashtags:");
     topHashtags.forEach((h, i) => {
-      console.log(`  ${i + 1}. #${h.tag} - ${h.count} posts ${h.isTrending ? '🔥' : ''}`);
+      console.log(`  ${i + 1}. #${h.tag} - ${h.count} posts ${h.isTrending ? "🔥" : ""}`);
     });
 
     await mongoose.disconnect();

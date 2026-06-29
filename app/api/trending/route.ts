@@ -8,14 +8,11 @@ import { Post } from "@/lib/db/models/Post";
 export async function GET(req: Request) {
   try {
     console.log("🔵 Trending API: Starting request");
-    
+
     const session = await getServerSession(authOptions);
     if (!session) {
       console.log("🔴 Trending API: Unauthorized");
-      return NextResponse.json(
-        { error: "Unauthorized", trending: [] },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized", trending: [] }, { status: 401 });
     }
 
     await connectDB();
@@ -38,10 +35,12 @@ export async function GET(req: Request) {
       const formattedPosts = posts.map((post: any) => ({
         ...post,
         _id: post._id.toString(),
-        author: post.author ? {
-          ...post.author,
-          _id: post.author._id.toString(),
-        } : null,
+        author: post.author
+          ? {
+              ...post.author,
+              _id: post.author._id.toString(),
+            }
+          : null,
         createdAt: post.createdAt?.toISOString(),
       }));
 
@@ -67,7 +66,7 @@ export async function GET(req: Request) {
     allPosts.forEach((post: any) => {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
-          const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
+          const cleanTag = tag.startsWith("#") ? tag.slice(1).toLowerCase() : tag.toLowerCase();
           if (cleanTag && cleanTag.length > 0) {
             hashtagCountMap[cleanTag] = (hashtagCountMap[cleanTag] || 0) + 1;
           }
@@ -92,7 +91,7 @@ export async function GET(req: Request) {
     const trendingPosts = await Post.find({
       hashtags: { $exists: true, $ne: [] },
     })
-      .sort({ createdAt: -1 })  // ✅ Only sort by createdAt
+      .sort({ createdAt: -1 }) // ✅ Only sort by createdAt
       .limit(20)
       .populate("author", "name username image")
       .lean();
@@ -101,14 +100,16 @@ export async function GET(req: Request) {
       // Calculate counts safely
       const likeCount = Array.isArray(post.likes) ? post.likes.length : 0;
       const commentCount = Array.isArray(post.comments) ? post.comments.length : 0;
-      
+
       return {
         ...post,
         _id: post._id.toString(),
-        author: post.author ? {
-          ...post.author,
-          _id: post.author._id.toString(),
-        } : null,
+        author: post.author
+          ? {
+              ...post.author,
+              _id: post.author._id.toString(),
+            }
+          : null,
         likes: likeCount,
         comments: commentCount,
         createdAt: post.createdAt?.toISOString(),
@@ -138,7 +139,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     console.log("🔵 Trending API: Recalculating...");
-    
+
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -154,7 +155,7 @@ export async function POST(req: Request) {
     allPosts.forEach((post: any) => {
       if (post.hashtags && Array.isArray(post.hashtags)) {
         post.hashtags.forEach((tag: string) => {
-          const cleanTag = tag.startsWith('#') ? tag.slice(1).toLowerCase() : tag.toLowerCase();
+          const cleanTag = tag.startsWith("#") ? tag.slice(1).toLowerCase() : tag.toLowerCase();
           if (cleanTag && cleanTag.length > 0) {
             hashtagCount[cleanTag] = (hashtagCount[cleanTag] || 0) + 1;
           }

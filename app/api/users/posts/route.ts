@@ -9,10 +9,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -22,16 +19,13 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "UserId is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "UserId is required" }, { status: 400 });
     }
 
     await connectDB();
 
     const query: any = { author: userId };
-    
+
     // Only show public posts or posts from followed users
     // For simplicity, we'll show all posts for now
 
@@ -47,10 +41,12 @@ export async function GET(req: Request) {
     const formattedPosts = posts.map((post: any) => ({
       ...post,
       _id: post._id.toString(),
-      author: post.author ? {
-        ...post.author,
-        _id: post.author._id.toString(),
-      } : null,
+      author: post.author
+        ? {
+            ...post.author,
+            _id: post.author._id.toString(),
+          }
+        : null,
       createdAt: post.createdAt?.toISOString(),
     }));
 
@@ -67,9 +63,6 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error fetching user posts:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch posts" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 });
   }
 }

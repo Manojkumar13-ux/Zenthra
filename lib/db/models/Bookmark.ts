@@ -20,5 +20,4 @@ const BookmarkSchema = new Schema<IBookmark>(
 BookmarkSchema.index({ user: 1, post: 1 }, { unique: true });
 
 export const Bookmark =
-  mongoose.models.Bookmark ||
-  mongoose.model<IBookmark>("Bookmark", BookmarkSchema);
+  mongoose.models.Bookmark || mongoose.model<IBookmark>("Bookmark", BookmarkSchema);

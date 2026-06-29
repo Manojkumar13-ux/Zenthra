@@ -8,10 +8,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -40,7 +37,7 @@ export async function GET(req: Request) {
     const communitiesWithStatus = communities.map((community: any) => {
       const memberIds = community.members?.map((m: any) => m._id.toString()) || [];
       const moderatorIds = community.moderators?.map((m: any) => m._id.toString()) || [];
-      
+
       return {
         ...community,
         _id: community._id.toString(),
@@ -54,10 +51,7 @@ export async function GET(req: Request) {
     return NextResponse.json(communitiesWithStatus);
   } catch (error) {
     console.error("Error fetching communities:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch communities" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch communities" }, { status: 500 });
   }
 }
 
@@ -65,20 +59,14 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const { name, description, isPrivate } = body;
 
     if (!name || !name.trim()) {
-      return NextResponse.json(
-        { message: "Community name is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Community name is required" }, { status: 400 });
     }
 
     await connectDB();
@@ -112,9 +100,6 @@ export async function POST(req: Request) {
     return NextResponse.json(populated, { status: 201 });
   } catch (error) {
     console.error("Error creating community:", error);
-    return NextResponse.json(
-      { message: "Failed to create community" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to create community" }, { status: 500 });
   }
 }

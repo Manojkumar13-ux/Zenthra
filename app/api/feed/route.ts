@@ -9,14 +9,11 @@ import { User } from "@/lib/db/models/User";
 export async function GET(req: Request) {
   try {
     console.log("🔵 Feed API: Starting request");
-    
+
     const session = await getServerSession(authOptions);
     if (!session) {
       console.log("🔴 Feed API: Unauthorized");
-      return NextResponse.json(
-        { error: "Unauthorized", posts: [] },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized", posts: [] }, { status: 401 });
     }
 
     console.log(`🟢 Feed API: User ${session.user.id} authenticated`);
@@ -39,10 +36,8 @@ export async function GET(req: Request) {
 
     switch (tab) {
       case "following": {
-        const currentUser = await User.findById(session.user.id)
-          .select("following")
-          .lean();
-        
+        const currentUser = await User.findById(session.user.id).select("following").lean();
+
         const followingIds = currentUser?.following?.map((id: any) => id.toString()) || [];
         const userId = session.user.id;
         query.author = { $in: [...followingIds, userId] };
@@ -72,11 +67,8 @@ export async function GET(req: Request) {
     // Apply category filter
     if (category !== "all") {
       const categoryLower = category.toLowerCase();
-      query.hashtags = { 
-        $in: [
-          categoryLower,
-          `#${categoryLower}`,
-        ] 
+      query.hashtags = {
+        $in: [categoryLower, `#${categoryLower}`],
       };
       console.log(`📊 Category filter: ${category}`);
     }
@@ -102,10 +94,12 @@ export async function GET(req: Request) {
     const formattedPosts = posts.map((post: any) => ({
       ...post,
       _id: post._id.toString(),
-      author: post.author ? {
-        ...post.author,
-        _id: post.author._id.toString(),
-      } : null,
+      author: post.author
+        ? {
+            ...post.author,
+            _id: post.author._id.toString(),
+          }
+        : null,
       likes: post.likes?.map((id: any) => id.toString()) || [],
       comments: post.comments?.map((id: any) => id.toString()) || [],
       reposts: post.reposts?.map((id: any) => id.toString()) || [],
@@ -125,10 +119,10 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("❌ Feed API Error:", error);
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : "Failed to fetch feed",
         posts: [],
-        pagination: { page: 1, limit: 10, total: 0, hasNext: false, hasPrev: false }
+        pagination: { page: 1, limit: 10, total: 0, hasNext: false, hasPrev: false },
       },
       { status: 500 }
     );

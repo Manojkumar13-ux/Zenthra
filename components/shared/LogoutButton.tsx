@@ -13,14 +13,14 @@ export function LogoutButton() {
     try {
       // Clear local storage
       localStorage.clear();
-      
+
       // Clear session storage
       sessionStorage.clear();
-      
+
       // Sign out with redirect to login
-      await signOut({ 
+      await signOut({
         redirect: true,
-        callbackUrl: "/login"
+        callbackUrl: "/login",
       });
     } catch (error) {
       console.error("Logout error:", error);
@@ -29,10 +29,10 @@ export function LogoutButton() {
   };
 
   return (
-    <Button 
-      variant="ghost" 
+    <Button
+      variant="ghost"
       onClick={handleLogout}
-      className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+      className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-600"
     >
       <LogOut className="h-4 w-4" />
       Logout

@@ -1,256 +1,173 @@
+// app/(main)/trending/page.tsx
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { PostCard } from "@/components/posts/PostCard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { TrendingUp, Hash, Loader2, Flame, Sparkles, Clock } from "lucide-react";
+import PostCard from "@/components/posts/PostCard"; // ✅ Default import
 import { Button } from "@/components/ui/button";
-import { 
-  Hash, 
-  TrendingUp, 
-  Flame, 
-  Clock, 
-  Sparkles,
-  Users,
-  Heart,
-  MessageCircle,
-  Repeat2,
-  Eye
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
-type TrendingTab = "trending" | "for-you" | "hashtags";
+interface TrendingPost {
+  _id: string;
+  content: string;
+  author: {
+    _id: string;
+    name: string;
+    username: string;
+    image?: string;
+    isFollowing?: boolean;
+    verified?: boolean;
+  };
+  createdAt: string;
+  likesCount?: number;
+  commentsCount?: number;
+  repostsCount?: number;
+  liked?: boolean;
+  bookmarked?: boolean;
+  reposted?: boolean;
+  media?: string[];
+  hashtags?: string[];
+  mood?: string;
+  category?: string;
+  viewsCount?: number;
+  isPinned?: boolean;
+  aiSummary?: string;
+  trendingScore?: number;
+}
 
 export default function TrendingPage() {
-  const { data: session } = useSession();
-  const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TrendingTab>("trending");
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today");
+  const [posts, setPosts] = useState<TrendingPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["trending"],
-    queryFn: async () => {
-      const res = await fetch("/api/trending");
-      if (!res.ok) throw new Error("Failed to fetch trending");
-      return res.json();
-    },
-  });
-
-  // Extract all unique hashtags from posts
-  const getAllHashtags = () => {
-    const posts = data?.hashtagPosts || [];
-    const hashtags = new Set<string>();
-    posts.forEach((post: any) => {
-      if (post.hashtags && Array.isArray(post.hashtags)) {
-        post.hashtags.forEach((tag: string) => hashtags.add(tag));
-      }
-    });
-    return Array.from(hashtags);
-  };
-
-  const allHashtags = getAllHashtags();
-
-  const getFilteredPosts = () => {
-    const posts = data?.hashtagPosts || [];
-    if (selectedHashtag) {
-      return posts.filter((post: any) => 
-        post.hashtags?.includes(selectedHashtag)
-      );
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
     }
-    return posts;
+    fetchTrendingPosts();
+  }, [session, status, router, timeRange]);
+
+  const fetchTrendingPosts = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await fetch(`/api/trending?range=${timeRange}`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to fetch trending posts");
+      }
+      const data = await res.json();
+      setPosts(data.posts || []);
+    } catch (error) {
+      console.error("Error fetching trending posts:", error);
+      setError(error instanceof Error ? error.message : "Failed to load trending posts");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const filteredPosts = getFilteredPosts();
-  const trendingData = data?.trending || [];
-
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-6 w-16" />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-8 w-24" />
-          ))}
-        </div>
-        <div className="flex gap-2">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-10 w-32" />
-          ))}
-        </div>
-        {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-48 w-full" />
-        ))}
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
-  const postsToShow = activeTab === "for-you" 
-    ? data?.recentPosts || []
-    : activeTab === "trending"
-      ? data?.trendingPosts || []
-      : filteredPosts;
-
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold">Trending</h1>
-        <Badge variant="outline" className="flex items-center gap-1">
-          <Flame className="h-3 w-3 text-orange-500" />
-          Live
-        </Badge>
-        <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-          <Sparkles className="h-3 w-3" />
-          AI Powered
-        </Badge>
-      </div>
-
-      {/* Trending Hashtags - Shows all detected hashtags */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-500 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-indigo-500" />
-            Trending Hashtags
-          </h2>
-          <Badge variant="outline" className="text-[10px]">
-            {allHashtags.length} total
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <TrendingUp className="h-8 w-8 text-orange-500" />
+          <h1 className="text-2xl font-bold">Trending</h1>
+          <Badge variant="secondary" className="text-xs">
+            <Flame className="mr-1 h-3 w-3" />
+            Live
           </Badge>
         </div>
-        
-        {allHashtags.length === 0 ? (
-          <div className="text-center py-4 text-gray-400 text-sm">
-            No hashtags detected yet. Use # in your posts!
-          </div>
-        ) : (
-          <div className="flex gap-2 flex-wrap">
-            {allHashtags.map((tag) => {
-              const trend = trendingData.find((t: any) => t.tag === tag);
-              const count = trend?.count || 0;
-              const isSelected = selectedHashtag === tag;
-
-              return (
-                <button
-                  key={tag}
-                  onClick={() => setSelectedHashtag(isSelected ? null : tag)}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all",
-                    isSelected
-                      ? "bg-indigo-500 text-white border-indigo-500"
-                      : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-indigo-300"
-                  )}
-                >
-                  <Hash className="h-3.5 w-3.5" />
-                  <span className="text-sm font-medium">{tag}</span>
-                  <Badge 
-                    variant={isSelected ? "secondary" : "outline"} 
-                    className="text-[10px]"
-                  >
-                    {count} posts
-                  </Badge>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 border-b pb-2">
-        <Button
-          variant={activeTab === "trending" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("trending")}
-          className="rounded-full"
-        >
-          <Flame className="h-4 w-4 mr-1" />
-          Trending
-        </Button>
-        <Button
-          variant={activeTab === "for-you" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("for-you")}
-          className="rounded-full"
-        >
-          <Sparkles className="h-4 w-4 mr-1" />
-          For You
-        </Button>
-        <Button
-          variant={activeTab === "hashtags" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("hashtags")}
-          className="rounded-full"
-        >
-          <Hash className="h-4 w-4 mr-1" />
-          Hashtags
-        </Button>
-        {selectedHashtag && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSelectedHashtag(null)}
-            className="rounded-full text-red-500"
-          >
-            Clear filter
+      {/* Time Range Tabs */}
+      <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as "today" | "week" | "month")}>
+        <TabsList className="w-full">
+          <TabsTrigger value="today" className="flex-1">
+            Today
+          </TabsTrigger>
+          <TabsTrigger value="week" className="flex-1">
+            This Week
+          </TabsTrigger>
+          <TabsTrigger value="month" className="flex-1">
+            This Month
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Trending Posts */}
+      {error ? (
+        <div className="py-12 text-center">
+          <p className="text-red-500">{error}</p>
+          <Button variant="outline" className="mt-4" onClick={fetchTrendingPosts}>
+            Try Again
           </Button>
-        )}
-      </div>
-
-      {/* Posts */}
-      <div>
-        {selectedHashtag && (
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Hash className="h-5 w-5 text-indigo-500" />
-              {selectedHashtag}
-            </h2>
-            <Badge variant="outline">{filteredPosts.length} posts</Badge>
-          </div>
-        )}
-
-        {postsToShow.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700">
-            {selectedHashtag ? (
-              <>
-                <Hash className="h-12 w-12 mx-auto text-gray-300" />
-                <p className="text-gray-500 mt-3">No posts with {selectedHashtag}</p>
-                <p className="text-sm text-gray-400">Try another hashtag or create a post!</p>
-              </>
-            ) : (
-              <>
-                <TrendingUp className="h-12 w-12 mx-auto text-gray-300" />
-                <p className="text-gray-500 mt-3">No trending posts yet</p>
-                <p className="text-sm text-gray-400">Posts with hashtags will appear here</p>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {postsToShow.map((post: any) => (
-              <div key={post._id}>
-                <PostCard post={post} />
-                {/* Show hashtags below post */}
-                {post.hashtags && post.hashtags.length > 0 && (
-                  <div className="flex gap-2 flex-wrap mt-2 px-4">
-                    {post.hashtags.map((tag: string) => (
-                      <button
-                        key={tag}
-                        onClick={() => setSelectedHashtag(tag)}
-                        className="text-sm text-indigo-500 hover:text-indigo-700 hover:underline"
-                      >
-                        {tag}
-                      </button>
-                    ))}
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="py-12 text-center">
+          <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground/30" />
+          <p className="mt-2 text-muted-foreground">No trending posts right now</p>
+          <p className="text-sm text-muted-foreground">Check back later!</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post, index) => (
+            <div key={post._id} className="relative">
+              {index < 3 && (
+                <div className="absolute -left-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-orange-400 to-yellow-500 text-xs font-bold text-white shadow-lg">
+                  {index + 1}
+                </div>
+              )}
+              <div className="ml-4">
+                <PostCard
+                  post={{
+                    ...post,
+                    _id: post._id,
+                    author: {
+                      ...post.author,
+                      _id: post.author._id,
+                      isFollowing: post.author.isFollowing || false,
+                      verified: post.author.verified || false,
+                    },
+                    likesCount: post.likesCount || 0,
+                    commentsCount: post.commentsCount || 0,
+                    repostsCount: post.repostsCount || 0,
+                    liked: post.liked || false,
+                    bookmarked: post.bookmarked || false,
+                    reposted: post.reposted || false,
+                    media: post.media || [],
+                    hashtags: post.hashtags || [],
+                    viewsCount: post.viewsCount || 0,
+                    isPinned: post.isPinned || false,
+                  }}
+                />
+                {post.trendingScore && (
+                  <div className="mt-1 flex items-center gap-2 text-xs text-orange-500">
+                    <Flame className="h-3 w-3" />
+                    <span>Trending Score: {post.trendingScore}</span>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

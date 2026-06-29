@@ -1,11 +1,11 @@
 // lib/utils/email.ts
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
 // Email configuration
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
+  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+  port: parseInt(process.env.EMAIL_PORT || "587"),
+  secure: process.env.EMAIL_SECURE === "true",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
@@ -25,7 +25,7 @@ export async function sendEmail({
 }) {
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@zenthra.com',
+      from: process.env.EMAIL_FROM || "noreply@zenthra.com",
       to,
       subject,
       text,
@@ -33,14 +33,14 @@ export async function sendEmail({
     });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email send error:', error);
+    console.error("Email send error:", error);
     return { success: false, error };
   }
 }
 
 export function generatePasswordResetEmail(name: string, resetLink: string) {
   return {
-    subject: 'Reset Your Password - Zenthra',
+    subject: "Reset Your Password - Zenthra",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #0A66C2;">Reset Your Password</h2>

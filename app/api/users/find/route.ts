@@ -9,10 +9,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -39,15 +36,13 @@ export async function GET(req: Request) {
     }
 
     // Tab-specific filters
-    const currentUser = await User.findById(session.user.id)
-      .select("following")
-      .lean();
+    const currentUser = await User.findById(session.user.id).select("following").lean();
 
     if (tab === "following") {
       query._id = { $in: currentUser?.following || [] };
     } else if (tab === "suggested") {
-      query._id = { 
-        $nin: [...(currentUser?.following || []), session.user.id] 
+      query._id = {
+        $nin: [...(currentUser?.following || []), session.user.id],
       };
     }
 
@@ -63,9 +58,7 @@ export async function GET(req: Request) {
     const total = await User.countDocuments(query);
 
     // Check if current user is following each user
-    const followingIds = new Set(
-      currentUser?.following?.map((id: any) => id.toString()) || []
-    );
+    const followingIds = new Set(currentUser?.following?.map((id: any) => id.toString()) || []);
 
     const usersWithFollowStatus = users.map((user: any) => ({
       ...user,
@@ -90,9 +83,6 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error finding users:", error);
-    return NextResponse.json(
-      { error: "Failed to find users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to find users" }, { status: 500 });
   }
 }

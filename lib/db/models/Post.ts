@@ -13,28 +13,40 @@ const PostSchema = new mongoose.Schema(
       required: [true, "Content is required"],
       maxlength: [1000, "Content cannot exceed 1000 characters"],
     },
-    media: [{
-      type: String,
-    }],
-    likes: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
-    reposts: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
-    comments: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment",
-    }],
-    hashtags: [{
-      type: String,
-    }],
-    mentions: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
+    media: [
+      {
+        type: String,
+      },
+    ],
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    reposts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    comments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
+    hashtags: [
+      {
+        type: String,
+      },
+    ],
+    mentions: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     visibility: {
       type: String,
       enum: ["public", "followers", "private"],

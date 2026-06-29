@@ -77,11 +77,7 @@ export default function FindPeoplePage() {
   };
 
   const handleFollowChange = (userId: string, isFollowing: boolean) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user._id === userId ? { ...user, isFollowing } : user
-      )
-    );
+    setUsers((prev) => prev.map((user) => (user._id === userId ? { ...user, isFollowing } : user)));
   };
 
   if (isLoading) {

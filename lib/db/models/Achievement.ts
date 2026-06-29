@@ -26,5 +26,4 @@ const AchievementSchema = new Schema<IAchievement>(
 );
 
 export const Achievement =
-  mongoose.models.Achievement ||
-  mongoose.model<IAchievement>("Achievement", AchievementSchema);
+  mongoose.models.Achievement || mongoose.model<IAchievement>("Achievement", AchievementSchema);

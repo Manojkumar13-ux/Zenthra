@@ -5,7 +5,7 @@ require("dotenv").config({ path: ".env.local" });
 async function checkDB() {
   try {
     console.log("🔍 Connecting to MongoDB...");
-    
+
     const MONGODB_URI = process.env.MONGODB_URI;
     if (!MONGODB_URI) {
       console.error("❌ MONGODB_URI not found in .env.local");
@@ -18,12 +18,15 @@ async function checkDB() {
 
     // List all collections
     const collections = await mongoose.connection.db.listCollections().toArray();
-    console.log("\n📊 Collections:", collections.map(c => c.name).join(", ") || "No collections found");
+    console.log(
+      "\n📊 Collections:",
+      collections.map((c) => c.name).join(", ") || "No collections found"
+    );
 
     // Check posts
     const postCount = await mongoose.connection.db.collection("posts").countDocuments();
     console.log(`\n📝 Posts: ${postCount}`);
-    
+
     if (postCount > 0) {
       const posts = await mongoose.connection.db.collection("posts").find().toArray();
       console.log("\n📋 All Posts:");
@@ -41,7 +44,7 @@ async function checkDB() {
     // Check users
     const userCount = await mongoose.connection.db.collection("users").countDocuments();
     console.log(`\n👤 Users: ${userCount}`);
-    
+
     if (userCount > 0) {
       const users = await mongoose.connection.db.collection("users").find().toArray();
       console.log("\n📋 Users:");

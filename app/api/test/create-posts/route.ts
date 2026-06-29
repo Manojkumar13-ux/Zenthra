@@ -8,7 +8,7 @@ import { Post } from "@/lib/db/models/Post";
 export async function GET() {
   try {
     console.log("🔵 Creating test posts...");
-    
+
     const session = await getServerSession(authOptions);
     if (!session) {
       console.log("🔴 No session found");
@@ -33,10 +33,12 @@ export async function GET() {
       const formattedPosts = posts.map((post: any) => ({
         ...post,
         _id: post._id.toString(),
-        author: post.author ? {
-          ...post.author,
-          _id: post.author._id.toString(),
-        } : null,
+        author: post.author
+          ? {
+              ...post.author,
+              _id: post.author._id.toString(),
+            }
+          : null,
         createdAt: post.createdAt?.toISOString(),
       }));
 
@@ -63,19 +65,22 @@ export async function GET() {
         isPublic: true,
       },
       {
-        content: "What's on your mind today? Share your thoughts with the community! 💭 #thoughts #community",
+        content:
+          "What's on your mind today? Share your thoughts with the community! 💭 #thoughts #community",
         author: session.user.id,
         hashtags: ["thoughts", "community"],
         isPublic: true,
       },
       {
-        content: "This is a test post with #movie hashtag. Check if it appears in movie category! #movie #test",
+        content:
+          "This is a test post with #movie hashtag. Check if it appears in movie category! #movie #test",
         author: session.user.id,
         hashtags: ["movie", "test"],
         isPublic: true,
       },
       {
-        content: "I love watching #movies and #sports! What are your favorite hobbies? #entertainment",
+        content:
+          "I love watching #movies and #sports! What are your favorite hobbies? #entertainment",
         author: session.user.id,
         hashtags: ["movies", "sports", "entertainment"],
         isPublic: true,
@@ -93,10 +98,12 @@ export async function GET() {
     const formattedPosts = posts.map((post: any) => ({
       ...post,
       _id: post._id.toString(),
-      author: post.author ? {
-        ...post.author,
-        _id: post.author._id.toString(),
-      } : null,
+      author: post.author
+        ? {
+            ...post.author,
+            _id: post.author._id.toString(),
+          }
+        : null,
       createdAt: post.createdAt?.toISOString(),
     }));
 
@@ -109,9 +116,9 @@ export async function GET() {
   } catch (error) {
     console.error("❌ Error:", error);
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : "Failed to create test posts",
-        details: error instanceof Error ? error.stack : null
+        details: error instanceof Error ? error.stack : null,
       },
       { status: 500 }
     );

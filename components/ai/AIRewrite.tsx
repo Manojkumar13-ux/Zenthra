@@ -106,27 +106,25 @@ export function AIRewrite({ content, setContent }: AIRewriteProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="outline" size="sm" disabled={!content.trim()}>
-          <RefreshCw className="h-4 w-4 mr-1" />
+          <RefreshCw className="mr-1 h-4 w-4" />
           AI Rewrite
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RefreshCw className="h-5 w-5 text-blue-500" />
             AI Rewrite
           </DialogTitle>
-          <DialogDescription>
-            Rewrite your content in a different style or tone.
-          </DialogDescription>
+          <DialogDescription>Rewrite your content in a different style or tone.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Original Content */}
           <div className="space-y-2">
             <Label>Original Content</Label>
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm whitespace-pre-wrap">{content || "Write something first..."}</p>
+            <div className="rounded-lg bg-muted p-3">
+              <p className="whitespace-pre-wrap text-sm">{content || "Write something first..."}</p>
             </div>
           </div>
 
@@ -159,12 +157,12 @@ export function AIRewrite({ content, setContent }: AIRewriteProps) {
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Rewriting...
               </>
             ) : (
               <>
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Rewrite
               </>
             )}
@@ -174,37 +172,26 @@ export function AIRewrite({ content, setContent }: AIRewriteProps) {
           {variations.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">
-                  Variations ({variations.length})
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearVariations}
-                >
-                  <X className="h-4 w-4 mr-1" />
+                <Label className="text-sm font-semibold">Variations ({variations.length})</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={clearVariations}>
+                  <X className="mr-1 h-4 w-4" />
                   Clear all
                 </Button>
               </div>
               {variations.map((text, index) => (
                 <div
                   key={index}
-                  className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="rounded-lg border p-3 transition-colors hover:bg-muted/50"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm whitespace-pre-wrap flex-1">{text}</p>
+                    <p className="flex-1 whitespace-pre-wrap text-sm">{text}</p>
                     <Badge variant="outline" className="shrink-0">
                       V{index + 1}
                     </Badge>
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => applyRewrite(text)}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
+                    <Button type="button" size="sm" onClick={() => applyRewrite(text)}>
+                      <Check className="mr-1 h-4 w-4" />
                       Use This
                     </Button>
                   </div>
