@@ -4,16 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
 
-export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
 
-export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
 
-export const dynamic = 'force-dynamic';
 import { User } from "@/lib/db/models/User";
 
-export const dynamic = 'force-dynamic';
 
 // GET /api/users/profile - Get current user's profile
 export async function GET() {

@@ -4,25 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
 
-export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
 
-export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
 
-export const dynamic = 'force-dynamic';
 import { Comment } from "@/lib/db/models/Comment";
 
-export const dynamic = 'force-dynamic';
 import { Post } from "@/lib/db/models/Post";
 
-export const dynamic = 'force-dynamic';
 import { Notification } from "@/lib/db/models/Notification";
 
-export const dynamic = 'force-dynamic';
 import mongoose from "mongoose";
 
-export const dynamic = 'force-dynamic';
 
 // POST /api/comments - Create a new comment
 export async function POST(req: NextRequest) {

@@ -4,19 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
 
-export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
 
-export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
 
-export const dynamic = 'force-dynamic';
 import { Post } from "@/lib/db/models/Post";
 
-export const dynamic = 'force-dynamic';
 import { Notification } from "@/lib/db/models/Notification";
 
-export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {

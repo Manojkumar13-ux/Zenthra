@@ -3,16 +3,12 @@ import { NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
 
-export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
 
-export const dynamic = 'force-dynamic';
 import { connectDB } from "@/lib/db/connect";
 
-export const dynamic = 'force-dynamic';
 import mongoose from "mongoose";
 
-export const dynamic = 'force-dynamic';
 
 // Define Notification Schema
 const NotificationSchema = new mongoose.Schema(

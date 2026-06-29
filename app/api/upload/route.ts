@@ -4,10 +4,8 @@ import { NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
 
-export const dynamic = 'force-dynamic';
 import { authOptions } from "@/lib/auth";
 
-export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
