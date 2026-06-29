@@ -1,121 +1,158 @@
+// app/(main)/find-people/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { Search, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, UserPlus, Loader2 } from "lucide-react";
+import UserCard from "@/components/shared/UserCard"; // ✅ Fixed: default import
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { UserCard } from "@/components/shared/UserCard";
+
+interface User {
+  _id: string;
+  name: string;
+  username: string;
+  image?: string;
+  bio?: string;
+  followersCount?: number;
+  postsCount?: number;
+  isFollowing?: boolean;
+  online?: boolean;
+  role?: string;
+}
 
 export default function FindPeoplePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "suggested" | "following">("all");
+  const [tab, setTab] = useState("all");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["find-people", debouncedSearch, activeTab],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        q: debouncedSearch,
-        tab: activeTab,
-      });
-      const res = await fetch(`/api/users/find?${params}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch users");
-      return res.json();
-    },
-    enabled: !!session,
-  });
+    fetchUsers();
+  }, [session, status, router, tab]);
 
-  const users = data?.users || [];
+  const fetchUsers = async (search?: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const url = new URL("/api/users/find", window.location.origin);
+      url.searchParams.set("tab", tab);
+      if (search || searchQuery) {
+        url.searchParams.set("q", search || searchQuery);
+      }
+
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to fetch users");
+      }
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setError(error instanceof Error ? error.message : "Failed to load users");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchUsers(searchQuery);
+  };
+
+  const handleFollowChange = (userId: string, isFollowing: boolean) => {
+    // Update local state
+    setUsers(prev =>
+      prev.map(user =>
+        user._id === userId ? { ...user, isFollowing } : user
+      )
+    );
+  };
 
   if (isLoading) {
-    return <FindPeopleSkeleton />;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
+    <div className="max-w-3xl mx-auto p-4">
+      <div className="flex items-center gap-3 mb-6">
+        <UserPlus className="h-8 w-8 text-blue-500" />
         <h1 className="text-2xl font-bold">Find People</h1>
-        <p className="text-sm text-muted-foreground">
-          Discover and connect with other users
-        </p>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by name or username..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+      {/* Search */}
+      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search by name or username..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Button type="submit">Search</Button>
+      </form>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">All Users</TabsTrigger>
+      {/* Tabs */}
+      <Tabs value={tab} onValueChange={setTab} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="suggested">Suggested</TabsTrigger>
           <TabsTrigger value="following">Following</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {users.length === 0 ? (
+      {/* User List */}
+      {error ? (
         <div className="text-center py-12">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground/50" />
-          <h3 className="mt-4 text-lg font-semibold">No users found</h3>
-          <p className="text-sm text-muted-foreground">
-            {debouncedSearch
-              ? `No results found for "${debouncedSearch}"`
-              : "Start following people to see them here"}
+          <p className="text-red-500">{error}</p>
+          <Button variant="outline" className="mt-4" onClick={() => fetchUsers()}>
+            Try Again
+          </Button>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="text-center py-12">
+          <UserPlus className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500">No users found</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Try searching for someone or explore suggestions
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {users.map((user: any) => (
+        <div className="space-y-3">
+          {users.map((user) => (
             <UserCard
               key={user._id}
-              user={user}
-              size="md"
-              onFollowChange={() => refetch()}
+              user={{
+                ...user,
+                followersCount: user.followersCount || 0,
+                postsCount: user.postsCount || 0,
+              }}
+              variant="horizontal"
+              showFollowButton={true}
+              showMessageButton={true}
+              showUnfollowButton={true}
+              onFollowChange={handleFollowChange}
             />
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function FindPeopleSkeleton() {
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-4 w-48 mt-1" />
-      </div>
-      <Skeleton className="h-10 w-full" />
-      <div className="grid grid-cols-3 gap-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-      <div className="space-y-4">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full" />
-        ))}
-      </div>
     </div>
   );
 }

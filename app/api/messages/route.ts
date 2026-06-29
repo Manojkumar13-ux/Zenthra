@@ -1,24 +1,26 @@
 // app/api/messages/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth"; // ✅ Fixed import
 import { connectDB } from "@/lib/db/connect";
 import { Message } from "@/lib/db/models/Message";
+import { Chat } from "@/lib/db/models/Chat";
 
-// GET /api/messages - Get messages for a user
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
-
-    await connectDB();
 
     const { searchParams } = new URL(req.url);
     const chatId = searchParams.get("chatId");
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const page = parseInt(searchParams.get("page") || "1");
+    const skip = (page - 1) * limit;
 
     if (!chatId) {
       return NextResponse.json(
@@ -27,41 +29,43 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const skip = (page - 1) * limit;
+    await connectDB();
 
-    const messages = await Message.find({
-      chatId,
-      isDeleted: { $ne: true },
-    })
+    // Verify user is in the chat
+    const chat = await Chat.findOne({
+      _id: chatId,
+      participants: session.user.id,
+    });
+
+    if (!chat) {
+      return NextResponse.json(
+        { error: "Chat not found or unauthorized" },
+        { status: 404 }
+      );
+    }
+
+    const messages = await Message.find({ chat: chatId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("sender", "name username image")
-      .populate("readBy", "name username image")
       .lean();
 
-    // Mark messages as read
-    await Message.updateMany(
-      {
-        chatId,
-        sender: { $ne: session.user.id },
-        readBy: { $ne: session.user.id },
-      },
-      { $addToSet: { readBy: session.user.id } }
-    );
+    const total = await Message.countDocuments({ chat: chatId });
 
     return NextResponse.json({
       messages: messages.reverse(),
       pagination: {
-        total: await Message.countDocuments({ chatId, isDeleted: { $ne: true } }),
+        total,
         page,
         limit,
-        hasNext: skip + messages.length < await Message.countDocuments({ chatId, isDeleted: { $ne: true } }),
+        pages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
       },
     });
-
   } catch (error) {
-    console.error("GET /api/messages error:", error);
+    console.error("Error fetching messages:", error);
     return NextResponse.json(
       { error: "Failed to fetch messages" },
       { status: 500 }
@@ -69,16 +73,17 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/messages - Send a new message
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const body = await req.json();
-    const { chatId, content, type = "text", media } = body;
+    const { chatId, content } = await req.json();
 
     if (!chatId || !content) {
       return NextResponse.json(
@@ -89,28 +94,41 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
+    // Verify user is in the chat
+    const chat = await Chat.findOne({
+      _id: chatId,
+      participants: session.user.id,
+    });
+
+    if (!chat) {
+      return NextResponse.json(
+        { error: "Chat not found or unauthorized" },
+        { status: 404 }
+      );
+    }
+
     const message = await Message.create({
-      chatId,
+      chat: chatId,
       sender: session.user.id,
-      content,
-      type,
-      media: media || [],
-      readBy: [session.user.id],
-      isDeleted: false,
-      createdAt: new Date(),
+      content: content.trim(),
+    });
+
+    // Update chat's last message
+    await Chat.findByIdAndUpdate(chatId, {
+      lastMessage: message._id,
       updatedAt: new Date(),
     });
 
-    await message.populate("sender", "name username image");
-    await message.populate("readBy", "name username image");
+    const populatedMessage = await Message.findById(message._id)
+      .populate("sender", "name username image")
+      .lean();
 
     return NextResponse.json({
+      message: populatedMessage,
       success: true,
-      message,
-    });
-
+    }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/messages error:", error);
+    console.error("Error sending message:", error);
     return NextResponse.json(
       { error: "Failed to send message" },
       { status: 500 }
