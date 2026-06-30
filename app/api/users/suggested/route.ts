@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -16,55 +15,40 @@ export async function GET() {
     }
 
     const db = await connectToDatabase();
-    
+    const currentUserId = session.user.id;
+
+    console.log("🔍 Current user ID:", currentUserId);
+
+    // Get all users EXCEPT the current user
+    const allUsers = await db.collection("users")
+      .find({ 
+        _id: { $ne: currentUserId }  // ✅ Exclude current user
+      })
+      .toArray();
+
+    console.log("📊 Other users:", allUsers.length);
+
     // Get users the current user is following
     const follows = await db.collection("follows")
-      .find({ followerId: session.user.id })
+      .find({ followerId: currentUserId })
       .toArray();
     
-    // ✅ Only include valid ObjectId strings
-    const followingIds = follows
-      .map(f => f.followingId)
-      .filter(id => id && ObjectId.isValid(id));
+    const followingIds = follows.map(f => f.followingId);
+    console.log("📊 Following users:", followingIds);
 
-    // Build query to exclude current user and followed users
-    const query: any = {};
-    
-    // Exclude current user
-    if (ObjectId.isValid(session.user.id)) {
-      query._id = { $ne: new ObjectId(session.user.id) };
-    }
-    
-    // Exclude followed users
-    if (followingIds.length > 0) {
-      const validObjectIds = followingIds
-        .filter(id => ObjectId.isValid(id))
-        .map(id => new ObjectId(id));
-      
-      if (validObjectIds.length > 0) {
-        // If we already have $ne for current user, combine with $nin
-        if (query._id) {
-          query._id = {
-            ...query._id,
-            $nin: validObjectIds
-          };
-        } else {
-          query._id = { $nin: validObjectIds };
-        }
-      }
-    }
+    // Filter out followed users
+    const suggestedUsers = allUsers.filter(user => {
+      const userId = user._id.toString();
+      return !followingIds.includes(userId);
+    });
 
-    // Get users not followed by current user
-    const users = await db.collection("users")
-      .find(query)
-      .limit(5)
-      .toArray();
+    console.log("📊 Suggested users:", suggestedUsers.length);
 
     // Format users
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = suggestedUsers.map(user => ({
       id: user._id.toString(),
-      name: user.name,
-      username: user.username,
+      name: user.name || "User",
+      username: user.username || "user",
       image: user.image || null,
       bio: user.bio || "",
       mutualFollowers: 0,

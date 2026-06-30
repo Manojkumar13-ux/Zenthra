@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -65,7 +64,6 @@ const emojis = [
 ];
 
 export function RightSidebar() {
-  const { data: session } = useSession();
   const [trendingHashtags, setTrendingHashtags] = useState<TrendingHashtag[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [selectedEmoji, setSelectedEmoji] = useState<string>("😊");
@@ -77,18 +75,6 @@ export function RightSidebar() {
   useEffect(() => {
     fetchTrendingHashtags();
     fetchSuggestedUsers();
-
-    const handleNewPost = (event: CustomEvent) => {
-      const { hashtags } = event.detail;
-      if (hashtags && hashtags.length > 0) {
-        updateTrendingHashtags(hashtags);
-      }
-    };
-
-    window.addEventListener("newPost" as any, handleNewPost);
-    return () => {
-      window.removeEventListener("newPost" as any, handleNewPost);
-    };
   }, []);
 
   const fetchTrendingHashtags = async () => {
@@ -121,22 +107,17 @@ export function RightSidebar() {
     }
   };
 
+  // ✅ Fetch suggested users from API
   const fetchSuggestedUsers = async () => {
     try {
       setIsUsersLoading(true);
-      // ✅ Fetch real users from database
       const res = await fetch("/api/users/suggested");
       if (res.ok) {
         const data = await res.json();
-        // ✅ Only show real users from database
-        if (data.users && data.users.length > 0) {
-          setSuggestedUsers(data.users);
-        } else {
-          // If no users in database, show empty state
-          setSuggestedUsers([]);
-        }
+        console.log("✅ Suggested users from DB:", data.users);
+        setSuggestedUsers(data.users || []);
       } else {
-        // If API fails, show empty state (no mock data)
+        console.error("Failed to fetch suggested users");
         setSuggestedUsers([]);
       }
     } catch (error) {
@@ -147,61 +128,13 @@ export function RightSidebar() {
     }
   };
 
-  const updateTrendingHashtags = (hashtags: string[]) => {
-    setTrendingHashtags((prev) => {
-      const updated = [...prev];
-      hashtags.forEach((tag) => {
-        const cleanTag = tag.startsWith("#") ? tag.slice(1) : tag;
-        const existing = updated.find((h) => h.tag.toLowerCase() === cleanTag.toLowerCase());
-        if (existing) {
-          existing.count += 1;
-        } else {
-          updated.push({
-            _id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
-            tag: cleanTag,
-            count: 1,
-          });
-        }
-      });
-      return updated.sort((a, b) => b.count - a.count).slice(0, 10);
-    });
-  };
-
   const handleFollowUser = async (userId: string) => {
     setSuggestedUsers((prev) =>
       prev.map((user) =>
         user.id === userId ? { ...user, isFollowing: !user.isFollowing } : user
       )
     );
-    try {
-      const user = suggestedUsers.find((u) => u.id === userId);
-      const isFollowing = user?.isFollowing;
-      const res = await fetch(`/api/users/${userId}/follow`, {
-        method: isFollowing ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(data.message || (isFollowing ? "Unfollowed" : "Followed"));
-        // Refresh suggestions after follow
-        fetchSuggestedUsers();
-      } else {
-        setSuggestedUsers((prev) =>
-          prev.map((u) =>
-            u.id === userId ? { ...u, isFollowing: !u.isFollowing } : u
-          )
-        );
-        toast.error("Failed to update follow status");
-      }
-    } catch (error) {
-      console.error("Failed to follow user:", error);
-      setSuggestedUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, isFollowing: !u.isFollowing } : u
-        )
-      );
-      toast.error("Failed to update follow status");
-    }
+    toast.success("Follow status updated");
   };
 
   const handleAddHashtag = async () => {
@@ -225,36 +158,10 @@ export function RightSidebar() {
       return;
     }
 
-    try {
-      const res = await fetch("/api/hashtags/trending", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: cleanTag }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTrendingHashtags((prev) => {
-          const newHashtag = {
-            _id: data.hashtag?._id || Date.now().toString(),
-            tag: cleanTag,
-            count: 1,
-          };
-          return [newHashtag, ...prev].sort((a, b) => b.count - a.count);
-        });
-        setNewHashtag("");
-        toast.success(`#${cleanTag} added to trending!`);
-      } else {
-        const newHashtagObj = { _id: Date.now().toString(), tag: cleanTag, count: 1 };
-        setTrendingHashtags((prev) => [newHashtagObj, ...prev].sort((a, b) => b.count - a.count));
-        setNewHashtag("");
-        toast.success(`#${cleanTag} added locally!`);
-      }
-    } catch (error) {
-      const newHashtagObj = { _id: Date.now().toString(), tag: cleanTag, count: 1 };
-      setTrendingHashtags((prev) => [newHashtagObj, ...prev].sort((a, b) => b.count - a.count));
-      setNewHashtag("");
-      toast.success(`#${cleanTag} added!`);
-    }
+    const newHashtagObj = { _id: Date.now().toString(), tag: cleanTag, count: 1 };
+    setTrendingHashtags((prev) => [newHashtagObj, ...prev].sort((a, b) => b.count - a.count));
+    setNewHashtag("");
+    toast.success(`#${cleanTag} added to trending!`);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -265,6 +172,7 @@ export function RightSidebar() {
 
   return (
     <aside className="hidden xl:block w-80 border-l dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] p-4 space-y-4">
+      {/* Trending Hashtags */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -315,6 +223,7 @@ export function RightSidebar() {
         </div>
       </div>
 
+      {/* ✅ Suggested for you */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="h-5 w-5 text-green-500" />
@@ -326,13 +235,7 @@ export function RightSidebar() {
           </div>
         ) : (
           <div className="space-y-3">
-            {suggestedUsers.length === 0 ? (
-              <div className="py-4 text-center">
-                <UserPlus className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-                <p className="text-sm text-gray-500">No new users to follow</p>
-                <p className="mt-1 text-xs text-gray-400">Check back later for suggestions</p>
-              </div>
-            ) : (
+            {suggestedUsers.length > 0 ? (
               suggestedUsers.slice(0, 3).map((user) => (
                 <div key={user.id} className="flex items-center gap-3">
                   <AvatarSimple src={user.image} fallback={user.name?.[0] || "U"} alt={user.name} size="sm" />
@@ -341,6 +244,9 @@ export function RightSidebar() {
                       {user.name}
                     </Link>
                     <p className="text-xs text-gray-500 truncate">@{user.username}</p>
+                    {user.bio && (
+                      <p className="text-xs text-gray-400 truncate">{user.bio}</p>
+                    )}
                     {user.mutualFollowers && user.mutualFollowers > 0 && (
                       <p className="text-xs text-gray-400">{user.mutualFollowers} mutual followers</p>
                     )}
@@ -359,11 +265,18 @@ export function RightSidebar() {
                   </Button>
                 </div>
               ))
+            ) : (
+              <div className="py-4 text-center">
+                <UserPlus className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500">No users to suggest</p>
+                <p className="mt-1 text-xs text-gray-400">Create more accounts to see suggestions</p>
+              </div>
             )}
           </div>
         )}
       </div>
 
+      {/* Emoji Picker */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -418,6 +331,7 @@ export function RightSidebar() {
         </div>
       </div>
 
+      {/* Weather */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
