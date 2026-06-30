@@ -1,39 +1,34 @@
 // app/(main)/profile/[id]/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  MapPin,
-  Link as LinkIcon,
-  Calendar,
-  Settings,
-  Edit3,
-  Share2,
   Heart,
-  Bookmark,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  Globe,
+  Users,
+  User,
   Loader2,
-  Camera,
-  Sparkles,
+  Mail,
+  UserPlus,
+  UserCheck,
+  Calendar,
+  MapPin,
+  Link2,
+  Image as ImageIcon,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarSimple } from "@/components/ui/avatar-simple";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import PostCard from "@/components/posts/PostCard";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Image from "next/image";
 
-interface UserProfile {
+interface Profile {
   _id: string;
   name: string;
   username: string;
@@ -43,401 +38,412 @@ interface UserProfile {
   bio?: string;
   location?: string;
   website?: string;
-  followers: string[];
-  following: string[];
-  postsCount: number;
-  followersCount: number;
-  followingCount: number;
-  isFollowing: boolean;
-  isOwnProfile: boolean;
   createdAt: string;
+  followers: number;
+  following: number;
+  posts: number;
+  isFollowing: boolean;
 }
 
 interface Post {
   _id: string;
   content: string;
+  image?: string;
+  video?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  createdAt: string;
+  isLiked: boolean;
+  hashtags?: string[];
+  category?: string;
   author: {
     _id: string;
     name: string;
     username: string;
     image?: string;
-    isFollowing?: boolean;
-    verified?: boolean;
   };
-  createdAt: string;
-  likesCount: number;
-  commentsCount: number;
-  repostsCount: number;
-  liked: boolean;
-  bookmarked: boolean;
-  reposted: boolean;
-  media: string[];
-  hashtags: string[];
-  mood?: string;
-  category?: string;
-  viewsCount: number;
-  isPinned: boolean;
-  aiSummary?: string;
 }
 
-export default function ProfilePage() {
+export default function UserProfilePage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const params = useParams();
-  const userId = params?.id as string;
+  const router = useRouter();
+  const userId = params.id as string;
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    bio: "",
-    location: "",
-    website: "",
-  });
-  const [activeTab, setActiveTab] = useState<"posts" | "likes" | "bookmarks">("posts");
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"posts" | "replies" | "media">("posts");
+  const [isCurrentUser, setIsCurrentUser] = useState(false);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/users/${userId}`);
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to fetch profile");
+      
+      if (!userId) {
+        if (session?.user?.id) {
+          router.push(`/profile/${session.user.id}`);
+        } else {
+          router.push("/feed");
+        }
+        return;
       }
-      const data = await res.json();
-      setProfile(data.user);
-      setEditForm({
-        name: data.user.name || "",
-        bio: data.user.bio || "",
-        location: data.user.location || "",
-        website: data.user.website || "",
-      });
+
+      console.log("🔍 Fetching user profile for ID:", userId);
+      
+      const res = await fetch(`/api/users/${userId}`);
+      console.log("📊 Response status:", res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log("📊 Profile data:", data);
+        setProfile(data.user);
+        setIsFollowing(data.user.isFollowing || false);
+        setIsCurrentUser(data.user._id === session?.user?.id);
+      } else {
+        const error = await res.json();
+        console.error("❌ Error:", error);
+        toast.error(error.error || "Failed to load profile");
+        router.push("/feed");
+      }
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error("Failed to fetch profile:", error);
       toast.error("Failed to load profile");
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  };
 
-  const fetchPosts = useCallback(async () => {
+  const fetchUserPosts = async () => {
     try {
       const res = await fetch(`/api/users/${userId}/posts`);
-      if (!res.ok) throw new Error("Failed to fetch posts");
-      const data = await res.json();
-      setPosts(data.posts || []);
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data.posts || []);
+      }
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      console.error("Failed to fetch posts:", error);
     }
-  }, [userId]);
+  };
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-    if (userId) {
+    if (status === "authenticated" && userId) {
       fetchProfile();
-      fetchPosts();
+      fetchUserPosts();
     }
-  }, [userId, status, router, fetchProfile, fetchPosts]);
+  }, [status, userId]);
 
   const handleFollow = async () => {
-    if (!session) return;
-    setIsFollowLoading(true);
     try {
-      const action = profile?.isFollowing ? "unfollow" : "follow";
-      const res = await fetch(`/api/users/${userId}/follow?action=${action}`, {
-        method: "POST",
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method: isFollowing ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) {
+      if (res.ok) {
         const data = await res.json();
-        throw new Error(data.message || "Failed to update follow");
-      }
-      const data = await res.json();
-      setProfile((prev) => {
-        if (!prev) return prev;
-        return {
+        setIsFollowing(!isFollowing);
+        setProfile(prev => prev ? {
           ...prev,
-          isFollowing: data.isFollowing,
-          followersCount: data.isFollowing
-            ? prev.followersCount + 1
-            : prev.followersCount - 1,
-        };
-      });
-      toast.success(data.isFollowing ? "Followed!" : "Unfollowed!");
-    } catch (error) {
-      console.error("Error updating follow:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update follow");
-    } finally {
-      setIsFollowLoading(false);
-    }
-  };
-
-  const handleUpdateProfile = async () => {
-    try {
-      const res = await fetch("/api/users/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to update profile");
+          followers: isFollowing ? prev.followers - 1 : prev.followers + 1,
+          isFollowing: !isFollowing
+        } : null);
+        toast.success(data.message || (isFollowing ? "Unfollowed" : "Followed"));
       }
-      const data = await res.json();
-      setProfile((prev) => ({
-        ...prev!,
-        name: data.user.name,
-        bio: data.user.bio,
-        location: data.user.location,
-        website: data.user.website,
-      }));
-      setIsEditing(false);
-      toast.success("Profile updated!");
     } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+      console.error("Failed to follow:", error);
+      toast.error("Failed to update follow status");
     }
   };
 
-  const handleDeletePost = (postId: string) => {
-    setPosts((prev) => prev.filter((post) => post._id !== postId));
-    toast.success("Post deleted");
+  const handleLike = async (postId: string) => {
+    setPosts((prev) =>
+      prev.map((post) =>
+        post._id === postId
+          ? {
+              ...post,
+              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+              isLiked: !post.isLiked,
+            }
+          : post
+      )
+    );
   };
 
-  if (isLoading) {
+  const getTimeAgo = (date: string) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(date).toLocaleDateString();
+  };
+
+  if (status === "loading" || isLoading) {
     return (
-      <div className="mx-auto max-w-4xl p-4">
-        <div className="animate-pulse">
-          <div className="h-48 w-full rounded-xl bg-muted" />
-          <div className="mt-4 flex items-center gap-4">
-            <div className="h-24 w-24 rounded-full bg-muted" />
-            <div className="flex-1">
-              <div className="h-6 w-32 rounded bg-muted" />
-              <div className="mt-1 h-4 w-24 rounded bg-muted" />
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <div className="h-4 w-full rounded bg-muted" />
-            <div className="h-4 w-3/4 rounded bg-muted" />
-          </div>
-          <div className="mt-6 flex gap-4">
-            <div className="h-10 w-20 rounded bg-muted" />
-            <div className="h-10 w-20 rounded bg-muted" />
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+          Welcome to Zenthra
+        </h2>
+        <p className="text-gray-500 mt-2">Please sign in to view profiles</p>
+        <Link
+          href="/login"
+          className="inline-block mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+        >
+          Sign In
+        </Link>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-4xl p-4 text-center">
-        <p className="text-muted-foreground">User not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.back()}>
-          Go Back
+      <div className="text-center py-20">
+        <div className="text-6xl mb-4">👤</div>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          User not found
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">
+          The user you're looking for doesn't exist
+        </p>
+        <Button
+          onClick={() => fetchProfile()}
+          className="mt-4"
+        >
+          <Loader2 className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+          Retry
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4">
-      {/* Cover Image */}
-      <div className="relative h-48 w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-purple-500">
+    <div className="max-w-4xl mx-auto">
+      {/* Cover Photo */}
+      <div className="relative rounded-xl overflow-hidden h-48 md:h-56 lg:h-64 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 dark:from-blue-800 dark:via-purple-800 dark:to-pink-800">
         {profile.coverImage ? (
-          <Image
-            src={profile.coverImage}
-            alt="Cover"
-            fill
-            className="object-cover"
+          <img 
+            src={profile.coverImage} 
+            alt="Cover" 
+            className="w-full h-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-white/30">
-            <Camera className="h-12 w-12" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+            <div className="text-center text-white/60">
+              <ImageIcon className="h-12 w-12 mx-auto mb-2" />
+              <p className="text-sm">Cover photo</p>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Profile Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-24 w-24 border-4 border-background">
-            <AvatarImage src={profile.image} />
-            <AvatarFallback className="text-2xl">
-              {profile.name?.[0]?.toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-2xl font-bold">{profile.name}</h1>
-            <p className="text-muted-foreground">@{profile.username}</p>
-            <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{profile.followersCount} followers</span>
-              <span>{profile.followingCount} following</span>
-              <span>{profile.postsCount} posts</span>
-            </div>
+      {/* Profile Info */}
+      <div className="relative px-4 sm:px-6">
+        {/* Avatar */}
+        <div className="relative -mt-16 sm:-mt-20">
+          <div className="relative inline-block">
+            <AvatarSimple
+              src={profile.image}
+              fallback={profile.name?.[0] || "U"}
+              alt={profile.name}
+              size="lg"
+              className="h-24 w-24 sm:h-32 sm:w-32 text-3xl ring-4 ring-white dark:ring-gray-900"
+            />
           </div>
         </div>
 
-        <div className="flex gap-2">
-          {profile.isOwnProfile ? (
-            <>
-              <Button variant="outline" onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-              <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Edit3 className="mr-2 h-4 w-4" />
-                    Edit Profile
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Edit Profile</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Name</label>
-                      <Input
-                        value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, name: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Bio</label>
-                      <Textarea
-                        value={editForm.bio}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, bio: e.target.value }))
-                        }
-                        rows={3}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Location</label>
-                      <Input
-                        value={editForm.location}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, location: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Website</label>
-                      <Input
-                        value={editForm.website}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, website: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <Button onClick={handleUpdateProfile} className="w-full">
-                      Save Changes
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </>
-          ) : (
-            <Button
-              variant={profile.isFollowing ? "outline" : "default"}
-              onClick={handleFollow}
-              disabled={isFollowLoading}
-            >
-              {isFollowLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : profile.isFollowing ? (
-                "Following"
-              ) : (
-                "Follow"
+        {/* Name and Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mt-3 sm:mt-4">
+          <div>
+            <h1 className="text-2xl font-bold">{profile.name}</h1>
+            <p className="text-gray-500">@{profile.username}</p>
+            {profile.bio && (
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{profile.bio}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
+              {profile.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {profile.location}
+                </span>
               )}
-            </Button>
-          )}
-          <Button variant="outline" size="icon">
-            <Share2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+              {profile.website && (
+                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-500 hover:underline">
+                  <Link2 className="h-3.5 w-3.5" />
+                  {profile.website}
+                </a>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                Joined {new Date(profile.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
 
-      {/* Bio & Info */}
-      <div className="space-y-2">
-        {profile.bio && <p className="text-sm">{profile.bio}</p>}
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          {profile.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              {profile.location}
-            </span>
-          )}
-          {profile.website && (
-            <a
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:underline"
-            >
-              <LinkIcon className="h-4 w-4" />
-              {profile.website}
-            </a>
-          )}
-          <span className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            Joined {new Date(profile.createdAt).toLocaleDateString()}
-          </span>
+          <div className="flex items-center gap-2 mt-3 sm:mt-0">
+            {isCurrentUser ? (
+              <Link href="/settings">
+                <Button variant="outline" size="sm">Edit Profile</Button>
+              </Link>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant={isFollowing ? "default" : "outline"}
+                  className={cn(
+                    "gap-1",
+                    isFollowing && "bg-green-500 hover:bg-green-600 text-white"
+                  )}
+                  onClick={handleFollow}
+                >
+                  {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                  {isFollowing ? "Following" : "Follow"}
+                </Button>
+                <Link href={`/messages?userId=${profile._id}`}>
+                  <Button variant="outline" size="sm">
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex flex-wrap items-center gap-6 mt-4 pb-4 border-b dark:border-gray-800">
+          <div className="text-center">
+            <p className="text-lg font-bold">{profile.posts}</p>
+            <p className="text-xs text-gray-500">Posts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold">{profile.followers}</p>
+            <p className="text-xs text-gray-500">Followers</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold">{profile.following}</p>
+            <p className="text-xs text-gray-500">Following</p>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "posts" | "likes" | "bookmarks")}
-      >
-        <TabsList className="w-full">
-          <TabsTrigger value="posts" className="flex-1">
-            Posts
-          </TabsTrigger>
-          <TabsTrigger value="likes" className="flex-1">
-            <Heart className="mr-2 h-4 w-4" />
-            Likes
-          </TabsTrigger>
-          {profile.isOwnProfile && (
-            <TabsTrigger value="bookmarks" className="flex-1">
-              <Bookmark className="mr-2 h-4 w-4" />
-              Bookmarks
-            </TabsTrigger>
-          )}
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center gap-1 mt-4 border-b dark:border-gray-800">
+        {["posts", "replies", "media"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors border-b-2",
+              activeTab === tab
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            )}
+          >
+            {tab === "posts" ? "Posts" : tab === "replies" ? "Replies" : "Media"}
+          </button>
+        ))}
+      </div>
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <div className="py-12 text-center">
-          <Sparkles className="mx-auto h-12 w-12 text-muted-foreground/30" />
-          <p className="mt-2 text-muted-foreground">
-            {activeTab === "posts"
-              ? "No posts yet"
-              : activeTab === "likes"
-              ? "No liked posts"
-              : "No bookmarked posts"}
+        <div className="text-center py-12">
+          <div className="text-4xl mb-3">📝</div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No posts yet</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {isCurrentUser ? "Create your first post!" : "This user hasn't posted yet"}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 mt-4">
           {posts.map((post) => (
-            <PostCard
-              key={post._id}
-              post={post}
-              onDelete={() => handleDeletePost(post._id)}
-            />
+            <div key={post._id} className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+              {post.category && post.category !== "General" && (
+                <div className="mb-2">
+                  <Badge variant="outline" className="text-xs">{post.category}</Badge>
+                </div>
+              )}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <AvatarSimple
+                    src={post.author?.image || profile.image}
+                    fallback={post.author?.name?.[0] || profile.name?.[0] || "U"}
+                    alt={post.author?.name || profile.name}
+                    size="md"
+                  />
+                  <div>
+                    <Link href={`/profile/${post.author?._id || profile._id}`} className="font-semibold hover:underline">
+                      {post.author?.name || profile.name}
+                    </Link>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>@{post.author?.username || profile.username}</span>
+                      <span>·</span>
+                      <span>{getTimeAgo(post.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="mt-3">
+                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                  {post.content?.split(/(#\w+)/g).map((part, index) => {
+                    if (part.startsWith("#")) {
+                      return (
+                        <Link
+                          key={index}
+                          href={`/explore?q=${encodeURIComponent(part.slice(1))}`}
+                          className="text-blue-500 hover:underline"
+                        >
+                          {part}
+                        </Link>
+                      );
+                    }
+                    return part;
+                  })}
+                </p>
+                {post.image && (
+                  <img src={post.image} alt="Post" className="mt-2 rounded-lg max-h-64 object-cover" />
+                )}
+                {post.video && (
+                  <video src={post.video} controls className="mt-2 rounded-lg max-h-64" />
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-3 pt-3 border-t dark:border-gray-800">
+                <button
+                  onClick={() => handleLike(post._id)}
+                  className={cn(
+                    "flex items-center gap-2 text-sm",
+                    post.isLiked ? "text-red-500" : "text-gray-500 hover:text-red-500"
+                  )}
+                >
+                  <Heart className={cn("h-5 w-5", post.isLiked && "fill-current")} />
+                  <span>{post.likes}</span>
+                </button>
+                <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-500">
+                  <MessageCircle className="h-5 w-5" />
+                  <span>{post.comments}</span>
+                </button>
+                <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-500">
+                  <Share2 className="h-5 w-5" />
+                  <span>{post.shares}</span>
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

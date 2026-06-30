@@ -1,19 +1,21 @@
-// test-db.js
-const mongoose = require('mongoose');
+﻿const { MongoClient } = require('mongodb');
 
-const MONGODB_URI = "mongodb+srv://manojkumar:manoj1234@cluster0.hcrcwnx.mongodb.net/zenthra?retryWrites=true&w=majority&appName=Cluster0";
+const uri = "mongodb://localhost:27017/zenthra";
 
-async function testConnection() {
+async function test() {
   try {
     console.log("🔄 Connecting to MongoDB...");
-    await mongoose.connect(MONGODB_URI);
+    const client = await MongoClient.connect(uri);
     console.log("✅ Connected successfully!");
-    console.log("✅ Database:", mongoose.connection.db.databaseName);
-    await mongoose.disconnect();
+    const db = client.db('zenthra');
+    console.log("✅ Database:", db.databaseName);
+    await client.close();
     console.log("✅ Disconnected");
-  } catch (error) {
-    console.error("❌ Connection failed:", error.message);
+    process.exit(0);
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+    process.exit(1);
   }
 }
 
-testConnection();
+test();

@@ -1,93 +1,176 @@
 // app/api/hashtags/trending/route.ts
 import { NextResponse } from "next/server";
-
-export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
-
 import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
 
-import { connectDB } from "@/lib/db/connect";
-
-import { Hashtag } from "@/lib/db/models/Hashtag";
-
-
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    await connectDB();
+    const db = await connectToDatabase();
+    
+    // Get trending hashtags sorted by count
+    const hashtags = await db.collection("hashtags")
+      .find()
+      .sort({ count: -1 })
+      .limit(10)
+      .project({ 
+        _id: 1, 
+        tag: 1, 
+        count: 1,
+        isTrending: 1
+      })
+      .toArray();
 
-    const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get("limit") || "10");
+    // If no hashtags exist, return mock trending data for demo
+    if (hashtags.length === 0) {
+      // Check if there are posts to generate hashtags from
+      const posts = await db.collection("posts")
+        .find()
+        .limit(20)
+        .toArray();
 
-    // Get top trending hashtags by count
-    const hashtags = await Hashtag.find({ count: { $gt: 0 } })
-      .sort({ count: -1, lastUsed: -1 })
-      .limit(limit)
-      .lean();
+      const tagCounts: Record<string, number> = {};
+      posts.forEach((post: any) => {
+        if (post.hashtags && Array.isArray(post.hashtags)) {
+          post.hashtags.forEach((tag: string) => {
+            const cleanTag = tag.toLowerCase();
+            tagCounts[cleanTag] = (tagCounts[cleanTag] || 0) + 1;
+          });
+        }
+      });
 
-    // Format the response
-    const formattedHashtags = hashtags.map((tag: any) => ({
-      id: tag._id.toString(),
-      tag: tag.tag,
-      count: tag.count,
-      isActive: tag.isTrending || tag.count > 3,
-      lastUsed: tag.lastUsed,
-    }));
+      const generatedHashtags = Object.entries(tagCounts)
+        .map(([tag, count]) => ({
+          _id: `temp_${tag}`,
+          tag: tag,
+          count: count,
+          isTrending: count > 3
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
 
-    return NextResponse.json({ hashtags: formattedHashtags });
+      if (generatedHashtags.length > 0) {
+        return NextResponse.json({ hashtags: generatedHashtags });
+      }
+
+      // Return empty array if no hashtags
+      return NextResponse.json({ hashtags: [] });
+    }
+
+    return NextResponse.json({ hashtags });
   } catch (error) {
     console.error("Error fetching trending hashtags:", error);
     return NextResponse.json(
-      { error: "Failed to fetch trending hashtags", hashtags: [] },
+      { error: "Failed to fetch trending hashtags" },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
-
-    const body = await req.json();
-    const { tag, postId } = body;
+    const db = await connectToDatabase();
+    const body = await request.json();
+    const { tag } = body;
 
     if (!tag) {
-      return NextResponse.json({ error: "Tag is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Tag is required" },
+        { status: 400 }
+      );
     }
 
-    const cleanTag = tag.toLowerCase().trim().replace(/\s/g, "");
-
-    // Find and update or create hashtag
-    const hashtag = await Hashtag.findOneAndUpdate(
+    const cleanTag = tag.toLowerCase().trim();
+    
+    // Update or insert hashtag
+    const result = await db.collection("hashtags").findOneAndUpdate(
       { tag: cleanTag },
-      {
+      { 
         $inc: { count: 1 },
-        $addToSet: { posts: postId },
-        $set: { lastUsed: new Date() },
+        $set: { 
+          lastUsed: new Date(),
+          isTrending: true
+        },
+        $setOnInsert: {
+          createdAt: new Date()
+        }
       },
-      { upsert: true, new: true }
+      { 
+        upsert: true, 
+        returnDocument: "after" 
+      }
     );
 
-    // Check if it should be trending (count > 3)
-    if (hashtag.count > 3) {
-      await Hashtag.updateOne({ _id: hashtag._id }, { $set: { isTrending: true } });
+    // If count is high enough, mark as trending
+    if (result && result.count > 5) {
+      await db.collection("hashtags").updateOne(
+        { tag: cleanTag },
+        { $set: { isTrending: true } }
+      );
     }
 
-    return NextResponse.json({
-      hashtag: {
-        id: hashtag._id.toString(),
-        tag: hashtag.tag,
-        count: hashtag.count,
-        isActive: hashtag.isTrending || hashtag.count > 3,
-      },
-      message: "Hashtag updated successfully",
+    return NextResponse.json({ 
+      hashtag: result,
+      message: "Hashtag updated successfully" 
     });
   } catch (error) {
     console.error("Error updating hashtag:", error);
-    return NextResponse.json({ error: "Failed to update hashtag" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update hashtag" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const db = await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+    const tag = searchParams.get("tag");
+
+    if (!tag) {
+      return NextResponse.json(
+        { error: "Tag is required" },
+        { status: 400 }
+      );
+    }
+
+    const cleanTag = tag.toLowerCase().trim();
+    
+    // Decrease count or remove if count becomes 0
+    const result = await db.collection("hashtags").findOneAndUpdate(
+      { tag: cleanTag },
+      { $inc: { count: -1 } },
+      { returnDocument: "after" }
+    );
+
+    // If count is 0 or less, delete the hashtag
+    if (result && result.count <= 0) {
+      await db.collection("hashtags").deleteOne({ tag: cleanTag });
+      return NextResponse.json({ 
+        message: "Hashtag removed completely" 
+      });
+    }
+
+    return NextResponse.json({ 
+      message: "Hashtag count decreased",
+      count: result?.count || 0
+    });
+  } catch (error) {
+    console.error("Error deleting hashtag:", error);
+    return NextResponse.json(
+      { error: "Failed to delete hashtag" },
+      { status: 500 }
+    );
   }
 }

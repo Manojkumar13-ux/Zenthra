@@ -1,39 +1,43 @@
 // app/(main)/profile/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  MapPin,
-  Link as LinkIcon,
-  Calendar,
-  Edit3,
-  Share2,
   Heart,
-  Bookmark,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  Globe,
+  Users,
+  User,
   Loader2,
-  Camera,
-  Sparkles,
+  Mail,
+  UserPlus,
+  UserCheck,
+  Calendar,
+  MapPin,
+  Link2,
   Settings,
+  Edit,
+  Camera,
+  Image as ImageIcon,
+  X,
+  Check,
+  Save,
+  PenSquare,
 } from "lucide-react";
 import { AvatarSimple } from "@/components/ui/avatar-simple";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import PostCard from "@/components/posts/PostCard";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
-interface UserProfile {
+interface Profile {
   _id: string;
   name: string;
   username: string;
@@ -43,171 +47,338 @@ interface UserProfile {
   bio?: string;
   location?: string;
   website?: string;
-  followers: string[];
-  following: string[];
-  postsCount: number;
-  followersCount: number;
-  followingCount: number;
-  isFollowing: boolean;
-  isOwnProfile: boolean;
   createdAt: string;
+  followers: number;
+  following: number;
+  posts: number;
 }
 
 interface Post {
   _id: string;
   content: string;
+  image?: string;
+  video?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  createdAt: string;
+  isLiked: boolean;
+  hashtags?: string[];
+  category?: string;
   author: {
     _id: string;
     name: string;
     username: string;
     image?: string;
-    isFollowing?: boolean;
-    verified?: boolean;
   };
-  createdAt: string;
-  likesCount: number;
-  commentsCount: number;
-  repostsCount: number;
-  liked: boolean;
-  bookmarked: boolean;
-  reposted: boolean;
-  media: string[];
-  hashtags: string[];
-  mood?: string;
-  category?: string;
-  viewsCount: number;
-  isPinned: boolean;
-  aiSummary?: string;
 }
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"posts" | "replies" | "media">("posts");
+  
+  // Edit states
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    bio: "",
-    location: "",
-    website: "",
-  });
-  const [activeTab, setActiveTab] = useState<"posts" | "likes" | "bookmarks">("posts");
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editWebsite, setEditWebsite] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const fetchUserProfile = async () => {
+  // File upload refs
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchProfile = async () => {
     try {
-      const res = await fetch("/api/users/profile");
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to fetch profile");
+      setIsLoading(true);
+      
+      if (!session?.user?.id) {
+        router.push("/login");
+        return;
       }
-      const data = await res.json();
-      setUser(data.user);
-      setEditForm({
-        name: data.user.name || "",
-        bio: data.user.bio || "",
-        location: data.user.location || "",
-        website: data.user.website || "",
-      });
+
+      console.log("🔍 Fetching profile for user ID:", session.user.id);
+      
+      const res = await fetch(`/api/users/${session.user.id}`);
+      console.log("📊 Response status:", res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log("📊 Profile data:", data);
+        setProfile(data.user);
+        setEditName(data.user.name || "");
+        setEditBio(data.user.bio || "");
+        setEditLocation(data.user.location || "");
+        setEditWebsite(data.user.website || "");
+      } else {
+        const error = await res.json();
+        console.error("❌ Error response:", error);
+        toast.error(error.error || "Failed to load profile");
+        // Use session data as fallback
+        if (session?.user) {
+          setProfile({
+            _id: session.user.id,
+            name: session.user.name || "User",
+            username: session.user.username || session.user.email?.split("@")[0] || "user",
+            email: session.user.email || "",
+            image: session.user.image || "",
+            bio: "",
+            location: "",
+            website: "",
+            createdAt: new Date().toISOString(),
+            followers: 0,
+            following: 0,
+            posts: 0,
+          });
+          setEditName(session.user.name || "");
+        }
+      }
     } catch (error) {
-      console.error("Error fetching profile:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to load profile");
+      console.error("Failed to fetch profile:", error);
+      toast.error("Failed to load profile");
+      // Use session data as fallback
+      if (session?.user) {
+        setProfile({
+          _id: session.user.id,
+          name: session.user.name || "User",
+          username: session.user.username || session.user.email?.split("@")[0] || "user",
+          email: session.user.email || "",
+          image: session.user.image || "",
+          bio: "",
+          location: "",
+          website: "",
+          createdAt: new Date().toISOString(),
+          followers: 0,
+          following: 0,
+          posts: 0,
+        });
+        setEditName(session.user.name || "");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchUserPosts = async () => {
     try {
-      const res = await fetch("/api/users/posts");
-      if (!res.ok) throw new Error("Failed to fetch posts");
-      const data = await res.json();
-      setPosts(data.posts || []);
+      if (!session?.user?.id) return;
+      
+      console.log("🔍 Fetching posts for user ID:", session.user.id);
+      
+      const res = await fetch(`/api/users/${session.user.id}/posts`);
+      if (res.ok) {
+        const data = await res.json();
+        console.log("📊 Posts data:", data.posts?.length || 0);
+        setPosts(data.posts || []);
+      }
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      console.error("Failed to fetch posts:", error);
     }
   };
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-    if (session?.user) {
-      fetchUserProfile();
+    if (status === "authenticated") {
+      fetchProfile();
       fetchUserPosts();
     }
-  }, [session, status, router]);
+  }, [status]);
 
+  // ============================================
+  // Profile Update Functions
+  // ============================================
   const handleUpdateProfile = async () => {
+    setIsSaving(true);
     try {
       const res = await fetch("/api/users/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          name: editName,
+          bio: editBio,
+          location: editLocation,
+          website: editWebsite,
+        }),
       });
-      if (!res.ok) {
+
+      if (res.ok) {
         const data = await res.json();
-        throw new Error(data.message || "Failed to update profile");
+        setProfile(prev => prev ? { ...prev, ...data.user } : null);
+        setIsEditing(false);
+        toast.success("Profile updated successfully!");
+      } else {
+        toast.error("Failed to update profile");
       }
-      const data = await res.json();
-      setUser((prev) => ({
-        ...prev!,
-        name: data.user.name,
-        bio: data.user.bio,
-        location: data.user.location,
-        website: data.user.website,
-      }));
-      setIsEditing(false);
-      toast.success("Profile updated!");
     } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+      console.error("Failed to update profile:", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDeletePost = (postId: string) => {
-    setPosts((prev) => prev.filter((post) => post._id !== postId));
-    toast.success("Post deleted");
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const res = await fetch("/api/users/profile/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(prev => prev ? { ...prev, image: data.imageUrl } : null);
+        toast.success("Profile picture updated!");
+      } else {
+        toast.error("Failed to update profile picture");
+      }
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      toast.error("Failed to upload avatar");
+    }
+    e.target.value = "";
   };
 
-  if (isLoading) {
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("cover", file);
+
+      const res = await fetch("/api/users/profile/cover", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(prev => prev ? { ...prev, coverImage: data.imageUrl } : null);
+        toast.success("Cover photo updated!");
+      } else {
+        toast.error("Failed to update cover photo");
+      }
+    } catch (error) {
+      console.error("Failed to upload cover:", error);
+      toast.error("Failed to upload cover");
+    }
+    e.target.value = "";
+  };
+
+  const handleLike = async (postId: string) => {
+    setPosts((prev) =>
+      prev.map((post) =>
+        post._id === postId
+          ? {
+              ...post,
+              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+              isLiked: !post.isLiked,
+            }
+          : post
+      )
+    );
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const res = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setPosts(posts.filter(post => post._id !== postId));
+        toast.success("Post deleted");
+        setProfile(prev => prev ? { ...prev, posts: prev.posts - 1 } : null);
+      } else {
+        toast.error("Failed to delete post");
+      }
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      toast.error("Failed to delete post");
+    }
+  };
+
+  const getTimeAgo = (date: string) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(date).toLocaleDateString();
+  };
+
+  if (status === "loading" || isLoading) {
     return (
-      <div className="mx-auto max-w-3xl p-4">
-        <div className="animate-pulse">
-          <div className="rounded-xl bg-gray-200 dark:bg-gray-700 h-48" />
-          <div className="mt-4 flex items-center gap-4">
-            <div className="rounded-xl bg-gray-200 dark:bg-gray-700 h-24 w-24" />
-            <div className="flex-1">
-              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-              <div className="mt-1 h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   if (status === "unauthenticated") {
     return (
-      <div className="mx-auto max-w-3xl p-4 text-center">
-        <h1 className="mb-2 text-2xl font-bold">Profile</h1>
-        <p className="text-gray-500">Please sign in to view your profile</p>
-        <a
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+          Welcome to Zenthra
+        </h2>
+        <p className="text-gray-500 mt-2">Please sign in to view your profile</p>
+        <Link
           href="/login"
-          className="mt-4 inline-block rounded-lg bg-blue-500 px-6 py-2 text-white hover:bg-blue-600"
+          className="inline-block mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
         >
           Sign In
-        </a>
+        </Link>
       </div>
     );
   }
 
-  if (!user) {
+  if (!profile) {
     return (
-      <div className="mx-auto max-w-3xl p-4 text-center">
-        <h1 className="mb-2 text-2xl font-bold">Profile</h1>
-        <p className="text-gray-500">No user data available</p>
-        <Button variant="outline" className="mt-4" onClick={fetchUserProfile}>
+      <div className="text-center py-20">
+        <div className="text-6xl mb-4">👤</div>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          Profile not found
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">
+          There was an error loading your profile
+        </p>
+        <Button
+          onClick={() => fetchProfile()}
+          className="mt-4"
+        >
+          <Loader2 className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
           Retry
         </Button>
       </div>
@@ -215,204 +386,293 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="mb-4 text-2xl font-bold">Profile</h1>
-        <Button variant="outline" onClick={() => router.push("/settings")}>
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </Button>
-      </div>
+    <div className="max-w-4xl mx-auto">
+      {/* Hidden file inputs */}
+      <input
+        type="file"
+        ref={avatarInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleAvatarUpload}
+      />
+      <input
+        type="file"
+        ref={coverInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleCoverUpload}
+      />
 
-      <div className="flex flex-col gap-6 md:flex-row">
-        {/* Profile Image */}
-        <div className="relative flex-shrink-0">
-          <AvatarSimple
-            src={user.image}
-            fallback={user.name}
-            alt={user.name}
-            size="xl"
+      {/* Cover Photo */}
+      <div className="relative rounded-xl overflow-hidden h-48 md:h-56 lg:h-64 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 dark:from-blue-800 dark:via-purple-800 dark:to-pink-800">
+        {profile.coverImage ? (
+          <img 
+            src={profile.coverImage} 
+            alt="Cover" 
+            className="w-full h-full object-cover"
           />
-          <button
-            className="absolute bottom-0 right-0 rounded-full bg-blue-500 p-1.5 text-white transition-colors hover:bg-blue-600"
-            onClick={() => setIsEditing(true)}
-          >
-            <Camera className="h-4 w-4" />
-          </button>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+            <div className="text-center text-white/60">
+              <ImageIcon className="h-12 w-12 mx-auto mb-2" />
+              <p className="text-sm">Add a cover photo</p>
+            </div>
+          </div>
+        )}
+        
+        <button
+          onClick={() => coverInputRef.current?.click()}
+          className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-lg px-3 py-1.5 text-xs flex items-center gap-2 transition-colors backdrop-blur-sm"
+        >
+          <Camera className="h-4 w-4" />
+          <span className="hidden sm:inline">Change Cover</span>
+        </button>
+      </div>
+
+      {/* Profile Info */}
+      <div className="relative px-4 sm:px-6">
+        {/* Avatar */}
+        <div className="relative -mt-16 sm:-mt-20">
+          <div className="relative inline-block">
+            <AvatarSimple
+              src={profile.image}
+              fallback={profile.name?.[0] || "U"}
+              alt={profile.name}
+              size="lg"
+              className="h-24 w-24 sm:h-32 sm:w-32 text-3xl ring-4 ring-white dark:ring-gray-900"
+            />
+            <button
+              onClick={() => avatarInputRef.current?.click()}
+              className="absolute bottom-0 right-0 rounded-full bg-blue-500 p-1.5 text-white hover:bg-blue-600 transition-colors ring-2 ring-white dark:ring-gray-900"
+            >
+              <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Profile Info */}
-        <div className="flex-1">
-          <div className="flex flex-wrap items-start justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">{user.name}</h2>
-              <p className="text-gray-500">@{user.username}</p>
-            </div>
-            <Button
-              onClick={() => setIsEditing(true)}
-              variant="outline"
-              className="gap-2"
-            >
-              <Edit3 className="h-4 w-4" />
-              Edit Profile
-            </Button>
+        {/* Name and Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mt-3 sm:mt-4">
+          <div>
+            {isEditing ? (
+              <div className="space-y-2">
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="text-xl font-bold"
+                  placeholder="Your name"
+                />
+                <Textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="Tell us about yourself"
+                  className="text-sm"
+                  rows={2}
+                />
+                <Input
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                  placeholder="Location"
+                  className="text-sm"
+                />
+                <Input
+                  value={editWebsite}
+                  onChange={(e) => setEditWebsite(e.target.value)}
+                  placeholder="Website"
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleUpdateProfile} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    Save
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold">{profile.name}</h1>
+                  <Badge variant="secondary" className="text-xs">You</Badge>
+                </div>
+                <p className="text-gray-500">@{profile.username}</p>
+                {profile.bio && (
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{profile.bio}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
+                  {profile.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {profile.location}
+                    </span>
+                  )}
+                  {profile.website && (
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-500 hover:underline">
+                      <Link2 className="h-3.5 w-3.5" />
+                      {profile.website}
+                    </a>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Joined {new Date(profile.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
-          {user.bio && <p className="mt-3 text-sm">{user.bio}</p>}
-
-          <div className="mt-3 flex flex-wrap gap-4">
-            {user.location && (
-              <span className="flex items-center gap-1 text-sm text-gray-500">
-                <MapPin className="h-4 w-4" />
-                {user.location}
-              </span>
-            )}
-            {user.website && (
-              <a
-                href={user.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-blue-500 transition-colors hover:text-blue-600"
+          {!isEditing && (
+            <div className="flex items-center gap-2 mt-3 sm:mt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="gap-2"
               >
-                <LinkIcon className="h-4 w-4" />
-                {user.website}
-              </a>
-            )}
-            <span className="flex items-center gap-1 text-sm text-gray-500">
-              <Calendar className="h-4 w-4" />
-              Joined{" "}
-              {new Date(user.createdAt).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-          </div>
+                <PenSquare className="h-4 w-4" />
+                Edit Profile
+              </Button>
+              <Link href="/settings">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
 
-          <div className="mt-4 flex gap-6">
-            <div>
-              <span className="font-semibold">{user.followersCount || 0}</span>
-              <span className="ml-1 text-sm text-gray-500">Followers</span>
-            </div>
-            <div>
-              <span className="font-semibold">{user.followingCount || 0}</span>
-              <span className="ml-1 text-sm text-gray-500">Following</span>
-            </div>
-            <div>
-              <span className="font-semibold">{user.postsCount || 0}</span>
-              <span className="ml-1 text-sm text-gray-500">Posts</span>
-            </div>
+        {/* Stats */}
+        <div className="flex flex-wrap items-center gap-6 mt-4 pb-4 border-b dark:border-gray-800">
+          <div className="text-center">
+            <p className="text-lg font-bold">{profile.posts}</p>
+            <p className="text-xs text-gray-500">Posts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold">{profile.followers}</p>
+            <p className="text-xs text-gray-500">Followers</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold">{profile.following}</p>
+            <p className="text-xs text-gray-500">Following</p>
           </div>
         </div>
       </div>
-
-      {/* Edit Profile Dialog */}
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Name</label>
-              <Input
-                value={editForm.name}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Bio</label>
-              <Textarea
-                value={editForm.bio}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, bio: e.target.value }))
-                }
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Location</label>
-              <Input
-                value={editForm.location}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, location: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Website</label>
-              <Input
-                value={editForm.website}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, website: e.target.value }))
-                }
-              />
-            </div>
-            <Button onClick={handleUpdateProfile} className="w-full">
-              Save Changes
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "posts" | "likes" | "bookmarks")}
-        className="mt-6"
-      >
-        <TabsList className="w-full">
-          <TabsTrigger value="posts" className="flex-1">
-            Posts
-          </TabsTrigger>
-          <TabsTrigger value="likes" className="flex-1">
-            <Heart className="mr-2 h-4 w-4" />
-            Likes
-          </TabsTrigger>
-          <TabsTrigger value="bookmarks" className="flex-1">
-            <Bookmark className="mr-2 h-4 w-4" />
-            Bookmarks
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center gap-1 mt-4 border-b dark:border-gray-800">
+        {["posts", "replies", "media"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors border-b-2",
+              activeTab === tab
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            )}
+          >
+            {tab === "posts" ? "Posts" : tab === "replies" ? "Replies" : "Media"}
+          </button>
+        ))}
+      </div>
 
       {/* Posts */}
-      {activeTab === "posts" &&
-        (posts.length === 0 ? (
-          <div className="py-12 text-center">
-            <Sparkles className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-            <p className="text-gray-500">No posts yet</p>
-            <a
-              href="/create-post"
-              className="mt-2 inline-block text-blue-500 hover:underline"
-            >
-              Create your first post
-            </a>
-          </div>
-        ) : (
-          <div className="space-y-4 mt-4">
-            {posts.map((post) => (
-              <PostCard
-                key={post._id}
-                post={post}
-                onDelete={() => handleDeletePost(post._id)}
-              />
-            ))}
-          </div>
-        ))}
-
-      {activeTab === "likes" && (
-        <div className="py-12 text-center">
-          <Heart className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-          <p className="text-gray-500">No liked posts yet</p>
+      {posts.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-3">📝</div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No posts yet</h3>
+          <p className="text-sm text-gray-500 mt-1">Create your first post to share with the world!</p>
+          <Link href="/feed">
+            <Button className="mt-4">Create Post</Button>
+          </Link>
         </div>
-      )}
+      ) : (
+        <div className="space-y-4 mt-4">
+          {posts.map((post) => (
+            <div key={post._id} className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+              {post.category && post.category !== "General" && (
+                <div className="mb-2">
+                  <Badge variant="outline" className="text-xs">{post.category}</Badge>
+                </div>
+              )}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <AvatarSimple
+                    src={post.author?.image || profile.image}
+                    fallback={post.author?.name?.[0] || profile.name?.[0] || "U"}
+                    alt={post.author?.name || profile.name}
+                    size="md"
+                  />
+                  <div>
+                    <Link href={`/profile/${post.author?._id || profile._id}`} className="font-semibold hover:underline">
+                      {post.author?.name || profile.name}
+                    </Link>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>@{post.author?.username || profile.username}</span>
+                      <span>·</span>
+                      <span>{getTimeAgo(post.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => handleDeletePost(post._id)}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </div>
 
-      {activeTab === "bookmarks" && (
-        <div className="py-12 text-center">
-          <Bookmark className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-          <p className="text-gray-500">No bookmarked posts yet</p>
+              <div className="mt-3">
+                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                  {post.content?.split(/(#\w+)/g).map((part, index) => {
+                    if (part.startsWith("#")) {
+                      return (
+                        <Link
+                          key={index}
+                          href={`/explore?q=${encodeURIComponent(part.slice(1))}`}
+                          className="text-blue-500 hover:underline"
+                        >
+                          {part}
+                        </Link>
+                      );
+                    }
+                    return part;
+                  })}
+                </p>
+                {post.image && (
+                  <img src={post.image} alt="Post" className="mt-2 rounded-lg max-h-64 object-cover" />
+                )}
+                {post.video && (
+                  <video src={post.video} controls className="mt-2 rounded-lg max-h-64" />
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-3 pt-3 border-t dark:border-gray-800">
+                <button
+                  onClick={() => handleLike(post._id)}
+                  className={cn(
+                    "flex items-center gap-2 text-sm",
+                    post.isLiked ? "text-red-500" : "text-gray-500 hover:text-red-500"
+                  )}
+                >
+                  <Heart className={cn("h-5 w-5", post.isLiked && "fill-current")} />
+                  <span>{post.likes}</span>
+                </button>
+                <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-500">
+                  <MessageCircle className="h-5 w-5" />
+                  <span>{post.comments}</span>
+                </button>
+                <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-500">
+                  <Share2 className="h-5 w-5" />
+                  <span>{post.shares}</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

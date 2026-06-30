@@ -1,87 +1,57 @@
 // app/api/users/profile/route.ts
-import { NextRequest, NextResponse } from "next/server";
-
-export const dynamic = 'force-dynamic';
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-
 import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
-import { connectDB } from "@/lib/db/connect";
-
-import { User } from "@/lib/db/models/User";
-
-
-// GET /api/users/profile - Get current user's profile
-export async function GET() {
+export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
+    const db = await connectToDatabase();
+    const body = await request.json();
+    const { name, bio, location, website } = body;
 
-    const user = await User.findById(session.user.id).select("-password").lean();
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (bio !== undefined) updateData.bio = bio;
+    if (location !== undefined) updateData.location = location;
+    if (website !== undefined) updateData.website = website;
+    updateData.updatedAt = new Date();
 
-    if (!user) {
+    const result = await db.collection("users").findOneAndUpdate(
+      { _id: new ObjectId(session.user.id) },
+      { $set: updateData },
+      { returnDocument: "after" }
+    );
+
+    if (!result) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
-  } catch (error) {
-    console.error("Profile GET error:", error);
-    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
-  }
-}
-
-// PUT /api/users/profile - Update current user's profile
-export async function PUT(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { name, bio, username, location, website, image } = body;
-
-    await connectDB();
-
-    // Check if username is taken by another user
-    if (username) {
-      const existingUser = await User.findOne({
-        username: username.toLowerCase(),
-        _id: { $ne: session.user.id },
-      });
-      if (existingUser) {
-        return NextResponse.json({ error: "Username is already taken" }, { status: 400 });
-      }
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      session.user.id,
-      {
-        name: name || session.user.name,
-        bio: bio || "",
-        username: username ? username.toLowerCase() : session.user.username,
-        location: location || "",
-        website: website || "",
-        image: image || session.user.image,
-        updatedAt: new Date(),
+    return NextResponse.json({ 
+      user: {
+        _id: result._id.toString(),
+        name: result.name,
+        username: result.username,
+        email: result.email,
+        image: result.image,
+        bio: result.bio,
+        location: result.location,
+        website: result.website,
+        createdAt: result.createdAt,
       },
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    if (!updatedUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      user: updatedUser,
-      message: "Profile updated successfully",
+      message: "Profile updated successfully" 
     });
   } catch (error) {
-    console.error("Profile PUT error:", error);
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    console.error("Error updating profile:", error);
+    return NextResponse.json(
+      { error: "Failed to update profile" },
+      { status: 500 }
+    );
   }
 }

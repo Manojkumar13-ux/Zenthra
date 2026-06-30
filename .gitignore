@@ -106,3 +106,5 @@ temp/
 .DS_Store" > .gitignore
 .vercel
 .env*
+
+/generated/prisma
