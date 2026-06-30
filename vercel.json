@@ -6,18 +6,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "regions": ["iad1"],
-  "functions": {
-    "app/api/**/*.ts": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 10,
-      "memory": 1024
-    },
-    "app/api/**/*.js": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 10,
-      "memory": 1024
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
