@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // app/api/test/db-users/route.ts
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";

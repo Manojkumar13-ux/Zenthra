@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // app/api/test/add-follows/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
