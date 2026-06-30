@@ -21,14 +21,38 @@ export async function GET() {
     const follows = await db.collection("follows")
       .find({ followerId: session.user.id })
       .toArray();
-    const followingIds = follows.map(f => f.followingId);
-
-    // ✅ Alternative: Use $nor
-    const excludedIds = [new ObjectId(session.user.id), ...followingIds.map(id => new ObjectId(id))];
     
-    const query = {
-      _id: { $nin: excludedIds }
-    };
+    // ✅ Only include valid ObjectId strings
+    const followingIds = follows
+      .map(f => f.followingId)
+      .filter(id => id && ObjectId.isValid(id));
+
+    // Build query to exclude current user and followed users
+    const query: any = {};
+    
+    // Exclude current user
+    if (ObjectId.isValid(session.user.id)) {
+      query._id = { $ne: new ObjectId(session.user.id) };
+    }
+    
+    // Exclude followed users
+    if (followingIds.length > 0) {
+      const validObjectIds = followingIds
+        .filter(id => ObjectId.isValid(id))
+        .map(id => new ObjectId(id));
+      
+      if (validObjectIds.length > 0) {
+        // If we already have $ne for current user, combine with $nin
+        if (query._id) {
+          query._id = {
+            ...query._id,
+            $nin: validObjectIds
+          };
+        } else {
+          query._id = { $nin: validObjectIds };
+        }
+      }
+    }
 
     // Get users not followed by current user
     const users = await db.collection("users")

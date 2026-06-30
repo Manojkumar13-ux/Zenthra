@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 // app/api/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
@@ -32,27 +30,22 @@ const handler = NextAuth({
           return null;
         }
 
-        // In production, use bcrypt to compare passwords
-        // const isValid = await bcrypt.compare(credentials.password, user.password);
-        // if (!isValid) return null;
-
         return {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
           image: user.image,
           username: user.username,
-          role: user.role || "user", // ✅ Include role
         };
       },
     }),
   ],
   callbacks: {
+    // ✅ Using 'any' to fix type errors
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.username = user.username;
-        token.role = user.role || "user"; // ✅ Include role in token
       }
       return token;
     },
@@ -60,7 +53,6 @@ const handler = NextAuth({
       if (session.user) {
         session.user.id = token.id;
         session.user.username = token.username;
-        session.user.role = token.role || "user"; // ✅ Include role in session
       }
       return session;
     },
