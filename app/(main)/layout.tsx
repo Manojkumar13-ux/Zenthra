@@ -43,22 +43,24 @@ export default function MainLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50/80 via-purple-50/80 to-pink-50/80 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar
         unreadNotifications={unreadNotifications}
         unreadMessages={unreadMessages}
         onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         isMobileMenuOpen={isMobileMenuOpen}
       />
-      <div className="flex">
+      <div className="flex pt-16">
         <Sidebar
           unreadNotifications={unreadNotifications}
           unreadMessages={unreadMessages}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
-        <main className="flex-1 min-h-[calc(100vh-4rem)] max-w-3xl mx-auto p-4 lg:p-6 overflow-y-auto">
-          {children}
+        <main className="flex-1 min-h-screen px-4 py-6 lg:px-8">
+          <div className="max-w-3xl mx-auto">
+            {children}
+          </div>
         </main>
         <RightSidebar />
       </div>

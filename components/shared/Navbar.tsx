@@ -39,7 +39,6 @@ export function Navbar({
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  // ✅ Prevent hydration mismatch by rendering only after mount
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -61,9 +60,8 @@ export function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b dark:border-gray-800">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b dark:border-gray-800">
       <div className="flex items-center justify-between px-4 h-16 lg:px-6">
-        {/* Left: Logo + Mobile Menu Button */}
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuToggle}
@@ -78,7 +76,6 @@ export function Navbar({
           </Link>
         </div>
 
-        {/* Center: Search Bar */}
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-6 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -90,9 +87,7 @@ export function Navbar({
           />
         </form>
 
-        {/* Right: Icons */}
         <div className="flex items-center gap-1">
-          {/* Dark Mode Toggle - only render after mount */}
           {mounted && (
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -107,7 +102,6 @@ export function Navbar({
             </button>
           )}
 
-          {/* Notifications */}
           <button
             onClick={goToNotifications}
             className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
@@ -121,7 +115,6 @@ export function Navbar({
             )}
           </button>
 
-          {/* Messages */}
           <button
             onClick={goToMessages}
             className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
@@ -135,7 +128,6 @@ export function Navbar({
             )}
           </button>
 
-          {/* Profile */}
           <button
             onClick={goToProfile}
             className="ml-1 hover:opacity-80 transition-opacity"
@@ -151,7 +143,6 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Mobile Search */}
       <div className="md:hidden px-4 pb-3">
         <form onSubmit={handleSearch} className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
