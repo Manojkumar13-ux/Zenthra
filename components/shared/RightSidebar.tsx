@@ -174,7 +174,6 @@ export function RightSidebar() {
 
   return (
     <aside className="hidden xl:block w-80 border-l dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] p-4 space-y-4">
-      {/* Trending Hashtags */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -270,7 +269,7 @@ export function RightSidebar() {
               <div className="py-4 text-center">
                 <UserPlus className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500">No users to suggest</p>
-                <p className="mt-1 text-xs text-gray-400">Create more accounts to see suggestions</p>
+                <p className="mt-1 text-xs text-gray-400">Check back later for suggestions</p>
               </div>
             )}
           </div>
