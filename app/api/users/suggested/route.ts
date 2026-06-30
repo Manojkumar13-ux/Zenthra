@@ -1,9 +1,12 @@
-export const dynamic = 'force-dynamic';
-
 // app/api/users/suggested/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
@@ -12,37 +15,37 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Return mock suggested users (no database needed)
-    const mockUsers = [
-      { 
-        id: "2", 
-        name: "Alice Johnson", 
-        username: "alicej", 
-        image: "", 
-        bio: "Tech enthusiast", 
-        mutualFollowers: 5 
-      },
-      { 
-        id: "3", 
-        name: "Bob Smith", 
-        username: "bobsmith", 
-        image: "", 
-        bio: "Photographer", 
-        mutualFollowers: 3 
-      },
-      { 
-        id: "4", 
-        name: "Carol White", 
-        username: "carolw", 
-        image: "", 
-        bio: "Travel blogger", 
-        mutualFollowers: 7 
-      },
-    ];
+    const db = await connectToDatabase();
+    
+    // Get users the current user is following
+    const follows = await db.collection("follows")
+      .find({ followerId: session.user.id })
+      .toArray();
+    const followingIds = follows.map(f => f.followingId);
 
-    return NextResponse.json({ users: mockUsers });
+    // Get users not followed by current user
+    const users = await db.collection("users")
+      .find({
+        _id: { $ne: new ObjectId(session.user.id) },
+        _id: { $nin: followingIds.map(id => new ObjectId(id)) }
+      })
+      .limit(5)
+      .toArray();
+
+    // Format users
+    const formattedUsers = users.map(user => ({
+      id: user._id.toString(),
+      name: user.name,
+      username: user.username,
+      image: user.image || null,
+      bio: user.bio || "",
+      mutualFollowers: 0,
+      isFollowing: false,
+    }));
+
+    return NextResponse.json({ users: formattedUsers });
   } catch (error) {
     console.error("Error fetching suggested users:", error);
-    return NextResponse.json({ users: [] });
+    return NextResponse.json({ error: "Failed to fetch suggested users" }, { status: 500 });
   }
 }

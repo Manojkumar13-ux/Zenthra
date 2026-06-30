@@ -1,7 +1,7 @@
 ﻿// app/(main)/feed/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -99,30 +99,353 @@ interface TrendingHashtag {
   count: number;
 }
 
+const TAB_DISPLAY = {
+  "for-you": "For You",
+  following: "Following",
+  trending: "Trending",
+  communities: "Communities",
+} as const;
+
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Movies: ["movie", "movies", "cinema", "film", "hollywood", "bollywood"],
+  Music: ["music", "song", "songs", "musician", "artist", "band"],
+  Sports: ["sports", "sport", "cricket", "football", "basketball", "tennis"],
+  Technology: ["tech", "technology", "coding", "programming", "ai", "software"],
+  Gaming: ["gaming", "game", "gamer", "esports", "playstation", "xbox"],
+  Business: ["business", "startup", "entrepreneur", "marketing", "finance"],
+  Education: ["education", "learning", "study", "school", "college"],
+  Travel: ["travel", "wanderlust", "vacation", "adventure", "explore"],
+  Food: ["food", "cooking", "recipe", "restaurant", "chef"],
+  Health: ["health", "fitness", "workout", "gym", "wellness"],
+  Fashion: ["fashion", "style", "outfit", "clothing", "trendy"],
+  Science: ["science", "research", "discovery", "space", "physics"],
+  Politics: ["politics", "election", "government", "policy"],
+  Environment: ["environment", "climate", "sustainable", "green", "nature"],
+};
+
 const extractHashtags = (content: string): string[] => {
-  const hashtagRegex = /#(\w+)/g;
-  const matches = content.match(hashtagRegex);
-  if (!matches) return [];
-  return matches.map(tag => tag.substring(1));
+  const matches = content.match(/#(\w+)/g);
+  return matches ? matches.map(tag => tag.substring(1)) : [];
 };
 
 const detectCategory = (hashtags: string[]): string => {
-  const categoryKeywords: Record<string, string[]> = {
-    "Movies": ["movie", "movies", "cinema", "film", "hollywood", "bollywood"],
-    "Music": ["music", "song", "songs", "musician", "artist", "band"],
-    "Sports": ["sports", "sport", "cricket", "football", "basketball", "tennis"],
-    "Technology": ["tech", "technology", "coding", "programming", "ai", "software"],
-    "Gaming": ["gaming", "game", "gamer", "esports", "playstation", "xbox"],
-    "Business": ["business", "startup", "entrepreneur", "marketing", "finance"],
-    "Education": ["education", "learning", "study", "school", "college"],
-  };
-
-  for (const [category, keywords] of Object.entries(categoryKeywords)) {
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     if (hashtags.some(tag => keywords.includes(tag.toLowerCase()))) {
       return category;
     }
   }
   return "General";
+};
+
+// ✅ 20 Random Posts with diverse content
+const generateMockPosts = (sessionUser: any): Post[] => {
+  const user = {
+    _id: sessionUser?.id || "1",
+    name: sessionUser?.name || "V. Manoj Kumar",
+    username: sessionUser?.username || "_manoj_kumar0",
+    image: sessionUser?.image || "",
+  };
+
+  const otherUsers = [
+    { _id: "2", name: "Alice Johnson", username: "alicej", image: "" },
+    { _id: "3", name: "Bob Smith", username: "bobsmith", image: "" },
+    { _id: "4", name: "Carol White", username: "carolw", image: "" },
+    { _id: "5", name: "David Brown", username: "davidb", image: "" },
+    { _id: "6", name: "Emma Wilson", username: "emmaw", image: "" },
+    { _id: "7", name: "Frank Miller", username: "frankm", image: "" },
+    { _id: "8", name: "Grace Lee", username: "gracel", image: "" },
+  ];
+
+  const randomDate = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - Math.floor(Math.random() * days));
+    return d.toISOString();
+  };
+
+  const posts: Post[] = [
+    // 1. Technology
+    {
+      _id: "1",
+      content: "Just built a new AI-powered recommendation system for movies! #AI #MachineLearning #Tech",
+      author: user,
+      likes: 145,
+      comments: 32,
+      shares: 18,
+      createdAt: randomDate(1),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["AI", "MachineLearning", "Tech"],
+      category: "Technology",
+    },
+    // 2. Movies
+    {
+      _id: "2",
+      content: "Watched the new sci-fi movie last night - mind blowing! #movie #cinema #scifi",
+      author: otherUsers[0],
+      likes: 89,
+      comments: 24,
+      shares: 7,
+      createdAt: randomDate(2),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["movie", "cinema", "scifi"],
+      category: "Movies",
+    },
+    // 3. Sports
+    {
+      _id: "3",
+      content: "What a match! The final was absolutely incredible. #cricket #sports #worldcup",
+      author: otherUsers[1],
+      likes: 234,
+      comments: 56,
+      shares: 42,
+      createdAt: randomDate(3),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["cricket", "sports", "worldcup"],
+      category: "Sports",
+    },
+    // 4. Music
+    {
+      _id: "4",
+      content: "Just released my new single! 🎵 Check it out! #music #newsong #artist",
+      author: otherUsers[2],
+      likes: 67,
+      comments: 15,
+      shares: 23,
+      createdAt: randomDate(4),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["music", "newsong", "artist"],
+      category: "Music",
+    },
+    // 5. Gaming
+    {
+      _id: "5",
+      content: "Finally reached Diamond rank in Valorant! 🎮 #gaming #valorant #esports",
+      author: otherUsers[3],
+      likes: 112,
+      comments: 28,
+      shares: 9,
+      createdAt: randomDate(5),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["gaming", "valorant", "esports"],
+      category: "Gaming",
+    },
+    // 6. Business
+    {
+      _id: "6",
+      content: "Thrilled to announce that we raised $10M in Series A funding! #business #startup #funding",
+      author: otherUsers[4],
+      likes: 178,
+      comments: 41,
+      shares: 35,
+      createdAt: randomDate(6),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["business", "startup", "funding"],
+      category: "Business",
+    },
+    // 7. Education
+    {
+      _id: "7",
+      content: "Just completed my Master's degree in Data Science! 🎓 #education #datascience #learning",
+      author: otherUsers[5],
+      likes: 156,
+      comments: 34,
+      shares: 12,
+      createdAt: randomDate(7),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["education", "datascience", "learning"],
+      category: "Education",
+    },
+    // 8. Travel
+    {
+      _id: "8",
+      content: "Exploring the beautiful streets of Paris! 🇫🇷 #travel #wanderlust #paris",
+      author: otherUsers[6],
+      likes: 203,
+      comments: 48,
+      shares: 27,
+      createdAt: randomDate(8),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["travel", "wanderlust", "paris"],
+      category: "Travel",
+    },
+    // 9. Food
+    {
+      _id: "9",
+      content: "Made the perfect pasta carbonara! 🍝 #food #cooking #recipe",
+      author: otherUsers[7],
+      likes: 78,
+      comments: 19,
+      shares: 14,
+      createdAt: randomDate(9),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["food", "cooking", "recipe"],
+      category: "Food",
+    },
+    // 10. Health & Fitness
+    {
+      _id: "10",
+      content: "100 days of gym consistency! The results are amazing. #health #fitness #workout",
+      author: otherUsers[0],
+      likes: 134,
+      comments: 31,
+      shares: 8,
+      createdAt: randomDate(10),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["health", "fitness", "workout"],
+      category: "Health",
+    },
+    // 11. Fashion
+    {
+      _id: "11",
+      content: "New winter collection is here! ❄️ #fashion #style #winterfashion",
+      author: otherUsers[1],
+      likes: 95,
+      comments: 22,
+      shares: 16,
+      createdAt: randomDate(11),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["fashion", "style", "winterfashion"],
+      category: "Fashion",
+    },
+    // 12. Science
+    {
+      _id: "12",
+      content: "New breakthrough in quantum computing! The future is here. #science #quantum #technology",
+      author: otherUsers[2],
+      likes: 189,
+      comments: 43,
+      shares: 29,
+      createdAt: randomDate(12),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["science", "quantum", "technology"],
+      category: "Science",
+    },
+    // 13. Politics
+    {
+      _id: "13",
+      content: "Interesting times ahead for global politics. #politics #global #leadership",
+      author: otherUsers[3],
+      likes: 76,
+      comments: 45,
+      shares: 11,
+      createdAt: randomDate(13),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["politics", "global", "leadership"],
+      category: "Politics",
+    },
+    // 14. Environment
+    {
+      _id: "14",
+      content: "Planted 100 trees today! #environment #sustainable #climateaction",
+      author: otherUsers[4],
+      likes: 215,
+      comments: 52,
+      shares: 38,
+      createdAt: randomDate(14),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["environment", "sustainable", "climateaction"],
+      category: "Environment",
+    },
+    // 15. Mixed (Multiple categories)
+    {
+      _id: "15",
+      content: "The future of #AI in #healthcare is incredible! #technology #medicine #innovation",
+      author: user,
+      likes: 167,
+      comments: 38,
+      shares: 21,
+      createdAt: randomDate(15),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["AI", "healthcare", "technology", "medicine", "innovation"],
+      category: "Technology",
+    },
+    // 16. Technology (Another)
+    {
+      _id: "16",
+      content: "Tesla's new autonomous driving update is a game changer! #tech #tesla #autonomous",
+      author: otherUsers[5],
+      likes: 145,
+      comments: 33,
+      shares: 19,
+      createdAt: randomDate(16),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["tech", "tesla", "autonomous"],
+      category: "Technology",
+    },
+    // 17. Travel
+    {
+      _id: "17",
+      content: "The sunsets in Santorini are unreal! 🌅 #travel #santorini #greece",
+      author: otherUsers[6],
+      likes: 198,
+      comments: 46,
+      shares: 31,
+      createdAt: randomDate(17),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["travel", "santorini", "greece"],
+      category: "Travel",
+    },
+    // 18. Business
+    {
+      _id: "18",
+      content: "5 lessons I learned from building my first million-dollar startup #business #entrepreneur",
+      author: otherUsers[7],
+      likes: 234,
+      comments: 56,
+      shares: 44,
+      createdAt: randomDate(18),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["business", "entrepreneur", "startup"],
+      category: "Business",
+    },
+    // 19. Music
+    {
+      _id: "19",
+      content: "The new album is streaming everywhere! #music #album #newrelease",
+      author: otherUsers[0],
+      likes: 89,
+      comments: 21,
+      shares: 15,
+      createdAt: randomDate(19),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["music", "album", "newrelease"],
+      category: "Music",
+    },
+    // 20. Random (Technology + Entertainment)
+    {
+      _id: "20",
+      content: "Quantum computing + AI = Mind blowing possibilities! #tech #ai #future #innovation",
+      author: otherUsers[1],
+      likes: 156,
+      comments: 37,
+      shares: 22,
+      createdAt: randomDate(20),
+      isLiked: false,
+      visibility: "everyone",
+      hashtags: ["tech", "ai", "future", "innovation"],
+      category: "Technology",
+    },
+  ];
+
+  return posts;
 };
 
 export default function FeedPage() {
@@ -142,7 +465,7 @@ export default function FeedPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<"image" | "video" | "audio" | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"for-you" | "following" | "trending" | "communities">("for-you");
+  const [activeTab, setActiveTab] = useState<keyof typeof TAB_DISPLAY>("for-you");
   
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
@@ -155,15 +478,12 @@ export default function FeedPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  const handleHashtagClick = (tag: string) => {
+  const handleHashtagClick = useCallback((tag: string) => {
     const cleanTag = tag.startsWith("#") ? tag.slice(1) : tag;
     router.push(`/explore?q=${encodeURIComponent(cleanTag)}`);
-  };
+  }, [router]);
 
-  // ============================================
-  // Fetch Following Users and Communities
-  // ============================================
-  const fetchFollowingUsers = async () => {
+  const fetchFollowingUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users/following");
       if (res.ok) {
@@ -173,9 +493,9 @@ export default function FeedPage() {
     } catch (error) {
       console.error("Failed to fetch following users:", error);
     }
-  };
+  }, []);
 
-  const fetchFollowingCommunities = async () => {
+  const fetchFollowingCommunities = useCallback(async () => {
     try {
       const res = await fetch("/api/communities/following");
       if (res.ok) {
@@ -185,12 +505,9 @@ export default function FeedPage() {
     } catch (error) {
       console.error("Failed to fetch following communities:", error);
     }
-  };
+  }, []);
 
-  // ============================================
-  // Fetch Trending Hashtags
-  // ============================================
-  const fetchTrendingHashtags = async () => {
+  const fetchTrendingHashtags = useCallback(async () => {
     try {
       const res = await fetch("/api/hashtags/trending");
       if (res.ok) {
@@ -200,103 +517,26 @@ export default function FeedPage() {
     } catch (error) {
       console.error("Failed to fetch trending hashtags:", error);
     }
-  };
+  }, []);
 
-  // ============================================
-  // Fetch Posts
-  // ============================================
-  const fetchPosts = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch all posts
-      const res = await fetch("/api/posts?limit=100");
-      let allPosts: Post[] = [];
-      
-      if (res.ok) {
-        const data = await res.json();
-        allPosts = data.posts || [];
-      } else {
-        // Mock data
-        const user = {
-          _id: session?.user?.id || "1",
-          name: session?.user?.name || "V. Manoj Kumar",
-          username: session?.user?.username || "_manoj_kumar0",
-          image: session?.user?.image || "",
-        };
-        allPosts = [
-          {
-            _id: "1",
-            content: "hii og nationnnnnnnnnnnnnnnnnnnnn #movie",
-            author: user,
-            likes: 380,
-            comments: 12,
-            shares: 5,
-            createdAt: new Date(Date.now() - 16 * 60000).toISOString(),
-            isLiked: false,
-            visibility: "everyone",
-            hashtags: ["movie"],
-            category: "Movies",
-          },
-          {
-            _id: "2",
-            content: "Just launched my new project #Zenthra 🚀 #tech #innovation",
-            author: user,
-            likes: 42,
-            comments: 8,
-            shares: 3,
-            createdAt: new Date(Date.now() - 3600000).toISOString(),
-            isLiked: true,
-            visibility: "everyone",
-            hashtags: ["Zenthra", "tech", "innovation"],
-            category: "Technology",
-          },
-          {
-            _id: "3",
-            content: "Check out this amazing movie #movie #cinema",
-            author: {
-              _id: "2",
-              name: "Alice Johnson",
-              username: "alicej",
-              image: "",
-            },
-            likes: 15,
-            comments: 3,
-            shares: 1,
-            createdAt: new Date(Date.now() - 7200000).toISOString(),
-            isLiked: false,
-            visibility: "everyone",
-            hashtags: ["movie", "cinema"],
-            category: "Movies",
-          },
-        ];
-      }
-      
-      setPosts(allPosts);
-      await filterPostsByTab(activeTab, allPosts);
-      
-    } catch (error) {
-      console.error("Failed to fetch posts:", error);
-      toast.error("Failed to load posts");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const getMockPosts = useCallback(() => {
+    return generateMockPosts(session?.user);
+  }, [session]);
 
-  // ============================================
-  // Filter Posts by Tab
-  // ============================================
-  const filterPostsByTab = async (tab: string, postsData?: Post[]) => {
+  const filterPostsByTab = useCallback(async (tab: keyof typeof TAB_DISPLAY, postsData?: Post[]) => {
     const sourcePosts = postsData || posts;
     
+    if (sourcePosts.length === 0) {
+      setFilteredPosts([]);
+      return;
+    }
+
     switch (tab) {
       case "for-you":
-        // ✅ For You: All posts (following + random)
         setFilteredPosts(sourcePosts);
         break;
         
-      case "following":
-        // ✅ Following: Only posts from users you follow
+      case "following": {
         if (followingUsers.length === 0) {
           await fetchFollowingUsers();
         }
@@ -305,9 +545,9 @@ export default function FeedPage() {
         );
         setFilteredPosts(followingPosts);
         break;
+      }
         
-      case "trending":
-        // ✅ Trending: Posts with trending hashtags
+      case "trending": {
         if (trendingHashtags.length === 0) {
           await fetchTrendingHashtags();
         }
@@ -317,9 +557,9 @@ export default function FeedPage() {
         );
         setFilteredPosts(trendingPosts);
         break;
+      }
         
-      case "communities":
-        // ✅ Communities: Posts from communities you follow
+      case "communities": {
         if (followingCommunities.length === 0) {
           await fetchFollowingCommunities();
         }
@@ -328,11 +568,38 @@ export default function FeedPage() {
         );
         setFilteredPosts(communityPosts);
         break;
+      }
         
       default:
         setFilteredPosts(sourcePosts);
     }
-  };
+  }, [posts, followingUsers, trendingHashtags, followingCommunities, fetchFollowingUsers, fetchTrendingHashtags, fetchFollowingCommunities]);
+
+  const fetchPosts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      const res = await fetch("/api/posts?limit=100");
+      
+      if (res.ok) {
+        const data = await res.json();
+        const allPosts = data.posts || [];
+        setPosts(allPosts);
+        await filterPostsByTab(activeTab, allPosts);
+      } else {
+        const mockPosts = getMockPosts();
+        setPosts(mockPosts);
+        await filterPostsByTab(activeTab, mockPosts);
+      }
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
+      const mockPosts = getMockPosts();
+      setPosts(mockPosts);
+      await filterPostsByTab(activeTab, mockPosts);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeTab, filterPostsByTab, getMockPosts]);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -341,18 +608,18 @@ export default function FeedPage() {
       fetchFollowingCommunities();
       fetchTrendingHashtags();
     }
-  }, [status]);
+  }, [status, fetchPosts, fetchFollowingUsers, fetchFollowingCommunities, fetchTrendingHashtags]);
 
   useEffect(() => {
     if (posts.length > 0) {
       filterPostsByTab(activeTab);
     }
-  }, [activeTab]);
+  }, [activeTab, posts, filterPostsByTab]);
 
   // ============================================
   // Comments Functions
   // ============================================
-  const fetchComments = async (postId: string) => {
+  const fetchComments = useCallback(async (postId: string) => {
     try {
       const res = await fetch(`/api/posts/${postId}/comments`);
       if (res.ok) {
@@ -365,9 +632,9 @@ export default function FeedPage() {
       console.error("Failed to fetch comments:", error);
       setComments(prev => ({ ...prev, [postId]: [] }));
     }
-  };
+  }, []);
 
-  const handleComment = async (postId: string) => {
+  const handleComment = useCallback(async (postId: string) => {
     if (!commentText.trim()) return;
     
     setIsCommenting(true);
@@ -419,9 +686,9 @@ export default function FeedPage() {
     } finally {
       setIsCommenting(false);
     }
-  };
+  }, [commentText, session]);
 
-  const toggleComments = async (postId: string) => {
+  const toggleComments = useCallback(async (postId: string) => {
     if (selectedPostId === postId && isCommentsOpen) {
       setIsCommentsOpen(false);
       setSelectedPostId(null);
@@ -433,12 +700,12 @@ export default function FeedPage() {
       }
       setTimeout(() => commentInputRef.current?.focus(), 100);
     }
-  };
+  }, [selectedPostId, isCommentsOpen, comments, fetchComments]);
 
   // ============================================
   // Post Actions
   // ============================================
-  const handleLike = async (postId: string) => {
+  const handleLike = useCallback((postId: string) => {
     setFilteredPosts((prev) =>
       prev.map((post) =>
         post._id === postId
@@ -450,16 +717,16 @@ export default function FeedPage() {
           : post
       )
     );
-  };
+  }, []);
 
-  const handleDeletePost = async (postId: string) => {
+  const handleDeletePost = useCallback(async (postId: string) => {
     try {
       const res = await fetch(`/api/posts/${postId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setPosts(posts.filter(post => post._id !== postId));
-        setFilteredPosts(filteredPosts.filter(post => post._id !== postId));
+        setPosts(prev => prev.filter(post => post._id !== postId));
+        setFilteredPosts(prev => prev.filter(post => post._id !== postId));
         toast.success("Post deleted successfully");
       } else {
         toast.error("Failed to delete post");
@@ -468,26 +735,41 @@ export default function FeedPage() {
       console.error("Failed to delete post:", error);
       toast.error("Failed to delete post");
     }
-  };
+  }, []);
 
-  const handleShare = (post: Post) => {
+  const handleShare = useCallback((post: Post) => {
     const url = `${window.location.origin}/post/${post._id}`;
     navigator.clipboard?.writeText(url).then(() => {
       toast.success("Link copied to clipboard!");
     }).catch(() => {
       toast.success(`Share: ${url}`);
     });
-  };
+  }, []);
 
-  const handleBookmark = (postId: string) => {
+  const handleBookmark = useCallback(() => {
     toast.success("Post saved to bookmarks!");
-  };
+  }, []);
 
-  const handleReport = (postId: string) => {
+  const handleReport = useCallback(() => {
     toast.success("Post reported. We'll review it.");
-  };
+  }, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") => {
+  const getTimeAgo = useCallback((date: string) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(date).toLocaleDateString();
+  }, []);
+
+  // ============================================
+  // File Handlers
+  // ============================================
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
@@ -500,19 +782,19 @@ export default function FeedPage() {
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} selected: ${file.name}`);
     }
     e.target.value = "";
-  };
+  }, []);
 
-  const handleMediaClick = () => imageInputRef.current?.click();
-  const handleVideoClick = () => videoInputRef.current?.click();
-  const handleAudioClick = () => audioInputRef.current?.click();
+  const handleMediaClick = useCallback(() => imageInputRef.current?.click(), []);
+  const handleVideoClick = useCallback(() => videoInputRef.current?.click(), []);
+  const handleAudioClick = useCallback(() => audioInputRef.current?.click(), []);
 
-  const removeFile = () => {
+  const removeFile = useCallback(() => {
     setSelectedFile(null);
     setFilePreview(null);
     setFileType(null);
-  };
+  }, []);
 
-  const handleCreatePost = async () => {
+  const handleCreatePost = useCallback(async () => {
     if (!postContent.trim() && !selectedFile) {
       toast.error("Please write something or add media");
       return;
@@ -548,11 +830,12 @@ export default function FeedPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setPosts([data.post, ...posts]);
-        setFilteredPosts([data.post, ...filteredPosts]);
+        setPosts(prev => [data.post, ...prev]);
+        setFilteredPosts(prev => [data.post, ...prev]);
         resetCreateForm();
         toast.success(`Post created! Added to ${category} section`);
-        updateTrendingHashtags(hashtags);
+        const event = new CustomEvent("newPost", { detail: { hashtags } });
+        window.dispatchEvent(event);
         fetchPosts();
       } else {
         const error = await res.json();
@@ -564,47 +847,19 @@ export default function FeedPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [postContent, selectedFile, fileType, filePreview, postVisibility, postMood, fetchPosts]);
 
-  const resetCreateForm = () => {
+  const resetCreateForm = useCallback(() => {
     setPostContent("");
     setSelectedFile(null);
     setFilePreview(null);
     setFileType(null);
     setIsCreateOpen(false);
-  };
+  }, []);
 
-  const updateTrendingHashtags = (hashtags: string[]) => {
-    const event = new CustomEvent("newPost", {
-      detail: { hashtags },
-    });
-    window.dispatchEvent(event);
-  };
-
-  const getTimeAgo = (date: string) => {
-    const diff = Date.now() - new Date(date).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(date).toLocaleDateString();
-  };
-
-  // ============================================
-  // Get Tab Display Name
-  // ============================================
-  const getTabDisplay = (tab: string) => {
-    switch (tab) {
-      case "for-you": return "For You";
-      case "following": return "Following";
-      case "trending": return "Trending";
-      case "communities": return "Communities";
-      default: return "For You";
-    }
-  };
+  const getTabDisplay = useCallback((tab: string) => {
+    return TAB_DISPLAY[tab as keyof typeof TAB_DISPLAY] || "For You";
+  }, []);
 
   if (status === "loading" || isLoading) {
     return (
@@ -698,10 +953,10 @@ export default function FeedPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-4 border-b dark:border-gray-800">
-        {["for-you", "following", "trending", "communities"].map((tab) => (
+        {(["for-you", "following", "trending", "communities"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab)}
             className={cn(
               "px-3 py-1.5 text-xs font-medium transition-colors border-b-2",
               activeTab === tab
@@ -709,9 +964,7 @@ export default function FeedPage() {
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             )}
           >
-            {tab === "for-you" ? "For You" :
-             tab === "following" ? "Following" :
-             tab === "trending" ? "Trending" : "Communities"}
+            {getTabDisplay(tab)}
           </button>
         ))}
       </div>
@@ -783,7 +1036,7 @@ export default function FeedPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => handleBookmark(post._id)}>
+                      <DropdownMenuItem onClick={handleBookmark}>
                         <Bookmark className="h-4 w-4 mr-2" />
                         Save
                       </DropdownMenuItem>
@@ -799,7 +1052,7 @@ export default function FeedPage() {
                         Copy text
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleReport(post._id)} className="text-gray-500">
+                      <DropdownMenuItem onClick={handleReport} className="text-gray-500">
                         <Flag className="h-4 w-4 mr-2" />
                         Report
                       </DropdownMenuItem>

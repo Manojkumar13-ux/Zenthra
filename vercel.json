@@ -1,15 +1,22 @@
 {
+  "version": 2,
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "regions": ["iad1"],
-  "env": {
-    "MONGODB_URI": "mongodb+srv://manojkumar:manoj1234@cluster0.hcrcwxn.mongodb.net/zenthra?retryWrites=true&w=majority&appName=Cluster0",
-    "MONGODB_DB": "zenthra",
-    "NEXTAUTH_SECRET": "PdRsuTwYleLo3ZaFcipJIQ0m9SE1tOgM",
-    "NEXTAUTH_URL": "https://zenthra.vercel.app"
+  "functions": {
+    "app/api/**/*.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 10,
+      "memory": 1024
+    },
+    "app/api/**/*.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 10,
+      "memory": 1024
+    }
   },
   "headers": [
     {
@@ -26,6 +33,14 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
     }
@@ -36,5 +51,13 @@
       "destination": "/feed",
       "permanent": true
     }
-  ]
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ],
+  "trailingSlash": false,
+  "cleanUrls": true
 }

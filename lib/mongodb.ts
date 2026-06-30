@@ -1,14 +1,11 @@
 // lib/mongodb.ts
 import { MongoClient, Db } from "mongodb";
 
-// Use different URIs for different environments
 const MONGODB_URI = process.env.MONGODB_URI || "";
 const MONGODB_DB = process.env.MONGODB_DB || "zenthra";
 
 if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable inside .env.local"
-  );
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
 let cachedClient: MongoClient | null = null;
@@ -22,12 +19,13 @@ export async function connectToDatabase(): Promise<Db> {
 
   try {
     console.log(`📚 Database: Connecting to MongoDB (${process.env.NODE_ENV || 'development'} mode)...`);
-    console.log(`📚 Database: Using URI: ${MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')}`);
     
     const client = new MongoClient(MONGODB_URI, {
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
     });
 
     await client.connect();

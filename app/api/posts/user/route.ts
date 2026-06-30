@@ -1,10 +1,11 @@
-export const dynamic = 'force-dynamic';
-
 // app/api/posts/user/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectToDatabase } from "@/lib/mongodb"; // ✅ Changed
+import { connectToDatabase } from "@/lib/mongodb";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
     const posts = await db.collection("posts")
       .find({ "author.id": session.user.id })
       .sort({ createdAt: -1 })
-      .limit(20)
+      .limit(50)
       .toArray();
 
     return NextResponse.json({ posts });

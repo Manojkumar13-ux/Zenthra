@@ -1,11 +1,12 @@
-export const dynamic = 'force-dynamic';
-
 // app/api/users/[id]/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectToDatabase } from "@/lib/mongodb";
+import { connectToDatabase, isValidObjectId } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(
   request: Request,
@@ -20,8 +21,7 @@ export async function GET(
     const db = await connectToDatabase();
     const userId = params.id;
 
-    // Check if it's a valid ObjectId
-    if (!ObjectId.isValid(userId)) {
+    if (!userId || !isValidObjectId(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
@@ -34,29 +34,22 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Count posts
     const postsCount = await db.collection("posts").countDocuments({
       "author.id": userId
     });
 
-    // Count followers
     const followersCount = await db.collection("follows").countDocuments({
       followingId: userId
     });
 
-    // Count following
     const followingCount = await db.collection("follows").countDocuments({
       followerId: userId
     });
 
-    // Check if current user is following this user
     const isFollowing = await db.collection("follows").countDocuments({
       followerId: session.user.id,
       followingId: userId
     }) > 0;
-
-    // Get user's cover image if exists
-    const coverImage = user.coverImage || null;
 
     return NextResponse.json({
       user: {
@@ -65,7 +58,7 @@ export async function GET(
         username: user.username,
         email: user.email,
         image: user.image || null,
-        coverImage: coverImage,
+        coverImage: user.coverImage || null,
         bio: user.bio || "",
         location: user.location || "",
         website: user.website || "",
