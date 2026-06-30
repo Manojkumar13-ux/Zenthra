@@ -5,6 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -20,7 +23,11 @@ export async function GET(
 
     // ✅ Check if it's a valid ObjectId
     if (!userId || !ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+      console.log(`❌ Invalid user ID: ${userId}`);
+      return NextResponse.json(
+        { error: "Invalid user ID format" },
+        { status: 400 }
+      );
     }
 
     // ✅ Convert to ObjectId
@@ -33,47 +40,12 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Count posts
-    const postsCount = await db.collection("posts").countDocuments({
-      "author.id": userId
-    });
-
-    // Count followers
-    const followersCount = await db.collection("follows").countDocuments({
-      followingId: userId
-    });
-
-    // Count following
-    const followingCount = await db.collection("follows").countDocuments({
-      followerId: userId
-    });
-
-    // Check if current user is following this user
-    const isFollowing = await db.collection("follows").countDocuments({
-      followerId: session.user.id,
-      followingId: userId
-    }) > 0;
-
-    return NextResponse.json({
-      user: {
-        _id: user._id.toString(),
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        image: user.image || null,
-        coverImage: user.coverImage || null,
-        bio: user.bio || "",
-        location: user.location || "",
-        website: user.website || "",
-        createdAt: user.createdAt,
-        posts: postsCount,
-        followers: followersCount,
-        following: followingCount,
-        isFollowing,
-      }
-    });
+    // ... rest of your code
   } catch (error) {
     console.error("Error fetching user:", error);
-    return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch user" },
+      { status: 500 }
+    );
   }
 }
