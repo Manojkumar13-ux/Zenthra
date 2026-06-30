@@ -104,21 +104,44 @@ export async function POST(request: NextRequest) {
     
     console.log(`🔍 Looking for user with ID: ${userId}`);
 
-    // Try to find user by various methods
-    if (ObjectId.isValid(userId)) {
-      user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+    // ✅ FIX: Try to find user by ObjectId first
+    try {
+      if (ObjectId.isValid(userId)) {
+        user = await db.collection("users").findOne({ 
+          _id: new ObjectId(userId) 
+        });
+        console.log(`🔍 Found by ObjectId: ${!!user}`);
+      }
+    } catch (error) {
+      console.warn("⚠️ Error finding by ObjectId:", error);
     }
-    
+
+    // ✅ If not found, try finding by string ID
     if (!user) {
-      user = await db.collection("users").findOne({ _id: userId });
+      try {
+        user = await db.collection("users").findOne({ 
+          _id: userId as any 
+        });
+        console.log(`🔍 Found by string ID: ${!!user}`);
+      } catch (error) {
+        console.warn("⚠️ Error finding by string ID:", error);
+      }
     }
     
+    // ✅ Try finding by email
     if (!user && session.user.email) {
-      user = await db.collection("users").findOne({ email: session.user.email });
+      user = await db.collection("users").findOne({ 
+        email: session.user.email 
+      });
+      console.log(`🔍 Found by email: ${!!user}`);
     }
     
+    // ✅ Try finding by username
     if (!user && session.user.username) {
-      user = await db.collection("users").findOne({ username: session.user.username });
+      user = await db.collection("users").findOne({ 
+        username: session.user.username 
+      });
+      console.log(`🔍 Found by username: ${!!user}`);
     }
 
     // ✅ If no user found, create one

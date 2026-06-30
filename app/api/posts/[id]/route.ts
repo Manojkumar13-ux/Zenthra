@@ -1,5 +1,5 @@
 // app/api/posts/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -9,15 +9,11 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const db = await connectToDatabase();
     const { id } = params;
 
@@ -34,7 +30,21 @@ export async function GET(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ post });
+    // Check visibility
+    if (post.visibility !== "everyone" && (!session || post.author.id !== session.user.id)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Serialize post
+    const serializedPost = {
+      ...post,
+      _id: post._id.toString(),
+      createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : new Date().toISOString(),
+    };
+
+    return NextResponse.json({ post: serializedPost });
+    
   } catch (error) {
     console.error("Error fetching post:", error);
     return NextResponse.json({ error: "Failed to fetch post" }, { status: 500 });
@@ -42,7 +52,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -72,6 +82,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    // ✅ Delete comments first
+    await db.collection("comments").deleteMany(
+      { postId: new ObjectId(id) }
+    );
+
     // ✅ Decrease hashtag counts
     if (post.hashtags && post.hashtags.length > 0) {
       for (const tag of post.hashtags) {
@@ -84,7 +99,11 @@ export async function DELETE(
 
     await db.collection("posts").deleteOne({ _id: new ObjectId(id) });
 
-    return NextResponse.json({ message: "Post deleted successfully" });
+    return NextResponse.json({ 
+      success: true,
+      message: "Post deleted successfully" 
+    });
+    
   } catch (error) {
     console.error("Error deleting post:", error);
     return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
