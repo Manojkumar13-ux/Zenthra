@@ -39,9 +39,17 @@ export async function GET() {
           (p: string) => p !== session.user.id
         );
         
+        // ✅ Convert otherParticipantId to ObjectId if valid
+        let otherUserQuery: any = {};
+        if (otherParticipantId && ObjectId.isValid(otherParticipantId)) {
+          otherUserQuery._id = new ObjectId(otherParticipantId);
+        } else if (otherParticipantId) {
+          otherUserQuery._id = otherParticipantId;
+        }
+        
         const otherUser = otherParticipantId 
           ? await db.collection("users").findOne(
-              { _id: otherParticipantId },
+              otherUserQuery,
               { projection: { name: 1, username: 1, image: 1 } }
             )
           : null;

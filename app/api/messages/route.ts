@@ -57,8 +57,16 @@ export async function GET(req: Request) {
     // ✅ Get sender info for each message
     const messagesWithSender = await Promise.all(
       messages.map(async (message) => {
+        // ✅ Convert sender ID to ObjectId if valid
+        let senderQuery: any = {};
+        if (ObjectId.isValid(message.sender)) {
+          senderQuery._id = new ObjectId(message.sender);
+        } else {
+          senderQuery._id = message.sender;
+        }
+        
         const sender = await db.collection("users").findOne(
-          { _id: message.sender },
+          senderQuery,
           { projection: { name: 1, username: 1, image: 1 } }
         );
         return {
@@ -145,9 +153,16 @@ export async function POST(req: Request) {
       }
     );
 
-    // ✅ Get sender info
+    // ✅ Get sender info - convert to ObjectId
+    let senderQuery: any = {};
+    if (ObjectId.isValid(session.user.id)) {
+      senderQuery._id = new ObjectId(session.user.id);
+    } else {
+      senderQuery._id = session.user.id;
+    }
+    
     const sender = await db.collection("users").findOne(
-      { _id: session.user.id },
+      senderQuery,
       { projection: { name: 1, username: 1, image: 1 } }
     );
 
