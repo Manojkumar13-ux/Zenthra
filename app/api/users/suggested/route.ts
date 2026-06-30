@@ -23,12 +23,16 @@ export async function GET() {
       .toArray();
     const followingIds = follows.map(f => f.followingId);
 
+    // ✅ Alternative: Use $nor
+    const excludedIds = [new ObjectId(session.user.id), ...followingIds.map(id => new ObjectId(id))];
+    
+    const query = {
+      _id: { $nin: excludedIds }
+    };
+
     // Get users not followed by current user
     const users = await db.collection("users")
-      .find({
-        _id: { $ne: new ObjectId(session.user.id) },
-        _id: { $nin: followingIds.map(id => new ObjectId(id)) }
-      })
+      .find(query)
       .limit(5)
       .toArray();
 
