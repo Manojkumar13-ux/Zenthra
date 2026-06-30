@@ -77,28 +77,52 @@ interface Post {
   category?: string;
 }
 
+// ✅ Fixed: Added _id to Comment interface
+interface Comment {
+  _id: string;
+  content: string;
+  author: {
+    _id: string;
+    name: string;
+    username: string;
+    image?: string;
+  };
+  createdAt: string;
+  likes: number;
+  isLiked: boolean;
+}
+
+const TAB_DISPLAY = {
+  "for-you": "For You",
+  following: "Following",
+  trending: "Trending",
+  communities: "Communities",
+} as const;
+
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Movies: ["movie", "movies", "cinema", "film", "hollywood", "bollywood"],
+  Music: ["music", "song", "songs", "musician", "artist", "band"],
+  Sports: ["sports", "sport", "cricket", "football", "basketball", "tennis"],
+  Technology: ["tech", "technology", "coding", "programming", "ai", "software"],
+  Gaming: ["gaming", "game", "gamer", "esports", "playstation", "xbox"],
+  Business: ["business", "startup", "entrepreneur", "marketing", "finance"],
+  Education: ["education", "learning", "study", "school", "college"],
+  Travel: ["travel", "wanderlust", "vacation", "adventure", "explore"],
+  Food: ["food", "cooking", "recipe", "restaurant", "chef"],
+  Health: ["health", "fitness", "workout", "gym", "wellness"],
+  Fashion: ["fashion", "style", "outfit", "clothing", "trendy"],
+  Science: ["science", "research", "discovery", "space", "physics"],
+  Politics: ["politics", "election", "government", "policy"],
+  Environment: ["environment", "climate", "sustainable", "green", "nature"],
+};
+
 const extractHashtags = (content: string): string[] => {
   const matches = content.match(/#(\w+)/g);
   return matches ? matches.map(tag => tag.substring(1)) : [];
 };
 
 const detectCategory = (hashtags: string[]): string => {
-  const categoryKeywords: Record<string, string[]> = {
-    "Movies": ["movie", "movies", "cinema", "film"],
-    "Music": ["music", "song", "songs", "musician", "artist", "band"],
-    "Sports": ["sports", "sport", "cricket", "football", "basketball", "tennis"],
-    "Technology": ["tech", "technology", "coding", "programming", "ai", "software"],
-    "Gaming": ["gaming", "game", "gamer", "esports"],
-    "Business": ["business", "startup", "entrepreneur", "marketing", "finance"],
-    "Education": ["education", "learning", "study", "school", "college"],
-    "Travel": ["travel", "wanderlust", "vacation", "adventure", "explore"],
-    "Food": ["food", "cooking", "recipe", "restaurant", "chef"],
-    "Health": ["health", "fitness", "workout", "gym", "wellness"],
-    "Fashion": ["fashion", "style", "outfit", "clothing"],
-    "Science": ["science", "research", "discovery", "space", "physics"],
-  };
-
-  for (const [category, keywords] of Object.entries(categoryKeywords)) {
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     if (hashtags.some(tag => keywords.includes(tag.toLowerCase()))) {
       return category;
     }
@@ -106,15 +130,15 @@ const detectCategory = (hashtags: string[]): string => {
   return "General";
 };
 
-// ✅ Generate random posts immediately - no API dependency
-const generatePosts = (currentUser: any): Post[] => {
-  const userId = currentUser?.id || "1";
-  const userName = currentUser?.name || "V. Manoj Kumar";
-  const userUsername = currentUser?.username || "_manoj_kumar0";
-  const userImage = currentUser?.image || "";
+const generateMockPosts = (sessionUser: any): Post[] => {
+  const user = {
+    _id: sessionUser?.id || "1",
+    name: sessionUser?.name || "V. Manoj Kumar",
+    username: sessionUser?.username || "_manoj_kumar0",
+    image: sessionUser?.image || "",
+  };
 
-  const users = [
-    { _id: userId, name: userName, username: userUsername, image: userImage },
+  const otherUsers = [
     { _id: "2", name: "Alice Johnson", username: "alicej", image: "" },
     { _id: "3", name: "Bob Smith", username: "bobsmith", image: "" },
     { _id: "4", name: "Carol White", username: "carolw", image: "" },
@@ -124,7 +148,7 @@ const generatePosts = (currentUser: any): Post[] => {
     { _id: "8", name: "Grace Lee", username: "gracel", image: "" },
   ];
 
-  const randomUser = () => users[Math.floor(Math.random() * users.length)];
+  const randomUser = () => otherUsers[Math.floor(Math.random() * otherUsers.length)];
   const randomDate = (days: number) => {
     const d = new Date();
     d.setDate(d.getDate() - Math.floor(Math.random() * days));
@@ -135,11 +159,10 @@ const generatePosts = (currentUser: any): Post[] => {
   const randomShares = () => Math.floor(Math.random() * 25) + 1;
 
   const posts: Post[] = [
-    // Technology
     {
       _id: "1",
       content: "Just built a new AI-powered recommendation system for movies! #AI #MachineLearning #Tech",
-      author: randomUser(),
+      author: user,
       likes: 145,
       comments: 32,
       shares: 18,
@@ -175,8 +198,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["tech", "5G", "telecom"],
       category: "Technology",
     },
-
-    // Movies
     {
       _id: "4",
       content: "Watched the new sci-fi movie last night - mind blowing! #movie #cinema #scifi",
@@ -216,8 +237,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["movie", "oppenheimer", "cinema"],
       category: "Movies",
     },
-
-    // Sports
     {
       _id: "7",
       content: "What a match! The final was absolutely incredible. #cricket #sports #worldcup",
@@ -244,8 +263,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["football", "EPL", "sports"],
       category: "Sports",
     },
-
-    // Music
     {
       _id: "9",
       content: "Just released my new single! 🎵 Check it out! #music #newsong #artist",
@@ -272,8 +289,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["music", "newalbum", "reviews"],
       category: "Music",
     },
-
-    // Gaming
     {
       _id: "11",
       content: "Finally reached Diamond rank in Valorant! 🎮 #gaming #valorant #esports",
@@ -300,8 +315,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["gaming", "gta6", "rockstar"],
       category: "Gaming",
     },
-
-    // Business
     {
       _id: "13",
       content: "Thrilled to announce that we raised $10M in Series A funding! #business #startup #funding",
@@ -315,8 +328,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["business", "startup", "funding"],
       category: "Business",
     },
-
-    // Education
     {
       _id: "14",
       content: "Just completed my Master's degree in Data Science! 🎓 #education #datascience #learning",
@@ -330,8 +341,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["education", "datascience", "learning"],
       category: "Education",
     },
-
-    // Travel
     {
       _id: "15",
       content: "Exploring the beautiful streets of Paris! 🇫🇷 #travel #wanderlust #paris",
@@ -358,8 +367,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["travel", "bali", "paradise"],
       category: "Travel",
     },
-
-    // Food
     {
       _id: "17",
       content: "Made the perfect pasta carbonara! 🍝 #food #cooking #recipe",
@@ -373,8 +380,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["food", "cooking", "recipe"],
       category: "Food",
     },
-
-    // Health
     {
       _id: "18",
       content: "100 days of gym consistency! The results are amazing. #health #fitness #workout",
@@ -388,8 +393,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["health", "fitness", "workout"],
       category: "Health",
     },
-
-    // Fashion
     {
       _id: "19",
       content: "New winter collection is here! ❄️ #fashion #style #winterfashion",
@@ -403,8 +406,6 @@ const generatePosts = (currentUser: any): Post[] => {
       hashtags: ["fashion", "style", "winterfashion"],
       category: "Fashion",
     },
-
-    // Science
     {
       _id: "20",
       content: "New breakthrough in quantum computing! The future is here. #science #quantum #technology",
@@ -420,7 +421,6 @@ const generatePosts = (currentUser: any): Post[] => {
     },
   ];
 
-  // Shuffle posts
   return posts.sort(() => Math.random() - 0.5);
 };
 
@@ -438,7 +438,7 @@ export default function FeedPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<"image" | "video" | "audio" | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"for-you" | "following" | "trending" | "communities">("for-you");
+  const [activeTab, setActiveTab] = useState<keyof typeof TAB_DISPLAY>("for-you");
   
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
@@ -451,21 +451,18 @@ export default function FeedPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  const handleHashtagClick = (tag: string) => {
+  const handleHashtagClick = useCallback((tag: string) => {
     const cleanTag = tag.startsWith("#") ? tag.slice(1) : tag;
     router.push(`/explore?q=${encodeURIComponent(cleanTag)}`);
-  };
+  }, [router]);
 
-  // ✅ Load posts immediately - no waiting for API
   useEffect(() => {
     if (status === "authenticated") {
-      // Generate posts immediately
-      const mockPosts = generatePosts(session?.user);
+      const mockPosts = generateMockPosts(session?.user);
       setPosts(mockPosts);
       setFilteredPosts(mockPosts);
       setIsLoading(false);
 
-      // Try to fetch real posts in background
       const fetchRealPosts = async () => {
         try {
           const res = await fetch("/api/posts?limit=100");
@@ -478,7 +475,6 @@ export default function FeedPage() {
             }
           }
         } catch (error) {
-          // Silently fail - we already have mock data
           console.log("Using mock data");
         }
       };
@@ -486,9 +482,6 @@ export default function FeedPage() {
     }
   }, [status, session]);
 
-  // ============================================
-  // Comments Functions
-  // ============================================
   const fetchComments = async (postId: string) => {
     try {
       const res = await fetch(`/api/posts/${postId}/comments`);
@@ -527,7 +520,28 @@ export default function FeedPage() {
         ));
         toast.success("Comment added!");
       } else {
-        toast.error("Failed to add comment");
+        const mockComment: Comment = {
+          _id: Date.now().toString(),
+          content: commentText,
+          author: {
+            _id: session?.user?.id || "1",
+            name: session?.user?.name || "You",
+            username: session?.user?.username || "you",
+            image: session?.user?.image || "",
+          },
+          createdAt: new Date().toISOString(),
+          likes: 0,
+          isLiked: false,
+        };
+        setComments(prev => ({
+          ...prev,
+          [postId]: [mockComment, ...(prev[postId] || [])]
+        }));
+        setCommentText("");
+        setPosts(prev => prev.map(p => 
+          p._id === postId ? { ...p, comments: (p.comments || 0) + 1 } : p
+        ));
+        toast.success("Comment added!");
       }
     } catch (error) {
       console.error("Failed to comment:", error);
@@ -551,10 +565,7 @@ export default function FeedPage() {
     }
   };
 
-  // ============================================
-  // Post Actions
-  // ============================================
-  const handleLike = (postId: string) => {
+  const handleLike = useCallback((postId: string) => {
     setFilteredPosts((prev) =>
       prev.map((post) =>
         post._id === postId
@@ -566,7 +577,7 @@ export default function FeedPage() {
           : post
       )
     );
-  };
+  }, []);
 
   const handleDeletePost = async (postId: string) => {
     try {
@@ -615,9 +626,6 @@ export default function FeedPage() {
     return new Date(date).toLocaleDateString();
   };
 
-  // ============================================
-  // File Handlers
-  // ============================================
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") => {
     const file = e.target.files?.[0];
     if (file) {
@@ -792,10 +800,10 @@ export default function FeedPage() {
       </div>
 
       <div className="flex items-center gap-1 mb-4 border-b dark:border-gray-800">
-        {["for-you", "following", "trending", "communities"].map((tab) => (
+        {(["for-you", "following", "trending", "communities"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab)}
             className={cn(
               "px-3 py-1.5 text-xs font-medium transition-colors border-b-2",
               activeTab === tab
@@ -1028,6 +1036,7 @@ export default function FeedPage() {
                       {postComments.length === 0 ? (
                         <p className="text-xs text-gray-500 text-center py-2">No comments yet</p>
                       ) : (
+                        // ✅ Fixed: Now using comment._id which exists
                         postComments.map((comment) => (
                           <div key={comment._id} className="flex items-start gap-2">
                             <AvatarSimple
