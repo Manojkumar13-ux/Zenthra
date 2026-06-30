@@ -1,17 +1,11 @@
 // app/api/messages/route.ts
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
 
 export const dynamic = 'force-dynamic';
-import { getServerSession } from "next-auth";
-
-import { authOptions } from "@/lib/auth"; // ✅ Fixed import
-
-import { connectDB } from "@/lib/db/connect";
-
-import { Message } from "@/lib/db/models/Message";
-
-import { Chat } from "@/lib/db/models/Chat";
-
+export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   try {
@@ -30,10 +24,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Chat ID is required" }, { status: 400 });
     }
 
-    await connectDB();
+    const db = await connectToDatabase();
 
-    // Verify user is in the chat
-    const chat = await Chat.findOne({
+    // ✅ Verify user is in the chat
+    const chat = await db.collection("chats").findOne({
       _id: chatId,
       participants: session.user.id,
     });
@@ -42,17 +36,38 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
     }
 
-    const messages = await Message.find({ chat: chatId })
+    // ✅ Get messages
+    const messages = await db.collection("messages")
+      .find({ chat: chatId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("sender", "name username image")
-      .lean();
+      .toArray();
 
-    const total = await Message.countDocuments({ chat: chatId });
+    const total = await db.collection("messages").countDocuments({ chat: chatId });
+
+    // ✅ Get sender info for each message
+    const messagesWithSender = await Promise.all(
+      messages.map(async (message) => {
+        const sender = await db.collection("users").findOne(
+          { _id: message.sender },
+          { projection: { name: 1, username: 1, image: 1 } }
+        );
+        return {
+          ...message,
+          _id: message._id.toString(),
+          sender: sender ? {
+            id: sender._id.toString(),
+            name: sender.name,
+            username: sender.username,
+            image: sender.image,
+          } : null,
+        };
+      })
+    );
 
     return NextResponse.json({
-      messages: messages.reverse(),
+      messages: messagesWithSender.reverse(),
       pagination: {
         total,
         page,
@@ -81,10 +96,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Chat ID and content are required" }, { status: 400 });
     }
 
-    await connectDB();
+    const db = await connectToDatabase();
 
-    // Verify user is in the chat
-    const chat = await Chat.findOne({
+    // ✅ Verify user is in the chat
+    const chat = await db.collection("chats").findOne({
       _id: chatId,
       participants: session.user.id,
     });
@@ -93,21 +108,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
     }
 
-    const message = await Message.create({
+    // ✅ Create message
+    const message = {
       chat: chatId,
       sender: session.user.id,
       content: content.trim(),
-    });
+      createdAt: new Date(),
+      read: false,
+    };
 
-    // Update chat's last message
-    await Chat.findByIdAndUpdate(chatId, {
-      lastMessage: message._id,
-      updatedAt: new Date(),
-    });
+    const result = await db.collection("messages").insertOne(message);
+    const createdMessage = { ...message, _id: result.insertedId };
 
-    const populatedMessage = await Message.findById(message._id)
-      .populate("sender", "name username image")
-      .lean();
+    // ✅ Update chat's last message
+    await db.collection("chats").updateOne(
+      { _id: chatId },
+      { 
+        $set: { 
+          lastMessage: result.insertedId,
+          updatedAt: new Date(),
+        }
+      }
+    );
+
+    // ✅ Get sender info
+    const sender = await db.collection("users").findOne(
+      { _id: session.user.id },
+      { projection: { name: 1, username: 1, image: 1 } }
+    );
+
+    const populatedMessage = {
+      ...createdMessage,
+      _id: createdMessage._id.toString(),
+      sender: sender ? {
+        id: sender._id.toString(),
+        name: sender.name,
+        username: sender.username,
+        image: sender.image,
+      } : null,
+    };
 
     return NextResponse.json(
       {
