@@ -22,19 +22,6 @@ A modern, feature-rich social media platform built with Next.js 14, MongoDB, and
 - ✅ **Dark Mode** - Toggle between light and dark themes
 - ✅ **Responsive Design** - Works on all devices
  
-<img width="1920" height="1080" alt="Screenshot (196)" src="https://github.com/user-attachments/assets/373b63d4-a30a-4829-aec0-7dacbcbd60d8" />
-
-<img width="1920" height="1080" alt="Screenshot (187)" src="https://github.com/user-attachments/assets/f51106f9-9c7a-481f-b4ed-95a9831bb149" />
-<img width="1920" height="1080" alt="Screenshot (188)" src="https://github.com/user-attachments/assets/0a49ff9b-bd55-4199-8390-e45b3666c37c" />
-<img width="1920" height="1080" alt="Screenshot (189)" src="https://github.com/user-attachments/assets/aa52e42c-71d6-4569-a22f-ff9fdd19a26a" />
-<img width="1920" height="1080" alt="Screenshot (190)" src="https://github.com/user-attachments/assets/1bbad871-1e7e-4f5e-b64b-db2e482982d3" />
-<img width="1920" height="1080" alt="Screenshot (191)" src="https://github.com/user-attachments/assets/a393fadc-4892-4892-bdc1-0e69ee6266f1" />
-
-
-
-
-
-  
 ### User Features
 - 📝 Create, edit, delete posts
 - 🏷️ Hashtag categorization (#movie, #music, #tech, etc.)
