@@ -39,9 +39,6 @@ import {
   Wind,
   Droplets,
   Clock,
-  Sparkles,
-  Hash,
-  Users,
 } from "lucide-react";
 import { AvatarSimple } from "@/components/ui/avatar-simple";
 import { Button } from "@/components/ui/button";
@@ -456,7 +453,7 @@ export default function FeedPage() {
   }, []);
 
   // ============================================
-  // Create Post
+  // Create Post - FIXED TypeScript Error
   // ============================================
   const handleCreatePost = useCallback(async () => {
     if (!postContent.trim() && !selectedFile) {
@@ -468,6 +465,10 @@ export default function FeedPage() {
     try {
       const hashtags = extractHashtags(postContent);
       const category = detectCategory(hashtags);
+
+      // ✅ FIX: Convert null to undefined for image and video
+      const imageValue = fileType === "image" && filePreview ? filePreview : undefined;
+      const videoValue = fileType === "video" && filePreview ? filePreview : undefined;
 
       // Create the post object
       const newPost: Post = {
@@ -488,8 +489,8 @@ export default function FeedPage() {
         visibility: postVisibility as any,
         hashtags: hashtags,
         category: category,
-        image: fileType === "image" ? filePreview : undefined,
-        video: fileType === "video" ? filePreview : undefined,
+        image: imageValue,
+        video: videoValue,
         mood: postMood,
       };
 
@@ -505,8 +506,8 @@ export default function FeedPage() {
           content: postContent,
           visibility: postVisibility,
           mood: postMood,
-          image: fileType === "image" ? filePreview : null,
-          video: fileType === "video" ? filePreview : null,
+          image: fileType === "image" && filePreview ? filePreview : null,
+          video: fileType === "video" && filePreview ? filePreview : null,
           hashtags: hashtags,
           category: category,
         };
