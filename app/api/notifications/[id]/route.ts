@@ -1,14 +1,14 @@
-export const dynamic = 'force-dynamic';
-
 // app/api/notifications/[id]/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import mongoose from "mongoose";
+import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
-const isValidObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-export async function GET(
+export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
@@ -18,24 +18,26 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const db = await connectToDatabase();
+    const notificationId = params.id;
 
-    // ✅ Validate before querying
-    if (!id || !isValidObjectId(id)) {
-      return NextResponse.json(
-        { error: "Invalid notification ID format" },
-        { status: 400 }
-      );
+    if (!notificationId || !ObjectId.isValid(notificationId)) {
+      return NextResponse.json({ error: "Invalid notification ID" }, { status: 400 });
     }
 
-    // Your existing logic to fetch a single notification by id
-    // const notification = await Notification.findById(id);
-    return NextResponse.json({ notification: null });
+    try {
+      await db.collection("notifications").updateOne(
+        { _id: new ObjectId(notificationId), userId: session.user.id },
+        { $set: { read: true } }
+      );
+    } catch (error) {
+      console.log("Notification not found");
+      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Notification marked as read" });
   } catch (error) {
-    console.error("Error fetching notification:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch notification" },
-      { status: 500 }
-    );
+    console.error("Error marking notification as read:", error);
+    return NextResponse.json({ error: "Failed to mark as read" }, { status: 500 });
   }
 }

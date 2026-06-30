@@ -5,6 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -20,7 +23,8 @@ export async function GET(
 
     // ✅ Check if it's a valid ObjectId
     if (!userId || !ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+      console.log(`❌ Invalid user ID for posts: ${userId}`);
+      return NextResponse.json({ posts: [] });
     }
 
     const posts = await db.collection("posts")
@@ -32,6 +36,6 @@ export async function GET(
     return NextResponse.json({ posts });
   } catch (error) {
     console.error("Error fetching posts:", error);
-    return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 });
+    return NextResponse.json({ posts: [] });
   }
 }

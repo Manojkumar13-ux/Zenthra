@@ -1,123 +1,79 @@
 // app/api/notifications/route.ts
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
 
 export const dynamic = 'force-dynamic';
-import { getServerSession } from "next-auth";
+export const runtime = 'nodejs';
 
-import { authOptions } from "@/lib/auth";
-
-import { connectDB } from "@/lib/db/connect";
-
-// Import models to ensure they're registered
-import "@/lib/db/models";
-
-
-// Mock data for fallback (keep this for when DB fails)
-const mockNotifications = [
-  {
-    _id: "1",
-    type: "like",
-    content: "John Doe liked your post",
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-    sender: {
-      _id: "user1",
-      name: "John Doe",
-      username: "johndoe",
-      image: null,
-    },
-    post: {
-      _id: "post1",
-      content: "Sample post content",
-    },
-  },
-  // ... other mock notifications
-];
-
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "You must be logged in" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 50);
-    const filter = searchParams.get("filter") || "all";
-
+    const db = await connectToDatabase();
+    
+    // Get notifications for the current user
+    let notifications = [];
     try {
-      await connectDB();
-
-      // Dynamically import models to ensure they're loaded
-      const { Notification } = await import("@/lib/db/models/Notification");
-      const { User } = await import("@/lib/db/models/User");
-      const { Post } = await import("@/lib/db/models/Post");
-      const { Comment } = await import("@/lib/db/models/Comment");
-
-      const query: any = { recipient: session.user.id };
-
-      if (filter !== "all") {
-        const validTypes = [
-          "like",
-          "comment",
-          "mention",
-          "follow",
-          "message",
-          "repost",
-          "community",
-          "achievement",
-        ];
-        if (validTypes.includes(filter)) {
-          query.type = filter;
-        }
-      }
-
-      // Use .lean() to avoid Mongoose document issues
-      const notifications = await Notification.find(query)
+      notifications = await db.collection("notifications")
+        .find({ userId: session.user.id })
         .sort({ createdAt: -1 })
-        .limit(limit)
-        .populate("sender", "name username image")
-        .populate("post", "content media")
-        .populate("comment", "content")
-        .lean();
-
-      const unreadCount = await Notification.countDocuments({
-        ...query,
-        read: false,
-      });
-
-      return NextResponse.json({
-        notifications: notifications || [],
-        unreadCount: unreadCount || 0,
-      });
-    } catch (dbError: any) {
-      console.error("Database error, using mock data:", dbError.message);
-
-      // Fallback to mock data
-      const filteredMock =
-        filter !== "all" ? mockNotifications.filter((n) => n.type === filter) : mockNotifications;
-
-      const limitedMock = filteredMock.slice(0, limit);
-      const unreadCount = limitedMock.filter((n: any) => !n.read).length;
-
-      return NextResponse.json({
-        notifications: limitedMock,
-        unreadCount,
-        usingMockData: true,
-      });
+        .limit(50)
+        .toArray();
+    } catch (error) {
+      console.log("Notifications collection not found");
     }
-  } catch (error: any) {
-    console.error("Notifications API Error:", error.message);
 
-    return NextResponse.json({
-      notifications: mockNotifications.slice(0, 5),
-      unreadCount: mockNotifications.filter((n: any) => !n.read).length,
-      usingMockData: true,
+    return NextResponse.json({ 
+      notifications: notifications.map((n: any) => ({
+        _id: n._id.toString(),
+        type: n.type || "general",
+        message: n.message || "",
+        read: n.read || false,
+        createdAt: n.createdAt || new Date().toISOString(),
+        sender: n.sender || {
+          id: "system",
+          name: "System",
+          username: "system",
+          image: null,
+        },
+        post: n.post || null,
+      }))
     });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return NextResponse.json({ notifications: [] });
   }
 }
 
-// ... POST, PUT, DELETE handlers remain the same
+export async function PUT(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const db = await connectToDatabase();
+    const body = await request.json();
+    const { read } = body;
+
+    // Mark all notifications as read
+    try {
+      await db.collection("notifications").updateMany(
+        { userId: session.user.id },
+        { $set: { read: true } }
+      );
+    } catch (error) {
+      console.log("Notifications collection not found");
+    }
+
+    return NextResponse.json({ message: "All notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking notifications as read:", error);
+    return NextResponse.json({ error: "Failed to mark as read" }, { status: 500 });
+  }
+}
