@@ -16,38 +16,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get("timeRange") || "week";
 
-    // Mock analytics data
+    // ✅ Return mock analytics data
     const data = {
       timeRange,
-      posts: {
-        total: 42,
-        thisPeriod: 12,
-        trend: 15,
-      },
-      likes: {
-        total: 380,
-        thisPeriod: 89,
-        trend: 22,
-      },
-      comments: {
-        total: 124,
-        thisPeriod: 34,
-        trend: 8,
-      },
-      followers: {
-        total: 56,
-        thisPeriod: 12,
-        trend: 25,
-      },
-      views: {
-        total: 1240,
-        thisPeriod: 320,
-        trend: 18,
-      },
-      engagement: {
-        rate: 4.2,
-        trend: 5,
-      },
+      posts: { total: 42, thisPeriod: 12, trend: 15 },
+      likes: { total: 380, thisPeriod: 89, trend: 22 },
+      comments: { total: 124, thisPeriod: 34, trend: 8 },
+      followers: { total: 56, thisPeriod: 12, trend: 25 },
+      views: { total: 1240, thisPeriod: 320, trend: 18 },
+      engagement: { rate: 4.2, trend: 5 },
       dailyData: [
         { day: "Mon", posts: 3, likes: 15, comments: 4 },
         { day: "Tue", posts: 2, likes: 12, comments: 3 },
