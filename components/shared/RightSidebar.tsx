@@ -85,29 +85,17 @@ export function RightSidebar() {
         const data = await res.json();
         setTrendingHashtags(data.hashtags || []);
       } else {
-        setTrendingHashtags([
-          { _id: "1", tag: "movie", count: 7 },
-          { _id: "2", tag: "music", count: 5 },
-          { _id: "3", tag: "tech", count: 4 },
-          { _id: "4", tag: "gaming", count: 3 },
-          { _id: "5", tag: "sports", count: 2 },
-        ]);
+        setTrendingHashtags([]);
       }
     } catch (error) {
       console.error("Failed to fetch trending hashtags:", error);
-      setTrendingHashtags([
-        { _id: "1", tag: "movie", count: 7 },
-        { _id: "2", tag: "music", count: 5 },
-        { _id: "3", tag: "tech", count: 4 },
-        { _id: "4", tag: "gaming", count: 3 },
-        { _id: "5", tag: "sports", count: 2 },
-      ]);
+      setTrendingHashtags([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ Fetch suggested users from API
+  // ✅ ONLY fetch real users - NO MOCK DATA
   const fetchSuggestedUsers = async () => {
     try {
       setIsUsersLoading(true);
@@ -115,6 +103,7 @@ export function RightSidebar() {
       if (res.ok) {
         const data = await res.json();
         console.log("✅ Suggested users from DB:", data.users);
+        // ✅ Only use API data
         setSuggestedUsers(data.users || []);
       } else {
         console.error("Failed to fetch suggested users");
@@ -144,24 +133,37 @@ export function RightSidebar() {
     }
     const cleanTag = newHashtag.trim().startsWith("#") ? newHashtag.trim().slice(1) : newHashtag.trim();
     
-    const existing = trendingHashtags.find((h) => h.tag.toLowerCase() === cleanTag.toLowerCase());
-    if (existing) {
-      setTrendingHashtags((prev) =>
-        prev
-          .map((h) =>
-            h.tag.toLowerCase() === cleanTag.toLowerCase() ? { ...h, count: h.count + 1 } : h
-          )
-          .sort((a, b) => b.count - a.count)
-      );
-      setNewHashtag("");
-      toast.success(`#${cleanTag} count increased!`);
-      return;
+    try {
+      const res = await fetch("/api/hashtags/trending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: cleanTag }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTrendingHashtags((prev) => {
+          const existing = prev.find(h => h.tag.toLowerCase() === cleanTag.toLowerCase());
+          if (existing) {
+            return prev.map(h => 
+              h.tag.toLowerCase() === cleanTag.toLowerCase() 
+                ? { ...h, count: h.count + 1 } 
+                : h
+            );
+          }
+          const newHashtag = {
+            _id: data.hashtag?._id || Date.now().toString(),
+            tag: cleanTag,
+            count: 1,
+          };
+          return [newHashtag, ...prev];
+        });
+        setNewHashtag("");
+        toast.success(`#${cleanTag} added to trending!`);
+      }
+    } catch (error) {
+      console.error("Failed to add hashtag:", error);
+      toast.error("Failed to add hashtag");
     }
-
-    const newHashtagObj = { _id: Date.now().toString(), tag: cleanTag, count: 1 };
-    setTrendingHashtags((prev) => [newHashtagObj, ...prev].sort((a, b) => b.count - a.count));
-    setNewHashtag("");
-    toast.success(`#${cleanTag} added to trending!`);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -188,7 +190,6 @@ export function RightSidebar() {
               <div className="py-4 text-center">
                 <Hash className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500">No trending hashtags yet</p>
-                <p className="mt-1 text-xs text-gray-400">Start using #hashtags in your posts!</p>
               </div>
             ) : (
               trendingHashtags.slice(0, 8).map((hashtag) => (
@@ -223,7 +224,7 @@ export function RightSidebar() {
         </div>
       </div>
 
-      {/* ✅ Suggested for you */}
+      {/* ✅ Suggested for you - ONLY REAL USERS */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="h-5 w-5 text-green-500" />

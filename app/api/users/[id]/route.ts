@@ -30,7 +30,6 @@ export async function GET(
       );
     }
 
-    // ✅ Convert to ObjectId
     const user = await db.collection("users").findOne(
       { _id: new ObjectId(userId) },
       { projection: { password: 0 } }

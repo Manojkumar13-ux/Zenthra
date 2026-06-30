@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -20,42 +19,27 @@ export async function GET() {
 
     console.log("🔍 Current user ID:", currentUserId);
 
-    // ✅ Convert string to ObjectId for comparison
-    let query: any = {};
-    
-    // Only add the $ne condition if the ID is valid
-    if (ObjectId.isValid(currentUserId)) {
-      query._id = { $ne: new ObjectId(currentUserId) };
-    } else {
-      // Fallback: use string comparison if not valid ObjectId
-      query._id = { $ne: currentUserId };
-    }
-
-    // Get all users EXCEPT the current user
-    const allUsers = await db.collection("users")
-      .find(query)
-      .toArray();
-
-    console.log("📊 Other users:", allUsers.length);
-
     // Get users the current user is following
     const follows = await db.collection("follows")
       .find({ followerId: currentUserId })
       .toArray();
     
     const followingIds = follows.map(f => f.followingId);
-    console.log("📊 Following users:", followingIds);
 
-    // Filter out followed users
-    const suggestedUsers = allUsers.filter(user => {
-      const userId = user._id.toString();
-      return !followingIds.includes(userId);
-    });
+    // ✅ Get REAL users from database - NO MOCK DATA
+    const excludedIds = [currentUserId, ...followingIds];
+    
+    const users = await db.collection("users")
+      .find({
+        _id: { $nin: excludedIds }
+      })
+      .limit(5)
+      .toArray();
 
-    console.log("📊 Suggested users:", suggestedUsers.length);
+    console.log("📊 Suggested users (real):", users.length);
 
-    // Format users
-    const formattedUsers = suggestedUsers.map(user => ({
+    // ✅ Format and return ONLY real users
+    const formattedUsers = users.map(user => ({
       id: user._id.toString(),
       name: user.name || "User",
       username: user.username || "user",
@@ -68,6 +52,6 @@ export async function GET() {
     return NextResponse.json({ users: formattedUsers });
   } catch (error) {
     console.error("Error fetching suggested users:", error);
-    return NextResponse.json({ error: "Failed to fetch suggested users" }, { status: 500 });
+    return NextResponse.json({ users: [] });
   }
 }
