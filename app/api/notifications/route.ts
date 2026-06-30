@@ -7,6 +7,24 @@ import { connectToDatabase } from "@/lib/mongodb";
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+interface Notification {
+  _id: any;
+  type: string;
+  message: string;
+  read: boolean;
+  createdAt: Date;
+  sender?: {
+    id: string;
+    name: string;
+    username: string;
+    image: string | null;
+  };
+  post?: {
+    id: string;
+    content: string;
+  } | null;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -16,34 +34,35 @@ export async function GET() {
 
     const db = await connectToDatabase();
     
-    // Get notifications for the current user
-    let notifications = [];
+    // ✅ Type the notifications array
+    let notifications: Notification[] = [];
+    
     try {
-      notifications = await db.collection("notifications")
+      const docs = await db.collection("notifications")
         .find({ userId: session.user.id })
         .sort({ createdAt: -1 })
         .limit(50)
         .toArray();
-    } catch (error) {
-      console.log("Notifications collection not found");
-    }
-
-    return NextResponse.json({ 
-      notifications: notifications.map((n: any) => ({
-        _id: n._id.toString(),
-        type: n.type || "general",
-        message: n.message || "",
-        read: n.read || false,
-        createdAt: n.createdAt || new Date().toISOString(),
-        sender: n.sender || {
+      
+      notifications = docs.map((doc: any) => ({
+        _id: doc._id.toString(),
+        type: doc.type || "general",
+        message: doc.message || "",
+        read: doc.read || false,
+        createdAt: doc.createdAt || new Date(),
+        sender: doc.sender || {
           id: "system",
           name: "System",
           username: "system",
           image: null,
         },
-        post: n.post || null,
-      }))
-    });
+        post: doc.post || null,
+      }));
+    } catch (error) {
+      console.log("Notifications collection not found or error:", error);
+    }
+
+    return NextResponse.json({ notifications });
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return NextResponse.json({ notifications: [] });

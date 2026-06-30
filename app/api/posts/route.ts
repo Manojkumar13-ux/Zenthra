@@ -63,15 +63,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { content, visibility, image, video, hashtags, category } = body;
 
+    // ✅ Get the user from database to ensure we have complete data
+    const user = await db.collection("users").findOne(
+      { _id: session.user.id }
+    );
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // ✅ Create post with complete author data from database
     const post = {
       content,
       image: image || null,
       video: video || null,
       author: {
         id: session.user.id,
-        name: session.user.name,
-        username: session.user.username || session.user.email?.split("@")[0],
-        image: session.user.image || null,
+        name: user.name || session.user.name || "Unknown User",
+        username: user.username || session.user.username || "user",
+        image: user.image || session.user.image || null,
       },
       likes: 0,
       comments: 0,
@@ -87,6 +97,7 @@ export async function POST(request: Request) {
     const result = await db.collection("posts").insertOne(post);
     const createdPost = { ...post, _id: result.insertedId };
 
+    // Update hashtag counts
     if (hashtags && hashtags.length > 0) {
       for (const tag of hashtags) {
         await db.collection("hashtags").updateOne(

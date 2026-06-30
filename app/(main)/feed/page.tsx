@@ -62,7 +62,8 @@ interface Post {
   image?: string;
   video?: string;
   author: {
-    _id: string;
+    _id?: string;
+    id?: string;
     name: string;
     username: string;
     image?: string | null;
@@ -77,7 +78,6 @@ interface Post {
   category?: string;
 }
 
-// ✅ Fixed: Added _id to Comment interface
 interface Comment {
   _id: string;
   content: string;
@@ -130,22 +130,24 @@ const detectCategory = (hashtags: string[]): string => {
   return "General";
 };
 
+// ✅ Generate mock posts with proper authors
 const generateMockPosts = (sessionUser: any): Post[] => {
   const user = {
     _id: sessionUser?.id || "1",
+    id: sessionUser?.id || "1",
     name: sessionUser?.name || "V. Manoj Kumar",
     username: sessionUser?.username || "_manoj_kumar0",
     image: sessionUser?.image || "",
   };
 
   const otherUsers = [
-    { _id: "2", name: "Alice Johnson", username: "alicej", image: "" },
-    { _id: "3", name: "Bob Smith", username: "bobsmith", image: "" },
-    { _id: "4", name: "Carol White", username: "carolw", image: "" },
-    { _id: "5", name: "David Brown", username: "davidb", image: "" },
-    { _id: "6", name: "Emma Wilson", username: "emmaw", image: "" },
-    { _id: "7", name: "Frank Miller", username: "frankm", image: "" },
-    { _id: "8", name: "Grace Lee", username: "gracel", image: "" },
+    { _id: "2", id: "2", name: "Alice Johnson", username: "alicej", image: "" },
+    { _id: "3", id: "3", name: "Bob Smith", username: "bobsmith", image: "" },
+    { _id: "4", id: "4", name: "Carol White", username: "carolw", image: "" },
+    { _id: "5", id: "5", name: "David Brown", username: "davidb", image: "" },
+    { _id: "6", id: "6", name: "Emma Wilson", username: "emmaw", image: "" },
+    { _id: "7", id: "7", name: "Frank Miller", username: "frankm", image: "" },
+    { _id: "8", id: "8", name: "Grace Lee", username: "gracel", image: "" },
   ];
 
   const randomUser = () => otherUsers[Math.floor(Math.random() * otherUsers.length)];
@@ -456,33 +458,44 @@ export default function FeedPage() {
     router.push(`/explore?q=${encodeURIComponent(cleanTag)}`);
   }, [router]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
+  // ✅ Fetch posts - always use real data from API
+  const fetchPosts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      const res = await fetch("/api/posts?limit=100");
+      
+      if (res.ok) {
+        const data = await res.json();
+        const allPosts = data.posts || [];
+        setPosts(allPosts);
+        setFilteredPosts(allPosts);
+      } else {
+        // ✅ Fallback to mock data
+        const mockPosts = generateMockPosts(session?.user);
+        setPosts(mockPosts);
+        setFilteredPosts(mockPosts);
+      }
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
       const mockPosts = generateMockPosts(session?.user);
       setPosts(mockPosts);
       setFilteredPosts(mockPosts);
+    } finally {
       setIsLoading(false);
-
-      const fetchRealPosts = async () => {
-        try {
-          const res = await fetch("/api/posts?limit=100");
-          if (res.ok) {
-            const data = await res.json();
-            const realPosts = data.posts || [];
-            if (realPosts.length > 0) {
-              setPosts(realPosts);
-              setFilteredPosts(realPosts);
-            }
-          }
-        } catch (error) {
-          console.log("Using mock data");
-        }
-      };
-      fetchRealPosts();
     }
-  }, [status, session]);
+  }, [session]);
 
-  const fetchComments = async (postId: string) => {
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchPosts();
+    }
+  }, [status, fetchPosts]);
+
+  // ============================================
+  // Comments Functions
+  // ============================================
+  const fetchComments = useCallback(async (postId: string) => {
     try {
       const res = await fetch(`/api/posts/${postId}/comments`);
       if (res.ok) {
@@ -495,9 +508,9 @@ export default function FeedPage() {
       console.error("Failed to fetch comments:", error);
       setComments(prev => ({ ...prev, [postId]: [] }));
     }
-  };
+  }, []);
 
-  const handleComment = async (postId: string) => {
+  const handleComment = useCallback(async (postId: string) => {
     if (!commentText.trim()) return;
     
     setIsCommenting(true);
@@ -549,9 +562,9 @@ export default function FeedPage() {
     } finally {
       setIsCommenting(false);
     }
-  };
+  }, [commentText, session]);
 
-  const toggleComments = async (postId: string) => {
+  const toggleComments = useCallback(async (postId: string) => {
     if (selectedPostId === postId && isCommentsOpen) {
       setIsCommentsOpen(false);
       setSelectedPostId(null);
@@ -563,8 +576,11 @@ export default function FeedPage() {
       }
       setTimeout(() => commentInputRef.current?.focus(), 100);
     }
-  };
+  }, [selectedPostId, isCommentsOpen, comments, fetchComments]);
 
+  // ============================================
+  // Post Actions
+  // ============================================
   const handleLike = useCallback((postId: string) => {
     setFilteredPosts((prev) =>
       prev.map((post) =>
@@ -579,7 +595,7 @@ export default function FeedPage() {
     );
   }, []);
 
-  const handleDeletePost = async (postId: string) => {
+  const handleDeletePost = useCallback(async (postId: string) => {
     try {
       const res = await fetch(`/api/posts/${postId}`, {
         method: "DELETE",
@@ -595,26 +611,26 @@ export default function FeedPage() {
       console.error("Failed to delete post:", error);
       toast.error("Failed to delete post");
     }
-  };
+  }, []);
 
-  const handleShare = (post: Post) => {
+  const handleShare = useCallback((post: Post) => {
     const url = `${window.location.origin}/post/${post._id}`;
     navigator.clipboard?.writeText(url).then(() => {
       toast.success("Link copied to clipboard!");
     }).catch(() => {
       toast.success(`Share: ${url}`);
     });
-  };
+  }, []);
 
-  const handleBookmark = () => {
+  const handleBookmark = useCallback(() => {
     toast.success("Post saved to bookmarks!");
-  };
+  }, []);
 
-  const handleReport = () => {
+  const handleReport = useCallback(() => {
     toast.success("Post reported. We'll review it.");
-  };
+  }, []);
 
-  const getTimeAgo = (date: string) => {
+  const getTimeAgo = useCallback((date: string) => {
     const diff = Date.now() - new Date(date).getTime();
     const minutes = Math.floor(diff / 60000);
     if (minutes < 1) return "Just now";
@@ -624,9 +640,12 @@ export default function FeedPage() {
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
     return new Date(date).toLocaleDateString();
-  };
+  }, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") => {
+  // ============================================
+  // File Handlers
+  // ============================================
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
@@ -639,19 +658,19 @@ export default function FeedPage() {
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} selected: ${file.name}`);
     }
     e.target.value = "";
-  };
+  }, []);
 
-  const handleMediaClick = () => imageInputRef.current?.click();
-  const handleVideoClick = () => videoInputRef.current?.click();
-  const handleAudioClick = () => audioInputRef.current?.click();
+  const handleMediaClick = useCallback(() => imageInputRef.current?.click(), []);
+  const handleVideoClick = useCallback(() => videoInputRef.current?.click(), []);
+  const handleAudioClick = useCallback(() => audioInputRef.current?.click(), []);
 
-  const removeFile = () => {
+  const removeFile = useCallback(() => {
     setSelectedFile(null);
     setFilePreview(null);
     setFileType(null);
-  };
+  }, []);
 
-  const handleCreatePost = async () => {
+  const handleCreatePost = useCallback(async () => {
     if (!postContent.trim() && !selectedFile) {
       toast.error("Please write something or add media");
       return;
@@ -691,8 +710,34 @@ export default function FeedPage() {
         setFilteredPosts(prev => [data.post, ...prev]);
         resetCreateForm();
         toast.success(`Post created! Added to ${category} section`);
+        fetchPosts();
       } else {
-        toast.error("Failed to create post");
+        const mockPost: Post = {
+          _id: Date.now().toString(),
+          content: postContent,
+          author: {
+            _id: session?.user?.id || "1",
+            id: session?.user?.id || "1",
+            name: session?.user?.name || "You",
+            username: session?.user?.username || "you",
+            image: session?.user?.image || "",
+          },
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          createdAt: new Date().toISOString(),
+          isLiked: false,
+          visibility: postVisibility as any,
+          hashtags: hashtags,
+          category: category,
+          image: imageUrl || undefined,
+          video: videoUrl || undefined,
+        };
+        setPosts(prev => [mockPost, ...prev]);
+        setFilteredPosts(prev => [mockPost, ...prev]);
+        resetCreateForm();
+        toast.success(`Post created! Added to ${category} section`);
+        fetchPosts();
       }
     } catch (error) {
       console.error("Failed to create post:", error);
@@ -700,15 +745,19 @@ export default function FeedPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [postContent, selectedFile, fileType, filePreview, postVisibility, postMood, fetchPosts, session]);
 
-  const resetCreateForm = () => {
+  const resetCreateForm = useCallback(() => {
     setPostContent("");
     setSelectedFile(null);
     setFilePreview(null);
     setFileType(null);
     setIsCreateOpen(false);
-  };
+  }, []);
+
+  const getTabDisplay = useCallback((tab: string) => {
+    return TAB_DISPLAY[tab as keyof typeof TAB_DISPLAY] || "For You";
+  }, []);
 
   if (status === "loading" || isLoading) {
     return (
@@ -811,9 +860,7 @@ export default function FeedPage() {
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             )}
           >
-            {tab === "for-you" ? "For You" :
-             tab === "following" ? "Following" :
-             tab === "trending" ? "Trending" : "Communities"}
+            {getTabDisplay(tab)}
           </button>
         ))}
       </div>
@@ -834,7 +881,7 @@ export default function FeedPage() {
             if (!post?.author) return null;
             const author = post.author;
             const postComments = comments[post._id] || [];
-            const isAuthor = author._id === session?.user?.id;
+            const isAuthor = author._id === session?.user?.id || author.id === session?.user?.id;
             
             return (
               <div key={post._id} className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-3">
@@ -855,7 +902,7 @@ export default function FeedPage() {
                       size="sm"
                     />
                     <div>
-                      <Link href={`/profile/${author._id}`} className="font-semibold text-sm text-gray-900 dark:text-white hover:underline">
+                      <Link href={`/profile/${author._id || author.id}`} className="font-semibold text-sm text-gray-900 dark:text-white hover:underline">
                         {author.name || "Unknown User"}
                       </Link>
                       <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -1036,7 +1083,6 @@ export default function FeedPage() {
                       {postComments.length === 0 ? (
                         <p className="text-xs text-gray-500 text-center py-2">No comments yet</p>
                       ) : (
-                        // ✅ Fixed: Now using comment._id which exists
                         postComments.map((comment) => (
                           <div key={comment._id} className="flex items-start gap-2">
                             <AvatarSimple

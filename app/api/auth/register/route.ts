@@ -33,11 +33,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ Create new user with proper ObjectId (MongoDB will generate automatically)
+    // ✅ Create user with complete data
     const newUser = {
-      name,
-      username: username || name.toLowerCase().replace(/\s/g, ""),
-      email,
+      name: name.trim(),
+      username: username ? username.trim().toLowerCase() : name.toLowerCase().replace(/\s/g, ""),
+      email: email.toLowerCase().trim(),
       password: await bcrypt.hash(password, 10),
       image: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`,
       bio: "",
@@ -48,14 +48,13 @@ export async function POST(request: Request) {
       updatedAt: new Date(),
     };
 
-    // ✅ Insert user - MongoDB will generate the _id automatically
+    // Insert user
     const result = await usersCollection.insertOne(newUser);
 
-    // ✅ Return the actual user ID (not a mock ID)
     return NextResponse.json({
       message: "User created successfully",
       user: {
-        id: result.insertedId.toString(), // ✅ Real MongoDB ObjectId
+        id: result.insertedId.toString(),
         name: newUser.name,
         username: newUser.username,
         email: newUser.email,

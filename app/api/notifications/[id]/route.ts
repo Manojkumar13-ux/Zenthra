@@ -26,12 +26,16 @@ export async function PUT(
     }
 
     try {
-      await db.collection("notifications").updateOne(
+      const result = await db.collection("notifications").updateOne(
         { _id: new ObjectId(notificationId), userId: session.user.id },
         { $set: { read: true } }
       );
+
+      if (result.matchedCount === 0) {
+        return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+      }
     } catch (error) {
-      console.log("Notification not found");
+      console.log("Notification not found:", error);
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
     }
 
