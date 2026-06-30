@@ -80,6 +80,18 @@ interface UserSettings {
   };
 }
 
+// Extended user type for session
+interface ExtendedUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  username?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+}
+
 // ============================================
 // Default Settings
 // ============================================
@@ -158,23 +170,26 @@ export default function SettingsPage() {
     try {
       setIsLoading(true);
       
+      // Cast session user to extended type
+      const user = session?.user as ExtendedUser | undefined;
+      
       // Start with session data
       const userData: UserSettings = {
         ...defaultSettings,
-        name: session?.user?.name || "",
-        username: session?.user?.username || "",
-        email: session?.user?.email || "",
-        bio: session?.user?.bio || "",
-        location: session?.user?.location || "",
-        website: session?.user?.website || "",
-        image: session?.user?.image || "",
+        name: user?.name || "",
+        username: user?.username || "",
+        email: user?.email || "",
+        bio: user?.bio || "",
+        location: user?.location || "",
+        website: user?.website || "",
+        image: user?.image || "",
       };
       
       setFormData(userData);
 
       // Try to fetch full user data from API
       try {
-        const userId = session?.user?.id;
+        const userId = user?.id;
         if (userId) {
           const res = await fetch(`/api/users/${userId}`);
           if (res.ok) {
