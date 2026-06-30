@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
@@ -63,6 +63,7 @@ interface Message {
 
 export default function MessagesPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
   
@@ -100,7 +101,6 @@ export default function MessagesPage() {
         const data = await res.json();
         setChats(data.chats || []);
         
-        // If userId is provided, select that chat
         if (userId) {
           const chat = data.chats?.find((c: Chat) => 
             c.participants.some(p => p.id === userId)
@@ -111,55 +111,10 @@ export default function MessagesPage() {
         } else if (data.chats?.length > 0) {
           setSelectedChat(data.chats[0]._id);
         }
-      } else {
-        // Mock chats
-        const mockChats: Chat[] = [
-          {
-            _id: "1",
-            isGroup: false,
-            participants: [
-              {
-                id: "2",
-                name: "Alice Johnson",
-                username: "alicej",
-                image: "",
-                online: true,
-              },
-            ],
-            lastMessage: {
-              content: "Hey! How are you?",
-              sender: { name: "Alice Johnson" },
-              createdAt: new Date().toISOString(),
-            },
-            unreadCount: 2,
-          },
-          {
-            _id: "2",
-            isGroup: false,
-            participants: [
-              {
-                id: "3",
-                name: "Bob Smith",
-                username: "bobsmith",
-                image: "",
-                online: false,
-              },
-            ],
-            lastMessage: {
-              content: "See you tomorrow!",
-              sender: { name: "Bob Smith" },
-              createdAt: new Date(Date.now() - 3600000).toISOString(),
-            },
-            unreadCount: 0,
-          },
-        ];
-        setChats(mockChats);
-        if (mockChats.length > 0) {
-          setSelectedChat(mockChats[0]._id);
-        }
       }
     } catch (error) {
       console.error("Failed to fetch chats:", error);
+      setChats([]);
     } finally {
       setIsLoading(false);
     }
@@ -173,38 +128,11 @@ export default function MessagesPage() {
         const data = await res.json();
         setMessages(data.messages || []);
       } else {
-        // Mock messages
-        setMessages([
-          {
-            _id: "1",
-            content: "Hey! How are you doing?",
-            sender: {
-              id: "2",
-              name: "Alice Johnson",
-              username: "alicej",
-              image: "",
-            },
-            chatId: chatId,
-            createdAt: new Date(Date.now() - 600000).toISOString(),
-            read: true,
-          },
-          {
-            _id: "2",
-            content: "I'm good! Working on the new project.",
-            sender: {
-              id: session?.user?.id || "1",
-              name: session?.user?.name || "You",
-              username: session?.user?.username || "you",
-              image: session?.user?.image || "",
-            },
-            chatId: chatId,
-            createdAt: new Date(Date.now() - 300000).toISOString(),
-            read: true,
-          },
-        ]);
+        setMessages([]);
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
+      setMessages([]);
     } finally {
       setIsMessagesLoading(false);
     }
@@ -228,56 +156,8 @@ export default function MessagesPage() {
         const data = await res.json();
         setMessages([...messages, data.message]);
         setNewMessage("");
-        
-        // Update last message in chat list
-        setChats(prev =>
-          prev.map(chat =>
-            chat._id === selectedChat
-              ? {
-                  ...chat,
-                  lastMessage: {
-                    content: newMessage,
-                    sender: { name: session?.user?.name || "You" },
-                    createdAt: new Date().toISOString(),
-                  },
-                  unreadCount: 0,
-                }
-              : chat
-          )
-        );
       } else {
-        // Mock send
-        const mockMessage: Message = {
-          _id: Date.now().toString(),
-          content: newMessage,
-          sender: {
-            id: session?.user?.id || "1",
-            name: session?.user?.name || "You",
-            username: session?.user?.username || "you",
-            image: session?.user?.image || "",
-          },
-          chatId: selectedChat,
-          createdAt: new Date().toISOString(),
-          read: true,
-        };
-        setMessages([...messages, mockMessage]);
-        setNewMessage("");
-        
-        setChats(prev =>
-          prev.map(chat =>
-            chat._id === selectedChat
-              ? {
-                  ...chat,
-                  lastMessage: {
-                    content: newMessage,
-                    sender: { name: session?.user?.name || "You" },
-                    createdAt: new Date().toISOString(),
-                  },
-                  unreadCount: 0,
-                }
-              : chat
-          )
-        );
+        toast.error("Failed to send message");
       }
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -297,12 +177,6 @@ export default function MessagesPage() {
     if (chat.isGroup) return "";
     const otherUser = chat.participants.find(p => p.id !== session?.user?.id);
     return otherUser?.image;
-  };
-
-  const getChatUsername = (chat: Chat) => {
-    if (chat.isGroup) return "";
-    const otherUser = chat.participants.find(p => p.id !== session?.user?.id);
-    return otherUser?.username || "user";
   };
 
   const getChatOnline = (chat: Chat) => {
@@ -421,7 +295,6 @@ export default function MessagesPage() {
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
         {selectedChatData ? (
           <>
-            {/* Chat Header */}
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
               <div className="flex items-center gap-3">
                 <AvatarSimple
@@ -450,7 +323,6 @@ export default function MessagesPage() {
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {isMessagesLoading ? (
                 <div className="flex justify-center py-10">
@@ -489,7 +361,6 @@ export default function MessagesPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
             <div className="p-4 border-t dark:border-gray-800">
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon">
