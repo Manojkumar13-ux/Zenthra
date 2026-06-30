@@ -21,13 +21,12 @@ export async function GET(
     const db = await connectToDatabase();
     const userId = params.id;
 
-    // ✅ Check if it's a valid ObjectId
+    // ✅ Validate ObjectId
     if (!userId || !ObjectId.isValid(userId)) {
       console.log(`❌ Invalid user ID: ${userId}`);
-      // ✅ Return 404 instead of 400 for mock users
       return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
+        { error: "Invalid user ID format" },
+        { status: 400 }
       );
     }
 

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,6 +16,8 @@ export async function GET() {
     }
 
     const db = await connectToDatabase();
+    
+    // ✅ Get user's posts
     const posts = await db.collection("posts")
       .find({ "author.id": session.user.id })
       .sort({ createdAt: -1 })

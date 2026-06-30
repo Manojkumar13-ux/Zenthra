@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectToDatabase, isValidObjectId } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
@@ -18,15 +18,17 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const db = await connectToDatabase();
     const { id } = params;
-    if (!id || !isValidObjectId(id)) {
+
+    // ✅ Validate ObjectId
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid post ID" }, { status: 400 });
     }
 
-    const db = await connectToDatabase();
-    const objectId = new ObjectId(id);
-    
-    const post = await db.collection("posts").findOne({ _id: objectId });
+    const post = await db.collection("posts").findOne(
+      { _id: new ObjectId(id) }
+    );
 
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -49,24 +51,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const db = await connectToDatabase();
     const { id } = params;
-    if (!id || !isValidObjectId(id)) {
+
+    // ✅ Validate ObjectId
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid post ID" }, { status: 400 });
     }
 
-    const db = await connectToDatabase();
-    const objectId = new ObjectId(id);
-    
-    const post = await db.collection("posts").findOne({ _id: objectId });
+    const post = await db.collection("posts").findOne(
+      { _id: new ObjectId(id) }
+    );
 
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
+    // ✅ Check if user is the author
     if (post.author.id !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    // ✅ Decrease hashtag counts
     if (post.hashtags && post.hashtags.length > 0) {
       for (const tag of post.hashtags) {
         await db.collection("hashtags").updateOne(
@@ -76,7 +82,7 @@ export async function DELETE(
       }
     }
 
-    await db.collection("posts").deleteOne({ _id: objectId });
+    await db.collection("posts").deleteOne({ _id: new ObjectId(id) });
 
     return NextResponse.json({ message: "Post deleted successfully" });
   } catch (error) {

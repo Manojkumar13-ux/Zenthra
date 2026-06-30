@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -63,12 +64,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { content, visibility, image, video, hashtags, category } = body;
 
+    // ✅ Convert session.user.id to ObjectId
+    let userQuery: any = {};
+    const userId = session.user.id;
+    
+    if (ObjectId.isValid(userId)) {
+      userQuery._id = new ObjectId(userId);
+    } else {
+      userQuery._id = userId;
+    }
+
     // ✅ Get the user from database to ensure we have complete data
-    const user = await db.collection("users").findOne(
-      { _id: session.user.id }
-    );
+    const user = await db.collection("users").findOne(userQuery);
 
     if (!user) {
+      console.error(`❌ User not found for ID: ${userId}`);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
