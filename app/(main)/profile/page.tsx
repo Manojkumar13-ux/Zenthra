@@ -97,70 +97,68 @@ export default function ProfilePage() {
     try {
       setIsLoading(true);
       
+      // ✅ Check if session exists
       if (!session?.user?.id) {
+        console.log("No session user ID found");
         router.push("/login");
         return;
       }
 
       console.log("🔍 Fetching profile for user ID:", session.user.id);
       
+      // ✅ Try to fetch from API
       const res = await fetch(`/api/users/${session.user.id}`);
       console.log("📊 Response status:", res.status);
       
       if (res.ok) {
         const data = await res.json();
         console.log("📊 Profile data:", data);
-        setProfile(data.user);
-        setEditName(data.user.name || "");
-        setEditBio(data.user.bio || "");
-        setEditLocation(data.user.location || "");
-        setEditWebsite(data.user.website || "");
+        if (data.user) {
+          setProfile(data.user);
+          setEditName(data.user.name || "");
+          setEditBio(data.user.bio || "");
+          setEditLocation(data.user.location || "");
+          setEditWebsite(data.user.website || "");
+        } else {
+          // ✅ If no user in response, use session data
+          useSessionData();
+        }
       } else {
         const error = await res.json();
         console.error("❌ Error response:", error);
-        toast.error(error.error || "Failed to load profile");
-        // Use session data as fallback
-        if (session?.user) {
-          setProfile({
-            _id: session.user.id,
-            name: session.user.name || "User",
-            username: session.user.username || session.user.email?.split("@")[0] || "user",
-            email: session.user.email || "",
-            image: session.user.image || "",
-            bio: "",
-            location: "",
-            website: "",
-            createdAt: new Date().toISOString(),
-            followers: 0,
-            following: 0,
-            posts: 0,
-          });
-          setEditName(session.user.name || "");
-        }
+        // ✅ Fallback to session data
+        useSessionData();
       }
     } catch (error) {
       console.error("Failed to fetch profile:", error);
-      toast.error("Failed to load profile");
-      // Use session data as fallback
-      if (session?.user) {
-        setProfile({
-          _id: session.user.id,
-          name: session.user.name || "User",
-          username: session.user.username || session.user.email?.split("@")[0] || "user",
-          email: session.user.email || "",
-          image: session.user.image || "",
-          bio: "",
-          location: "",
-          website: "",
-          createdAt: new Date().toISOString(),
-          followers: 0,
-          following: 0,
-          posts: 0,
-        });
-        setEditName(session.user.name || "");
-      }
+      // ✅ Fallback to session data
+      useSessionData();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ✅ Helper function to use session data as fallback
+  const useSessionData = () => {
+    if (session?.user) {
+      console.log("Using session data as fallback");
+      setProfile({
+        _id: session.user.id,
+        name: session.user.name || "User",
+        username: session.user.username || session.user.email?.split("@")[0] || "user",
+        email: session.user.email || "",
+        image: session.user.image || "",
+        bio: "",
+        location: "",
+        website: "",
+        createdAt: new Date().toISOString(),
+        followers: 0,
+        following: 0,
+        posts: 0,
+      });
+      setEditName(session.user.name || "");
+    } else {
+      router.push("/login");
     }
   };
 
@@ -364,23 +362,18 @@ export default function ProfilePage() {
     );
   }
 
+  // ✅ Check if profile exists before rendering
   if (!profile) {
     return (
       <div className="text-center py-20">
         <div className="text-6xl mb-4">👤</div>
         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Profile not found
+          Loading profile...
         </h3>
         <p className="text-sm text-gray-500 mt-1">
-          There was an error loading your profile
+          Please wait while we load your profile
         </p>
-        <Button
-          onClick={() => fetchProfile()}
-          className="mt-4"
-        >
-          <Loader2 className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-          Retry
-        </Button>
+        <Loader2 className="h-6 w-6 animate-spin text-blue-500 mx-auto mt-4" />
       </div>
     );
   }

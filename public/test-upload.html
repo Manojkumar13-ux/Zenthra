@@ -1,0 +1,41 @@
+<!-- public/test-upload.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Cover Upload</title>
+</head>
+<body>
+    <h2>Test Cover Upload</h2>
+    <input type="file" id="coverInput" accept="image/*" />
+    <button onclick="uploadCover()">Upload Cover</button>
+    <div id="result"></div>
+
+    <script>
+        async function uploadCover() {
+            const fileInput = document.getElementById('coverInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('result').innerHTML = 'Please select a file';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('cover', file);
+
+            try {
+                const res = await fetch('/api/users/me/cover', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+                
+                const data = await res.json();
+                document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

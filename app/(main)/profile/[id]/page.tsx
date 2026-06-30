@@ -83,11 +83,7 @@ export default function UserProfilePage() {
       setIsLoading(true);
       
       if (!userId) {
-        if (session?.user?.id) {
-          router.push(`/profile/${session.user.id}`);
-        } else {
-          router.push("/feed");
-        }
+        router.push("/profile");
         return;
       }
 
@@ -99,18 +95,28 @@ export default function UserProfilePage() {
       if (res.ok) {
         const data = await res.json();
         console.log("📊 Profile data:", data);
-        setProfile(data.user);
-        setIsFollowing(data.user.isFollowing || false);
-        setIsCurrentUser(data.user._id === session?.user?.id);
+        if (data.user) {
+          setProfile(data.user);
+          setIsFollowing(data.user.isFollowing || false);
+          setIsCurrentUser(data.user._id === session?.user?.id);
+        } else {
+          toast.error("User not found");
+          router.push("/profile");
+        }
       } else {
         const error = await res.json();
         console.error("❌ Error:", error);
         toast.error(error.error || "Failed to load profile");
-        router.push("/feed");
+        if (userId === session?.user?.id) {
+          router.push("/profile");
+        } else {
+          router.push("/feed");
+        }
       }
     } catch (error) {
       console.error("Failed to fetch profile:", error);
       toast.error("Failed to load profile");
+      router.push("/feed");
     } finally {
       setIsLoading(false);
     }

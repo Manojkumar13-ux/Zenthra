@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="animGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1">
+        <animate attributeName="stop-color" values="#6366F1;#8B5CF6;#EC4899;#F59E0B;#6366F1" dur="8s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#8B5CF6">
+        <animate attributeName="stop-color" values="#8B5CF6;#EC4899;#F59E0B;#6366F1;#8B5CF6" dur="8s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+    
+    <filter id="animGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <circle cx="50" cy="50" r="45" fill="url(#animGrad)">
+    <animate attributeName="r" values="45;47;45" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <text x="50" y="68" font-size="48" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="700">Z</text>
+  
+  <path d="M72 22 L78 16 M75 14 L75 24 M68 19 L82 19" stroke="white" stroke-width="2.5" stroke-linecap="round" filter="url(#animGlow)">
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+  </path>
+</svg>

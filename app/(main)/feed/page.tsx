@@ -911,7 +911,7 @@ export default function FeedPage() {
                         src={session?.user?.image}
                         fallback={session?.user?.name?.[0] || "U"}
                         alt={session?.user?.name || "User"}
-                        size="xs"
+                        size="sm"
                       />
                       <div className="flex-1 flex gap-2">
                         <Input
