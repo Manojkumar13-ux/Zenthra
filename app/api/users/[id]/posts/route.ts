@@ -2,11 +2,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectToDatabase, isValidObjectId } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET(
   request: Request,
@@ -21,7 +18,8 @@ export async function GET(
     const db = await connectToDatabase();
     const userId = params.id;
 
-    if (!userId || !isValidObjectId(userId)) {
+    // ✅ Check if it's a valid ObjectId
+    if (!userId || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 

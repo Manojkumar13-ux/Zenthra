@@ -18,6 +18,7 @@ export async function POST(
     const db = await connectToDatabase();
     const userId = params.id;
 
+    // ✅ Check if it's a valid ObjectId
     if (!userId || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
@@ -37,21 +38,6 @@ export async function POST(
     await db.collection("follows").insertOne({
       followerId: currentUserId,
       followingId: userId,
-      createdAt: new Date(),
-    });
-
-    // Create notification for follow
-    await db.collection("notifications").insertOne({
-      userId: userId,
-      type: "follow",
-      message: `${session.user.name} started following you`,
-      sender: {
-        id: session.user.id,
-        name: session.user.name,
-        username: session.user.username,
-        image: session.user.image,
-      },
-      read: false,
       createdAt: new Date(),
     });
 

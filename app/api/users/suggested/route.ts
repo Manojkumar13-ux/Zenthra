@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -19,11 +20,20 @@ export async function GET() {
 
     console.log("🔍 Current user ID:", currentUserId);
 
+    // ✅ Convert string to ObjectId for comparison
+    let query: any = {};
+    
+    // Only add the $ne condition if the ID is valid
+    if (ObjectId.isValid(currentUserId)) {
+      query._id = { $ne: new ObjectId(currentUserId) };
+    } else {
+      // Fallback: use string comparison if not valid ObjectId
+      query._id = { $ne: currentUserId };
+    }
+
     // Get all users EXCEPT the current user
     const allUsers = await db.collection("users")
-      .find({ 
-        _id: { $ne: currentUserId }  // ✅ Exclude current user
-      })
+      .find(query)
       .toArray();
 
     console.log("📊 Other users:", allUsers.length);

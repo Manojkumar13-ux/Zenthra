@@ -2,11 +2,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectToDatabase, isValidObjectId } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET(
   request: Request,
@@ -21,10 +18,12 @@ export async function GET(
     const db = await connectToDatabase();
     const userId = params.id;
 
-    if (!userId || !isValidObjectId(userId)) {
+    // ✅ Check if it's a valid ObjectId
+    if (!userId || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
+    // ✅ Convert to ObjectId
     const user = await db.collection("users").findOne(
       { _id: new ObjectId(userId) },
       { projection: { password: 0 } }
@@ -34,18 +33,22 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Count posts
     const postsCount = await db.collection("posts").countDocuments({
       "author.id": userId
     });
 
+    // Count followers
     const followersCount = await db.collection("follows").countDocuments({
       followingId: userId
     });
 
+    // Count following
     const followingCount = await db.collection("follows").countDocuments({
       followerId: userId
     });
 
+    // Check if current user is following this user
     const isFollowing = await db.collection("follows").countDocuments({
       followerId: session.user.id,
       followingId: userId
