@@ -26,10 +26,9 @@ export async function GET() {
     
     const followingIds = follows.map(f => f.followingId);
 
-    // ✅ Exclude current user and followed users
+    // ✅ Get REAL users from database - use string comparison
     const excludedIds = [currentUserId, ...followingIds];
-
-    // ✅ Get REAL users from database
+    
     const users = await db.collection("users")
       .find({
         _id: { $nin: excludedIds }
@@ -37,7 +36,7 @@ export async function GET() {
       .limit(5)
       .toArray();
 
-    console.log("📊 Suggested users found:", users.length);
+    console.log(`📊 Suggested users found: ${users.length}`);
 
     // ✅ Format and return ONLY real users
     const formattedUsers = users.map(user => ({
@@ -50,7 +49,6 @@ export async function GET() {
       isFollowing: false,
     }));
 
-    // ✅ Return empty array if no users found - NO MOCK DATA
     return NextResponse.json({ users: formattedUsers });
   } catch (error) {
     console.error("Error fetching suggested users:", error);

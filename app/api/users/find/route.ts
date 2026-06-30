@@ -1,119 +1,73 @@
 // app/api/users/find/route.ts
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
-import { getServerSession } from "next-auth";
+export const runtime = 'nodejs';
 
-import { authOptions } from "@/lib/auth";
-
-import { connectDB } from "@/lib/db/connect";
-
-import { User } from "@/lib/db/models/User";
-
-
-export async function GET(req: Request) {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const q = searchParams.get("q") || "";
+    const db = await connectToDatabase();
+    const { searchParams } = new URL(request.url);
     const tab = searchParams.get("tab") || "all";
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const page = parseInt(searchParams.get("page") || "1");
-    const skip = (page - 1) * limit;
+    const query = searchParams.get("q") || "";
 
-    await connectDB();
+    let filter: any = {};
 
-    // Build search query
-    let query: any = {};
+    // ✅ Exclude current user - use string comparison
+    filter._id = { $ne: session.user.id };
 
-    // Exclude current user
-    query._id = { $ne: session.user.id };
-
-    // Search by name or username
-    if (q) {
-      query.$or = [
-        { name: { $regex: q, $options: "i" } },
-        { username: { $regex: q, $options: "i" } },
+    // ✅ Search by name or username
+    if (query) {
+      filter.$or = [
+        { name: { $regex: query, $options: "i" } },
+        { username: { $regex: query, $options: "i" } },
       ];
     }
 
-    // Get current user's following list
-    const currentUser = await User.findById(session.user.id)
-      .select("following")
-      .lean();
+    // ✅ Get ALL users from database
+    const users = await db.collection("users")
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .toArray();
 
-    // Type assertion to handle the following array
-    const currentUserData = currentUser as any;
-    const followingIds = currentUserData?.following?.map((id: any) => id.toString()) || [];
+    console.log(`📊 Found ${users.length} users in database`);
 
-    // Tab-specific filters
-    if (tab === "following") {
-      query._id = { $in: followingIds };
-    } else if (tab === "suggested") {
-      // Users not followed and not current user
-      query._id = {
-        $nin: [...followingIds, session.user.id]
-      };
-      // Prioritize users with more followers
-      query.followersCount = { $gt: 0 };
-    }
+    // ✅ Get follows to check if current user follows them
+    const follows = await db.collection("follows")
+      .find({ followerId: session.user.id })
+      .toArray();
+    const followingIds = follows.map(f => f.followingId);
 
-    // Fetch users with pagination
-    const users = await User.find(query)
-      .select("name username email image bio followers following postsCount")
-      .sort({ followersCount: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-
-    // Get total count
-    const total = await User.countDocuments(query);
-
-    // Format users with follow status
-    const followingIdsSet = new Set(followingIds);
-
-    const usersWithFollowStatus = users.map((user: any) => ({
+    // ✅ Format users
+    const formattedUsers = users.map(user => ({
       _id: user._id.toString(),
-      name: user.name,
-      username: user.username,
-      email: user.email,
+      name: user.name || "User",
+      username: user.username || "user",
       image: user.image || null,
       bio: user.bio || "",
-      isFollowing: followingIdsSet.has(user._id.toString()),
-      isCurrentUser: user._id.toString() === session.user.id,
-      followersCount: user.followers?.length || 0,
-      followingCount: user.following?.length || 0,
-      postsCount: user.postsCount || 0,
-      createdAt: user.createdAt?.toISOString(),
+      isFollowing: followingIds.includes(user._id.toString()),
+      followersCount: 0,
+      postsCount: 0,
     }));
 
-    return NextResponse.json({
-      success: true,
-      users: usersWithFollowStatus,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-        hasNext: page < Math.ceil(total / limit),
-        hasPrev: page > 1,
-      },
+    return NextResponse.json({ 
+      users: formattedUsers,
+      total: formattedUsers.length 
     });
   } catch (error) {
     console.error("Error finding users:", error);
     return NextResponse.json(
-      { 
-        error: "Failed to find users",
-        message: error instanceof Error ? error.message : "Unknown error",
-        users: [],
-      },
+      { error: "Failed to find users" },
       { status: 500 }
     );
   }

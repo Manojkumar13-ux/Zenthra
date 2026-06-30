@@ -103,7 +103,7 @@ export function RightSidebar() {
       if (res.ok) {
         const data = await res.json();
         console.log("✅ Suggested users from DB:", data.users);
-        // ✅ Only use API data
+        // ✅ Only use API data - NO MOCK FALLBACK
         setSuggestedUsers(data.users || []);
       } else {
         console.error("Failed to fetch suggested users");
@@ -118,12 +118,46 @@ export function RightSidebar() {
   };
 
   const handleFollowUser = async (userId: string) => {
+    // Optimistic update
     setSuggestedUsers((prev) =>
       prev.map((user) =>
         user.id === userId ? { ...user, isFollowing: !user.isFollowing } : user
       )
     );
-    toast.success("Follow status updated");
+
+    try {
+      const user = suggestedUsers.find((u) => u.id === userId);
+      const isFollowing = user?.isFollowing;
+      
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method: isFollowing ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message || (isFollowing ? "Unfollowed" : "Followed"));
+        // Refresh suggestions
+        fetchSuggestedUsers();
+      } else {
+        // Revert optimistic update
+        setSuggestedUsers((prev) =>
+          prev.map((user) =>
+            user.id === userId ? { ...user, isFollowing: !user.isFollowing } : user
+          )
+        );
+        toast.error("Failed to update follow status");
+      }
+    } catch (error) {
+      console.error("Failed to follow/unfollow:", error);
+      toast.error("Failed to update follow status");
+      // Revert optimistic update
+      setSuggestedUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, isFollowing: !user.isFollowing } : user
+        )
+      );
+    }
   };
 
   const handleAddHashtag = async () => {
@@ -174,6 +208,7 @@ export function RightSidebar() {
 
   return (
     <aside className="hidden xl:block w-80 border-l dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] p-4 space-y-4">
+      {/* Trending Hashtags */}
       <div className="rounded-xl border dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -189,6 +224,7 @@ export function RightSidebar() {
               <div className="py-4 text-center">
                 <Hash className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500">No trending hashtags yet</p>
+                <p className="mt-1 text-xs text-gray-400">Start using #hashtags in your posts!</p>
               </div>
             ) : (
               trendingHashtags.slice(0, 8).map((hashtag) => (
