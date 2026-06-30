@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // app/api/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";

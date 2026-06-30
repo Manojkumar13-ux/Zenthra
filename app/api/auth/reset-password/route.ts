@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // app/api/auth/reset-password/route.ts
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";

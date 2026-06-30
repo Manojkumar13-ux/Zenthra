@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // app/api/notifications/unread-count/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";

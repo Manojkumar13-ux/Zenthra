@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // app/api/communities/[id]/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";

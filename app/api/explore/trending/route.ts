@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // app/api/hashtags/trending/route.ts
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
