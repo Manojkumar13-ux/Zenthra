@@ -2,11 +2,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectToDatabase, isValidObjectId } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function POST(
   request: Request,
@@ -21,12 +18,15 @@ export async function POST(
     const db = await connectToDatabase();
     const userId = params.id;
 
-    if (!userId || !isValidObjectId(userId)) {
+    if (!userId || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
+    const currentUserId = session.user.id;
+
+    // Check if already following
     const existingFollow = await db.collection("follows").findOne({
-      followerId: session.user.id,
+      followerId: currentUserId,
       followingId: userId,
     });
 
@@ -35,15 +35,33 @@ export async function POST(
     }
 
     await db.collection("follows").insertOne({
-      followerId: session.user.id,
+      followerId: currentUserId,
       followingId: userId,
+      createdAt: new Date(),
+    });
+
+    // Create notification for follow
+    await db.collection("notifications").insertOne({
+      userId: userId,
+      type: "follow",
+      message: `${session.user.name} started following you`,
+      sender: {
+        id: session.user.id,
+        name: session.user.name,
+        username: session.user.username,
+        image: session.user.image,
+      },
+      read: false,
       createdAt: new Date(),
     });
 
     return NextResponse.json({ message: "Followed successfully" });
   } catch (error) {
     console.error("Error following user:", error);
-    return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to follow user" },
+      { status: 500 }
+    );
   }
 }
 
@@ -60,18 +78,23 @@ export async function DELETE(
     const db = await connectToDatabase();
     const userId = params.id;
 
-    if (!userId || !isValidObjectId(userId)) {
+    if (!userId || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
+    const currentUserId = session.user.id;
+
     await db.collection("follows").deleteOne({
-      followerId: session.user.id,
+      followerId: currentUserId,
       followingId: userId,
     });
 
     return NextResponse.json({ message: "Unfollowed successfully" });
   } catch (error) {
     console.error("Error unfollowing user:", error);
-    return NextResponse.json({ error: "Failed to unfollow user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to unfollow user" },
+      { status: 500 }
+    );
   }
 }

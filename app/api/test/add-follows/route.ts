@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export async function GET() {
   try {
@@ -15,9 +16,12 @@ export async function GET() {
     const usersCollection = db.collection("users");
     const followsCollection = db.collection("follows");
 
+    // ✅ Convert string ID to ObjectId
+    const currentUserId = session.user.id;
+    
     // Get current user
     const currentUser = await usersCollection.findOne({ 
-      _id: session.user.id 
+      _id: new ObjectId(currentUserId)
     });
 
     if (!currentUser) {
@@ -26,7 +30,7 @@ export async function GET() {
 
     // Get all other users
     const otherUsers = await usersCollection
-      .find({ _id: { $ne: session.user.id } })
+      .find({ _id: { $ne: new ObjectId(currentUserId) } })
       .limit(10)
       .toArray();
 
@@ -36,13 +40,13 @@ export async function GET() {
     // Follow each other user
     for (const user of otherUsers) {
       const existingFollow = await followsCollection.findOne({
-        followerId: session.user.id,
+        followerId: currentUserId,
         followingId: user._id.toString(),
       });
 
       if (!existingFollow) {
         await followsCollection.insertOne({
-          followerId: session.user.id,
+          followerId: currentUserId,
           followingId: user._id.toString(),
           createdAt: new Date(),
         });
