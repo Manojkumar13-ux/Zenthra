@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -25,8 +26,10 @@ export async function GET() {
     // ✅ Get last message for each chat
     const chatsWithDetails = await Promise.all(
       chats.map(async (chat) => {
+        const chatId = chat._id.toString();
+        
         const lastMessage = await db.collection("messages")
-          .find({ chat: chat._id.toString() })
+          .find({ chat: chatId })
           .sort({ createdAt: -1 })
           .limit(1)
           .toArray();
@@ -45,14 +48,14 @@ export async function GET() {
 
         // Count unread messages
         const unreadCount = await db.collection("messages").countDocuments({
-          chat: chat._id.toString(),
+          chat: chatId,
           sender: { $ne: session.user.id },
           read: false,
         });
 
         return {
           ...chat,
-          _id: chat._id.toString(),
+          _id: chatId,
           participants: chat.participants,
           lastMessage: lastMessage[0] || null,
           otherUser: otherUser ? {

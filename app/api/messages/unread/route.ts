@@ -1,4 +1,4 @@
-// app/api/messages/unread-count/route.ts
+// app/api/notifications/unread-count/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -16,14 +16,20 @@ export async function GET() {
 
     const db = await connectToDatabase();
     
-    const count = await db.collection("messages").countDocuments({
-      recipientId: session.user.id,
-      read: false,
-    });
-
-    return NextResponse.json({ count });
+    // Count unread notifications for the current user
+    try {
+      const count = await db.collection("notifications").countDocuments({
+        userId: session.user.id,
+        read: false,
+      });
+      return NextResponse.json({ count });
+    } catch (error) {
+      // If collection doesn't exist, return 0
+      console.log("Notifications collection not found, returning 0");
+      return NextResponse.json({ count: 0 });
+    }
   } catch (error) {
-    console.error("Failed to fetch unread messages:", error);
-    return NextResponse.json({ error: "Failed to fetch unread messages" }, { status: 500 });
+    console.error("Failed to fetch unread notifications:", error);
+    return NextResponse.json({ count: 0 });
   }
 }

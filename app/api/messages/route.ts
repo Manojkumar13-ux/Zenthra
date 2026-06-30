@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -26,17 +27,24 @@ export async function GET(req: Request) {
 
     const db = await connectToDatabase();
 
+    // ✅ Convert chatId to ObjectId for query
+    let chatQuery: any = { participants: session.user.id };
+    
+    // Only use ObjectId if chatId is valid
+    if (ObjectId.isValid(chatId)) {
+      chatQuery._id = new ObjectId(chatId);
+    } else {
+      chatQuery._id = chatId;
+    }
+
     // ✅ Verify user is in the chat
-    const chat = await db.collection("chats").findOne({
-      _id: chatId,
-      participants: session.user.id,
-    });
+    const chat = await db.collection("chats").findOne(chatQuery);
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
     }
 
-    // ✅ Get messages
+    // ✅ Get messages - use string ID for query
     const messages = await db.collection("messages")
       .find({ chat: chatId })
       .sort({ createdAt: -1 })
@@ -98,11 +106,17 @@ export async function POST(req: Request) {
 
     const db = await connectToDatabase();
 
+    // ✅ Convert chatId to ObjectId for query
+    let chatQuery: any = { participants: session.user.id };
+    
+    if (ObjectId.isValid(chatId)) {
+      chatQuery._id = new ObjectId(chatId);
+    } else {
+      chatQuery._id = chatId;
+    }
+
     // ✅ Verify user is in the chat
-    const chat = await db.collection("chats").findOne({
-      _id: chatId,
-      participants: session.user.id,
-    });
+    const chat = await db.collection("chats").findOne(chatQuery);
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
@@ -122,10 +136,10 @@ export async function POST(req: Request) {
 
     // ✅ Update chat's last message
     await db.collection("chats").updateOne(
-      { _id: chatId },
+      chatQuery,
       { 
         $set: { 
-          lastMessage: result.insertedId,
+          lastMessage: result.insertedId.toString(),
           updatedAt: new Date(),
         }
       }

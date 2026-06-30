@@ -1,194 +1,81 @@
-export const dynamic = 'force-dynamic';
-
+// app/api/messages/chats/[chatId]/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { connectDB } from "@/lib/db/connect";
-import { Chat } from "@/lib/db/models/Chat";
-import { Message } from "@/lib/db/models/Message";
-import { User } from "@/lib/db/models/User";
-import { z } from "zod";
+import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
-const updateChatSchema = z.object({
-  name: z.string().min(1, "Name is required").optional(),
-  avatar: z.string().url().optional(),
-  addParticipants: z.array(z.string()).optional(),
-  removeParticipants: z.array(z.string()).optional(),
-});
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-// GET /api/messages/chats/[chatId] - Get chat details
-export async function GET(req: Request, { params }: { params: { chatId: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { chatId: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
+    const db = await connectToDatabase();
+    const { chatId } = params;
 
-    const chat = await Chat.findById(params.chatId)
-      .populate("participants", "name username image online lastActive")
-      .populate("admins", "name username image")
-      .populate({
-        path: "lastMessage",
-        populate: {
-          path: "sender",
-          select: "name username image",
-        },
-      });
+    if (!chatId) {
+      return NextResponse.json({ error: "Chat ID is required" }, { status: 400 });
+    }
+
+    // ✅ Verify user is in the chat
+    let chatQuery: any = { participants: session.user.id };
+    
+    if (ObjectId.isValid(chatId)) {
+      chatQuery._id = new ObjectId(chatId);
+    } else {
+      chatQuery._id = chatId;
+    }
+
+    const chat = await db.collection("chats").findOne(chatQuery);
 
     if (!chat) {
-      return NextResponse.json({ message: "Chat not found" }, { status: 404 });
+      return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
     }
 
-    // Check if user is a participant
-    if (!chat.participants.some((p: any) => p._id.toString() === session.user.id)) {
-      return NextResponse.json(
-        { message: "You are not a participant in this chat" },
-        { status: 403 }
-      );
-    }
+    // ✅ Get messages
+    const messages = await db.collection("messages")
+      .find({ chat: chatId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .toArray();
 
-    return NextResponse.json({ chat });
-  } catch (error) {
-    console.error("GET /api/messages/chats/[chatId] error:", error);
-    return NextResponse.json({ message: "Failed to fetch chat details" }, { status: 500 });
-  }
-}
+    // ✅ Get sender info for each message
+    const messagesWithSender = await Promise.all(
+      messages.map(async (message) => {
+        const sender = await db.collection("users").findOne(
+          { _id: message.sender },
+          { projection: { name: 1, username: 1, image: 1 } }
+        );
+        return {
+          ...message,
+          _id: message._id.toString(),
+          sender: sender ? {
+            id: sender._id.toString(),
+            name: sender.name,
+            username: sender.username,
+            image: sender.image,
+          } : null,
+        };
+      })
+    );
 
-// PUT /api/messages/chats/[chatId] - Update chat (group settings)
-export async function PUT(req: Request, { params }: { params: { chatId: string } }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectDB();
-
-    const chat = await Chat.findById(params.chatId);
-    if (!chat) {
-      return NextResponse.json({ message: "Chat not found" }, { status: 404 });
-    }
-
-    // Check if user is a participant
-    if (!chat.participants.includes(session.user.id)) {
-      return NextResponse.json(
-        { message: "You are not a participant in this chat" },
-        { status: 403 }
-      );
-    }
-
-    // For group chats, check if user is admin
-    if (chat.isGroup && !chat.admins?.includes(session.user.id)) {
-      return NextResponse.json(
-        { message: "Only admins can update group settings" },
-        { status: 403 }
-      );
-    }
-
-    const body = await req.json();
-    const parsed = updateChatSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { message: "Invalid update data", errors: parsed.error.errors },
-        { status: 400 }
-      );
-    }
-
-    const { name, avatar, addParticipants, removeParticipants } = parsed.data;
-
-    // Update basic info
-    if (name) chat.name = name;
-    if (avatar) chat.avatar = avatar;
-
-    // Add participants
-    if (addParticipants && addParticipants.length > 0) {
-      const validUsers = await User.find({
-        _id: { $in: addParticipants },
-      });
-
-      const validUserIds = validUsers.map((u) => u._id.toString());
-      chat.participants = [
-        ...new Set([...chat.participants.map((p: any) => p.toString()), ...validUserIds]),
-      ];
-    }
-
-    // Remove participants
-    if (removeParticipants && removeParticipants.length > 0) {
-      chat.participants = chat.participants.filter(
-        (p: any) => !removeParticipants.includes(p.toString())
-      );
-    }
-
-    await chat.save();
-
-    await chat.populate("participants", "name username image online lastActive");
-
-    return NextResponse.json({ chat });
-  } catch (error) {
-    console.error("PUT /api/messages/chats/[chatId] error:", error);
-    return NextResponse.json({ message: "Failed to update chat" }, { status: 500 });
-  }
-}
-
-// DELETE /api/messages/chats/[chatId] - Delete/leave chat
-export async function DELETE(req: Request, { params }: { params: { chatId: string } }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectDB();
-
-    const chat = await Chat.findById(params.chatId);
-    if (!chat) {
-      return NextResponse.json({ message: "Chat not found" }, { status: 404 });
-    }
-
-    // Check if user is a participant
-    if (!chat.participants.includes(session.user.id)) {
-      return NextResponse.json(
-        { message: "You are not a participant in this chat" },
-        { status: 403 }
-      );
-    }
-
-    // If group chat, remove user from participants
-    if (chat.isGroup) {
-      chat.participants = chat.participants.filter((p: any) => p.toString() !== session.user.id);
-
-      // If user was admin, remove from admins
-      if (chat.admins) {
-        chat.admins = chat.admins.filter((a: any) => a.toString() !== session.user.id);
+    return NextResponse.json({ 
+      messages: messagesWithSender.reverse(),
+      chat: {
+        _id: chat._id.toString(),
+        participants: chat.participants,
       }
-
-      // If no participants left, delete the chat
-      if (chat.participants.length === 0) {
-        await Chat.deleteOne({ _id: params.chatId });
-        await Message.deleteMany({ chat: params.chatId });
-        return NextResponse.json({ message: "Chat deleted" });
-      }
-
-      await chat.save();
-      return NextResponse.json({
-        message: "You left the group",
-        chat,
-      });
-    }
-
-    // For direct messages, only allow deletion if both users agree or admin
-    if (session.user.role === "admin") {
-      await Chat.deleteOne({ _id: params.chatId });
-      await Message.deleteMany({ chat: params.chatId });
-      return NextResponse.json({ message: "Chat deleted" });
-    }
-
-    return NextResponse.json({ message: "You can only leave group chats" }, { status: 403 });
+    });
   } catch (error) {
-    console.error("DELETE /api/messages/chats/[chatId] error:", error);
-    return NextResponse.json({ message: "Failed to delete chat" }, { status: 500 });
+    console.error("Error fetching chat messages:", error);
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
   }
 }
